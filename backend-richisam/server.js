@@ -1,16 +1,29 @@
 const express = require('express');
 const cors = require('cors');
+const bodyParser = require('body-parser');
 require('dotenv').config();
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// 1. MIDDLEWARE HARUS DI ATAS (urutan penting!)
 app.use(express.json());
+app.use(cors());
+app.use(bodyParser.json());           // Parsing JSON body
+app.use(bodyParser.urlencoded({ extended: true })); // Parsing form body
 
-// Import & Gunakan Routes
+// 2. IMPORT ROUTES
 const cabangRoutes = require('./routes/cabangRoutes');
+const bahanRoutes = require('./routes/bahanRoutes');
+const mutasiRoutes = require('./routes/mutasiRoutes');
+const permintaanRoutes = require('./routes/permintaanRoutes');
+const authRoutes = require('./routes/authRoutes');
+
+// 3. GUNAKAN ROUTES
+app.use('/api/auth', authRoutes);
 app.use('/api/cabang', cabangRoutes);
+app.use('/api/bahan', bahanRoutes);
+app.use('/api/mutasi', mutasiRoutes);
+app.use('/api/permintaan', permintaanRoutes);
 
 // Cek Status API
 app.get('/', (req, res) => {

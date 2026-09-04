@@ -3,6 +3,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const login = async (req, res) => {
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.status(400).json({ error: 'Request body kosong. Pastikan Content-Type: application/json dan body berisi username & password.' });
+  }
   const { username, password } = req.body;
   
   try {

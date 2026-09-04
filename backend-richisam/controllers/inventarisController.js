@@ -92,4 +92,39 @@ const updateStokMinimum = async (req, res) => {
   }
 };
 
-module.exports = { getAllStokCabang, getStokByCabang, updateStokMinimum };
+// GET stok yang kurang dari stok_minimum di suatu cabang
+const cekStokKurang = async (req, res) => {
+  const { id_cabang } = req.params;
+  try {
+    const result = await pool.query(`
+      SELECT 
+        si.id_cabang,
+        c.nama_cabang,
+        si.id_bahan,
+        b.nama_bahan,
+        b.sku,
+        s.nama_satuan,
+        si.jumlah_sekarang,
+        si.stok_minimum,
+        (si.stok_minimum - si.jumlah_sekarang) AS kekurangan
+      FROM stok_inventaris si
+      JOIN cabang c ON si.id_cabang = c.id_cabang
+      JOIN bahan_baku b ON si.id_bahan = b.id_bahan
+      JOIN satuan s ON b.id_satuan = s.id_satuan
+      WHERE si.id_cabang = $1 
+        AND si.jumlah_sekarang < si.stok_minimum
+      ORDER BY kekurangan DESC
+    `, [id_cabang]);
+
+    res.status(200).json({
+      message: 'Berhasil memuat daftar barang yang kurang stok',
+      total: result.rowCount,
+      data_barang_kurang: result.rows
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Terjadi kesalahan pada server' });
+  }
+};
+
+module.exports = { getAllStokCabang, getStokByCabang, updateStokMinimum, cekStokKurang };

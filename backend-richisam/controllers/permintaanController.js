@@ -47,4 +47,39 @@ const getPermintaan = async (req, res) => {
   }
 };
 
-module.exports = { ajukanPermintaan, getPermintaan };
+const updateStatusPermintaan = async (req, res) => {
+  const { id_permintaan } = req.params;
+  const { status } = req.body;
+
+  // Validasi nilai status yang diizinkan
+  const statusDiizinkan = ['Menunggu', 'Diproses', 'Dikirim', 'Selesai'];
+  if (!status || !statusDiizinkan.includes(status)) {
+    return res.status(400).json({
+      error: `Status tidak valid. Gunakan salah satu: ${statusDiizinkan.join(', ')}`
+    });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE permintaan_stok 
+       SET status = $1 
+       WHERE id_permintaan = $2 
+       RETURNING id_permintaan, status, tanggal_minta`,
+      [status, id_permintaan]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: 'Permintaan stok tidak ditemukan' });
+    }
+
+    res.status(200).json({
+      message: `Status permintaan berhasil diperbarui menjadi: ${status}`,
+      data: result.rows[0]
+    });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Terjadi kesalahan pada server' });
+  }
+};
+
+module.exports = { ajukanPermintaan, getPermintaan, updateStatusPermintaan };

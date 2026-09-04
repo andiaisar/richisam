@@ -47,39 +47,90 @@ const getPermintaan = async (req, res) => {
   }
 };
 
-const updateStatusPermintaan = async (req, res) => {
-  const { id_permintaan } = req.params;
-  const { status } = req.body;
-
-  // Validasi nilai status yang diizinkan
-  const statusDiizinkan = ['Menunggu', 'Diproses', 'Dikirim', 'Selesai'];
-  if (!status || !statusDiizinkan.includes(status)) {
-    return res.status(400).json({
-      error: `Status tidak valid. Gunakan salah satu: ${statusDiizinkan.join(', ')}`
-    });
-  }
-
+// Memperbarui status + otomatis tambah stok cabang jika status 'Selesai'
+const updateStatusDanTambahStok = async (req, res) => {
+  const client = await pool.connect();
   try {
-    const result = await pool.query(
-      `UPDATE permintaan_stok 
-       SET status = $1 
-       WHERE id_permintaan = $2 
-       RETURNING id_permintaan, status, tanggal_minta`,
-      [status, id_permintaan]
+    const { id_permintaan } = req.params;
+    const { status } = req.body;
+
+    // Validasi nilai status yang diizinkan
+    const statusDiizinkan = ['Menunggu', 'Diproses', 'Dikirim', 'Selesai'];
+    if (!status || !statusDiizinkan.includes(status)) {
+      return res.status(400).json({
+        error: `Status tidak valid. Gunakan salah satu: ${statusDiizinkan.join(', ')}`
+      });
+    }
+
+    await client.query('BEGIN');
+
+    // 1. Cek permintaan ada atau tidak
+    const cekPermintaan = await client.query(
+      `SELECT * FROM permintaan_stok WHERE id_permintaan = $1`,
+      [id_permintaan]
     );
 
-    if (result.rowCount === 0) {
+    if (cekPermintaan.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Permintaan stok tidak ditemukan' });
     }
 
+    const permintaan = cekPermintaan.rows[0];
+
+    // 2. Update status permintaan
+    await client.query(
+      `UPDATE permintaan_stok SET status = $1 WHERE id_permintaan = $2`,
+      [status, id_permintaan]
+    );
+
+    // 3. Jika status 'Selesai', otomatis tambahkan stok ke stok_inventaris cabang
+    if (status === 'Selesai') {
+      const detailPermintaan = await client.query(
+        `SELECT id_bahan, jumlah_diminta FROM detail_permintaan WHERE id_permintaan = $1`,
+        [id_permintaan]
+      );
+
+      for (const item of detailPermintaan.rows) {
+        // Cek apakah bahan sudah ada di stok_inventaris cabang tersebut
+        const cekStok = await client.query(
+          `SELECT * FROM stok_inventaris WHERE id_cabang = $1 AND id_bahan = $2`,
+          [permintaan.id_cabang_pemohon, item.id_bahan]
+        );
+
+        if (cekStok.rows.length > 0) {
+          // Tambahkan ke jumlah_sekarang yang sudah ada
+          await client.query(
+            `UPDATE stok_inventaris 
+             SET jumlah_sekarang = jumlah_sekarang + $1, last_updated = CURRENT_TIMESTAMP
+             WHERE id_cabang = $2 AND id_bahan = $3`,
+            [item.jumlah_diminta, permintaan.id_cabang_pemohon, item.id_bahan]
+          );
+        } else {
+          // Buat record baru jika belum ada
+          await client.query(
+            `INSERT INTO stok_inventaris (id_cabang, id_bahan, jumlah_sekarang, stok_minimum)
+             VALUES ($1, $2, $3, 0)`,
+            [permintaan.id_cabang_pemohon, item.id_bahan, item.jumlah_diminta]
+          );
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+
     res.status(200).json({
-      message: `Status permintaan berhasil diperbarui menjadi: ${status}`,
-      data: result.rows[0]
+      message: `Status berhasil diubah ke '${status}'${
+        status === 'Selesai' ? ' dan stok cabang diperbarui otomatis!' : '!'
+      }`
     });
+
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error(err.message);
-    res.status(500).json({ error: 'Terjadi kesalahan pada server' });
+    res.status(500).json({ error: 'Terjadi kesalahan pada server saat memproses transaksi' });
+  } finally {
+    client.release(); // Kembalikan koneksi ke pool
   }
 };
 
-module.exports = { ajukanPermintaan, getPermintaan, updateStatusPermintaan };
+module.exports = { ajukanPermintaan, getPermintaan, updateStatusDanTambahStok };

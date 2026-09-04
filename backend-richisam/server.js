@@ -17,6 +17,7 @@ const bahanRoutes = require('./routes/bahanRoutes');
 const mutasiRoutes = require('./routes/mutasiRoutes');
 const permintaanRoutes = require('./routes/permintaanRoutes');
 const authRoutes = require('./routes/authRoutes');
+const inventarisRoutes = require('./routes/inventarisRoutes');
 
 // 3. GUNAKAN ROUTES
 app.use('/api/auth', authRoutes);
@@ -24,6 +25,7 @@ app.use('/api/cabang', cabangRoutes);
 app.use('/api/bahan', bahanRoutes);
 app.use('/api/mutasi', mutasiRoutes);
 app.use('/api/permintaan', permintaanRoutes);
+app.use('/api/stok-cabang', inventarisRoutes);
 
 // Cek Status API
 app.get('/', (req, res) => {

@@ -1,3 +1,15 @@
+@import "tailwindcss";
+
+/* Konfigurasi warna brand Richisam untuk Tailwind v4 */
+@theme {
+  --color-richisam-putih: #FFFFFF;
+  --color-richisam-hitam: #000000;
+  --color-richisam-orange: #F9610D;
+  --color-richisam-merah-tua: #ED0303;
+  --color-richisam-merah-muda: #EC1F27;
+  --color-richisam-kuning: #FFCE00;
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -82,6 +94,7 @@ h1 {
     margin: 20px 0;
   }
 }
+
 h2 {
   font-size: 24px;
   line-height: 118%;
@@ -91,6 +104,7 @@ h2 {
     font-size: 20px;
   }
 }
+
 p {
   margin: 0;
 }

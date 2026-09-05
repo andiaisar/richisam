@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import Register from './pages/Register';
+
 
 // Komponen Dashboard dummy sederhana
 function Dashboard() {
@@ -51,6 +53,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         {/* Fallback: semua rute tak dikenal diarahkan ke /login */}
         <Route path="*" element={<Navigate to="/login" replace />} />

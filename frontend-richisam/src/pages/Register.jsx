@@ -100,20 +100,20 @@ export default function Register() {
     <div style={{
       minHeight: '100vh',
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, var(--color-richisam-merah-tua) 0%, #8B0000 100%)',
+      background: '#FBF7F4',
       fontFamily: 'var(--sans)',
-      padding: '24px',
+      padding: '32px 16px',
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '460px',
-        background: 'var(--bg)',
-        borderRadius: '20px',
-        padding: '40px 36px',
-        boxShadow: '0 32px 64px rgba(0,0,0,0.3)',
-        border: '1px solid var(--border)',
+        maxWidth: '440px',
+        background: '#fff',
+        borderRadius: '16px',
+        padding: '36px 28px',
+        boxShadow: '0 4px 24px rgba(26,15,8,0.08)',
+        border: '1px solid #EDE8E4',
       }}>
 
         {/* Header */}

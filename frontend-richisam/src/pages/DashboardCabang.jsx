@@ -73,13 +73,17 @@ export default function DashboardCabang() {
         <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
           <Table hoverable>
             <TableHead>
-              <TableHeadCell>Nama Bahan</TableHeadCell>
-              <TableHeadCell className="text-center">Stok Saat Ini</TableHeadCell>
-              <TableHeadCell className="text-center">Stok Minimum</TableHeadCell>
-              <TableHeadCell className="text-center">Kekurangan</TableHeadCell>
-              <TableHeadCell className="text-center">Aksi</TableHeadCell>
+              {/* ✅ TableRow wajib di dalam TableHead */}
+              <TableRow>
+                <TableHeadCell>Nama Bahan</TableHeadCell>
+                <TableHeadCell className="text-center">Stok Saat Ini</TableHeadCell>
+                <TableHeadCell className="text-center">Stok Minimum</TableHeadCell>
+                <TableHeadCell className="text-center">Kekurangan</TableHeadCell>
+                <TableHeadCell className="text-center">Aksi</TableHeadCell>
+              </TableRow>
             </TableHead>
-            <TableBody divideY>
+            {/* ✅ Hapus prop divideY */}
+            <TableBody>
               {loadingStok ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-10">
@@ -134,13 +138,16 @@ export default function DashboardCabang() {
         <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
           <Table hoverable>
             <TableHead>
-              <TableHeadCell>ID Tiket</TableHeadCell>
-              <TableHeadCell>Cabang Pemohon</TableHeadCell>
-              <TableHeadCell>Tanggal Minta</TableHeadCell>
-              <TableHeadCell className="text-center">Status</TableHeadCell>
-              <TableHeadCell className="text-center">Aksi (SOP Cabang)</TableHeadCell>
+              {/* ✅ TableRow wajib di dalam TableHead */}
+              <TableRow>
+                <TableHeadCell>ID Tiket</TableHeadCell>
+                <TableHeadCell>Cabang Pemohon</TableHeadCell>
+                <TableHeadCell>Tanggal Minta</TableHeadCell>
+                <TableHeadCell className="text-center">Status</TableHeadCell>
+                <TableHeadCell className="text-center">Aksi (SOP Cabang)</TableHeadCell>
+              </TableRow>
             </TableHead>
-            <TableBody divideY>
+            <TableBody>
               {loadingPesanan ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-10">

@@ -118,19 +118,12 @@ export default function Register() {
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '64px',
-            height: '64px',
-            borderRadius: '18px',
-            background: 'var(--color-richisam-orange)',
-            boxShadow: '0 8px 20px rgba(249,97,13,0.35)',
-            marginBottom: '16px',
-          }}>
-            <span style={{ fontSize: '28px', fontWeight: '900', color: '#fff' }}>R</span>
-          </div>
+          <img
+            src="/logo.png"
+            alt="Logo Richisam"
+            style={{ width: '72px', height: '72px', objectFit: 'contain', marginBottom: '12px' }}
+          />
+
           <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: '800', color: 'var(--text-h)', letterSpacing: '-0.5px' }}>
             Buat Akun
           </h1>

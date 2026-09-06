@@ -18,15 +18,9 @@ function Dashboard() {
         border: '1px solid #EDE8E4',
         boxShadow: '0 2px 12px rgba(26,15,8,0.06)',
       }}>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-          width: '48px', height: '48px', borderRadius: '12px',
-          background: 'var(--color-richisam-orange)',
-          marginBottom: '18px',
-          boxShadow: '0 4px 12px rgba(249,97,13,0.22)',
-        }}>
-          <span style={{ fontSize: '22px', fontWeight: '900', color: '#fff' }}>R</span>
-        </div>
+        <img src="/logo.png" alt="Logo Richisam"
+          style={{ width: '56px', height: '56px', objectFit: 'contain', marginBottom: '14px', borderRadius: '8px' }} />
+
         <h1 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: '800', color: '#1A0F08' }}>
           Selamat Datang di Richisam
         </h1>

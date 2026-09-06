@@ -34,13 +34,8 @@ function SidebarContent({ onClose }) {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{
-            width: '34px', height: '34px', borderRadius: '9px',
-            background: 'var(--color-richisam-orange)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-          }}>
-            <span style={{ fontSize: '15px', fontWeight: '900', color: '#fff' }}>R</span>
-          </div>
+          <img src="/logo.png" alt="Logo Richisam"
+            style={{ width: '36px', height: '36px', objectFit: 'contain', flexShrink: 0, borderRadius: '6px' }} />
           <div>
             <div style={{ color: '#fff', fontWeight: '700', fontSize: '14px', lineHeight: 1 }}>Richisam</div>
             <div style={{ color: 'rgba(255,255,255,0.3)', fontSize: '10px', marginTop: '2px' }}>Inventaris</div>
@@ -182,13 +177,8 @@ export default function DashboardLayout() {
 
           {/* Logo mobile inline */}
           <div className="md:hidden" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '26px', height: '26px', borderRadius: '6px',
-              background: 'var(--color-richisam-orange)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '12px', fontWeight: '900', color: '#fff' }}>R</span>
-            </div>
+            <img src="/logo.png" alt="Logo Richisam"
+              style={{ width: '28px', height: '28px', objectFit: 'contain', borderRadius: '4px' }} />
             <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A0F08' }}>Richisam</span>
           </div>
 

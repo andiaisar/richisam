@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Table, TableBody, TableCell, TableHead, TableHeadCell, TableRow,
-  Button, Badge, Spinner, Alert, Card,
+  Button, Badge, Spinner, Alert,
 } from 'flowbite-react';
 import { HiExclamationTriangle, HiTruck, HiArrowPath } from 'react-icons/hi2';
 import api from '../utils/api';
@@ -48,23 +48,49 @@ export default function DashboardGudang() {
   return (
     <div className="space-y-6">
 
-      {/* ══ KARTU METRIK ══ */}
+      {/* ══ KARTU METRIK — warna eksplisit agar tidak ikut dark mode OS ══ */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-yellow-400">
-          <p className="text-sm font-medium text-gray-500">Menunggu Diproses</p>
-          <p className="text-4xl font-black text-yellow-500 mt-1">{loading ? '—' : totalMenunggu}</p>
-          <p className="text-xs text-gray-400 mt-1">tiket perlu tindakan gudang</p>
-        </Card>
-        <Card className="border-l-4 border-l-blue-400">
-          <p className="text-sm font-medium text-gray-500">Sedang Diproses</p>
-          <p className="text-4xl font-black text-blue-500 mt-1">{loading ? '—' : totalDiproses}</p>
-          <p className="text-xs text-gray-400 mt-1">dalam perjalanan ke cabang</p>
-        </Card>
-        <Card className="border-l-4 border-l-green-400">
-          <p className="text-sm font-medium text-gray-500">Selesai</p>
-          <p className="text-4xl font-black text-green-500 mt-1">{loading ? '—' : totalSelesai}</p>
-          <p className="text-xs text-gray-400 mt-1">dikonfirmasi oleh cabang</p>
-        </Card>
+        {/* Kartu Menunggu */}
+        <div style={{
+          background: '#fff', borderRadius: '12px', padding: '20px 24px',
+          borderLeft: '4px solid #EAB308',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.07)',
+          border: '1px solid #F3F0EC', borderLeftColor: '#EAB308',
+        }}>
+          <p style={{ fontSize: '13px', fontWeight: '500', color: '#6B7280', margin: '0 0 6px' }}>Menunggu Diproses</p>
+          <p style={{ fontSize: '36px', fontWeight: '900', color: '#CA8A04', margin: '0 0 4px', lineHeight: 1 }}>
+            {loading ? '—' : totalMenunggu}
+          </p>
+          <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0 }}>tiket perlu tindakan gudang</p>
+        </div>
+
+        {/* Kartu Diproses */}
+        <div style={{
+          background: '#fff', borderRadius: '12px', padding: '20px 24px',
+          border: '1px solid #F3F0EC', borderLeftColor: '#3B82F6',
+          borderLeft: '4px solid #3B82F6',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.07)',
+        }}>
+          <p style={{ fontSize: '13px', fontWeight: '500', color: '#6B7280', margin: '0 0 6px' }}>Sedang Diproses</p>
+          <p style={{ fontSize: '36px', fontWeight: '900', color: '#2563EB', margin: '0 0 4px', lineHeight: 1 }}>
+            {loading ? '—' : totalDiproses}
+          </p>
+          <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0 }}>dalam perjalanan ke cabang</p>
+        </div>
+
+        {/* Kartu Selesai */}
+        <div style={{
+          background: '#fff', borderRadius: '12px', padding: '20px 24px',
+          border: '1px solid #F3F0EC', borderLeftColor: '#22C55E',
+          borderLeft: '4px solid #22C55E',
+          boxShadow: '0 1px 6px rgba(0,0,0,0.07)',
+        }}>
+          <p style={{ fontSize: '13px', fontWeight: '500', color: '#6B7280', margin: '0 0 6px' }}>Selesai</p>
+          <p style={{ fontSize: '36px', fontWeight: '900', color: '#16A34A', margin: '0 0 4px', lineHeight: 1 }}>
+            {loading ? '—' : totalSelesai}
+          </p>
+          <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0 }}>dikonfirmasi oleh cabang</p>
+        </div>
       </div>
 
       {/* ══ TABEL ANTREAN TIKET ══ */}
@@ -86,16 +112,20 @@ export default function DashboardGudang() {
         <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
           <Table hoverable>
             <TableHead>
-              <TableHeadCell>ID Tiket</TableHeadCell>
-              <TableHeadCell>Cabang Pemohon</TableHeadCell>
-              <TableHeadCell>Tanggal Minta</TableHeadCell>
-              <TableHeadCell className="text-center">Status</TableHeadCell>
-              <TableHeadCell className="text-center">
-                Aksi Gudang
-                <span className="block text-xs font-normal text-gray-400">(Selesai = hak cabang)</span>
-              </TableHeadCell>
+              {/* ✅ TableRow wajib di dalam TableHead */}
+              <TableRow>
+                <TableHeadCell>ID Tiket</TableHeadCell>
+                <TableHeadCell>Cabang Pemohon</TableHeadCell>
+                <TableHeadCell>Tanggal Minta</TableHeadCell>
+                <TableHeadCell className="text-center">Status</TableHeadCell>
+                <TableHeadCell className="text-center">
+                  Aksi Gudang
+                  <span className="block text-xs font-normal text-gray-400">(Selesai = hak cabang)</span>
+                </TableHeadCell>
+              </TableRow>
             </TableHead>
-            <TableBody divideY>
+            {/* ✅ Hapus prop divideY — tidak dikenal di v0.12 */}
+            <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-12">
@@ -129,7 +159,6 @@ export default function DashboardGudang() {
                   </TableCell>
                   <TableCell className="text-center">
                     {tiket.status === 'Menunggu' ? (
-                      // ✅ Hanya "Proses & Kirim" — tidak ada tombol Selesai
                       <Button size="xs"
                         disabled={prosesId === tiket.id_permintaan}
                         onClick={() => handleProses(tiket.id_permintaan)}
@@ -139,7 +168,6 @@ export default function DashboardGudang() {
                           : <><HiTruck className="mr-1 h-4 w-4" />Proses & Kirim</>}
                       </Button>
                     ) : (
-                      // ❌ Tidak ada tombol untuk status lain
                       <span className="text-xs text-gray-400 italic">
                         {tiket.status === 'Selesai' ? 'Dikonfirmasi cabang ✓' : 'Menunggu konfirmasi cabang'}
                       </span>

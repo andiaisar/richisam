@@ -40,15 +40,11 @@ export default function Login() {
         gap: '28px',
       }} className="hidden md:flex">
         {/* Logo besar */}
-        <div style={{
-          width: '80px', height: '80px',
-          borderRadius: '24px',
-          background: 'var(--color-richisam-orange)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 12px 32px rgba(249,97,13,0.35)',
-        }}>
-          <span style={{ fontSize: '36px', fontWeight: '900', color: '#fff' }}>R</span>
-        </div>
+        <img
+          src="/logo.png"
+          alt="Logo Richisam"
+          style={{ width: '88px', height: '88px', objectFit: 'contain', borderRadius: '16px' }}
+        />
         <div style={{ textAlign: 'center' }}>
           <h2 style={{ color: '#fff', fontSize: '28px', fontWeight: '800', margin: '0 0 10px', letterSpacing: '-0.5px' }}>
             Richisam
@@ -76,17 +72,10 @@ export default function Login() {
         <div style={{ width: '100%', maxWidth: '400px' }}>
 
           {/* Mobile logo */}
-          <div className="md:hidden" style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              width: '56px', height: '56px', borderRadius: '16px',
-              background: 'var(--color-richisam-orange)',
-              boxShadow: '0 6px 16px rgba(249,97,13,0.3)',
-              marginBottom: '12px',
-            }}>
-              <span style={{ fontSize: '24px', fontWeight: '900', color: '#fff' }}>R</span>
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: '800', color: '#1A0F08' }}>Richisam</div>
+          <div className="md:hidden" style={{ textAlign: 'center', marginBottom: '28px' }}>
+            <img src="/logo.png" alt="Logo Richisam"
+              style={{ width: '64px', height: '64px', objectFit: 'contain', marginBottom: '8px' }} />
+            <div style={{ fontSize: '20px', fontWeight: '800', color: '#1A0F08' }}>Richisam</div>
           </div>
 
           <h1 style={{ margin: '0 0 6px', fontSize: '26px', fontWeight: '800', color: '#1A0F08', letterSpacing: '-0.5px' }}>

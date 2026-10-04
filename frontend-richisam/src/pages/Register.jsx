@@ -20,18 +20,14 @@ export default function Register() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Ambil daftar cabang untuk dropdown
-    api.get('/cabang').catch(() => {
-      // Jika belum login, fetch tanpa token
-      fetch('http://localhost:5000/api/cabang', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+    // Ambil daftar cabang untuk dropdown (endpoint publik, tidak perlu login)
+    api.get('/cabang/publik')
+      .then(res => {
+        if (Array.isArray(res.data)) setCabangList(res.data);
       })
-        .then(r => r.json())
-        .then(data => Array.isArray(data) && setCabangList(data))
-        .catch(() => {});
-    }).then(res => {
-      if (res?.data && Array.isArray(res.data)) setCabangList(res.data);
-    });
+      .catch(() => {
+        setError('Gagal memuat daftar cabang. Pastikan server backend aktif.');
+      });
   }, []);
 
   const handleChange = (e) => {

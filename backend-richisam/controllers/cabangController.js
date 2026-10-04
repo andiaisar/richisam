@@ -10,6 +10,17 @@ const getAllCabang = async (req, res) => {
   }
 };
 
+// Publik (tanpa token) — hanya id & nama, dipakai dropdown halaman Register
+const getCabangPublik = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id_cabang, nama_cabang FROM cabang ORDER BY id_cabang ASC');
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ error: 'Terjadi kesalahan server saat mengambil cabang' });
+  }
+};
+
 const getStokKritis = async (req, res) => {
   try {
     const queryKritis = `
@@ -27,4 +38,4 @@ const getStokKritis = async (req, res) => {
   }
 };
 
-module.exports = { getAllCabang, getStokKritis };
+module.exports = { getAllCabang, getCabangPublik, getStokKritis };

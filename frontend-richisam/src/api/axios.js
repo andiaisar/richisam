@@ -17,10 +17,18 @@ instance.interceptors.request.use(
 );
 
 // Response interceptor: tangani error 401 (Unauthorized)
+const PUBLIC_PAGES = ['/login', '/register'];
+
 instance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    const isAuthRequest = error.config?.url?.startsWith('/auth');
+    const isOnPublicPage = PUBLIC_PAGES.includes(window.location.pathname);
+
+    // Redirect hanya jika sesi kadaluarsa di halaman terlindungi.
+    // 401 dari /auth (mis. password salah) atau di halaman publik dibiarkan
+    // agar komponen bisa menampilkan pesan error-nya sendiri.
+    if (error.response?.status === 401 && !isAuthRequest && !isOnPublicPage) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

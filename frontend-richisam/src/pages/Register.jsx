@@ -2,15 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../utils/api';
 
-const ROLES = ['Pegawai', 'Manajer', 'Superadmin'];
-
 export default function Register() {
   const [form, setForm] = useState({
     nama_lengkap: '',
     username: '',
     password: '',
     konfirmasi_password: '',
-    role: 'Pegawai',
     id_cabang: '',
   });
   const [cabangList, setCabangList] = useState([]);
@@ -52,7 +49,6 @@ export default function Register() {
         nama_lengkap: form.nama_lengkap,
         username: form.username,
         password: form.password,
-        role: form.role,
         id_cabang: form.id_cabang || null,
       });
 
@@ -167,21 +163,14 @@ export default function Register() {
             </div>
           ))}
 
-          {/* Role */}
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: 'var(--text-h)', marginBottom: '5px' }}>
-              Role
-            </label>
-            <select
-              name="role"
-              value={form.role}
-              onChange={handleChange}
-              style={inputStyle}
-              onFocus={focusIn}
-              onBlur={focusOut}
-            >
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-            </select>
+          {/* Info role — akun publik selalu Pegawai */}
+          <div style={{
+            padding: '10px 14px', borderRadius: '10px', fontSize: '12px', lineHeight: 1.5,
+            background: 'rgba(249,97,13,0.06)', border: '1px solid rgba(249,97,13,0.18)',
+            color: 'var(--text)',
+          }}>
+            ℹ️ Akun baru terdaftar sebagai <strong>Pegawai</strong>. Hubungi Superadmin
+            jika membutuhkan akses Manajer.
           </div>
 
           {/* Cabang */}

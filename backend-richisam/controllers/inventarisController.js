@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { bolehAksesCabang } = require('../middlewares/authMiddleware');
 
 // GET semua stok inventaris per cabang
 const getAllStokCabang = async (req, res) => {
@@ -70,6 +71,11 @@ const updateStokMinimum = async (req, res) => {
 
   if (stok_minimum === undefined || stok_minimum < 0) {
     return res.status(400).json({ error: 'stok_minimum harus berupa angka >= 0' });
+  }
+
+  // Role (Manajer/Superadmin) sudah dicek di route; di sini cek kepemilikan cabang
+  if (!bolehAksesCabang(req.user, id_cabang)) {
+    return res.status(403).json({ error: 'Anda hanya boleh mengubah stok minimum cabang Anda sendiri' });
   }
 
   try {

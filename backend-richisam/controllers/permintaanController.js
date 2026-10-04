@@ -1,14 +1,30 @@
 const pool = require('../config/db');
+const { bolehAksesCabang } = require('../middlewares/authMiddleware');
 
 const ajukanPermintaan = async (req, res) => {
-  const { id_cabang_pemohon, id_user, detail_barang } = req.body;
+  const { detail_barang } = req.body || {};
   // detail_barang adalah array: [{ id_bahan: 1, jumlah_diminta: 20 }, ...]
 
+  // Identitas diambil dari TOKEN, bukan dari body (tidak bisa dipalsukan)
+  const id_user = req.user.id_user;
+  // Superadmin boleh mengajukan atas nama cabang mana pun; role lain selalu cabangnya sendiri
+  const id_cabang_pemohon = req.user.role === 'Superadmin'
+    ? req.body?.id_cabang_pemohon
+    : req.user.id_cabang;
+
+  if (!id_cabang_pemohon || !Array.isArray(detail_barang) || detail_barang.length === 0) {
+    return res.status(400).json({
+      error: 'Field wajib: id_cabang_pemohon (akun harus terdaftar di cabang) dan detail_barang (array tidak kosong)'
+    });
+  }
+
+  // Gunakan SATU koneksi khusus agar seluruh langkah berada dalam transaksi yang sama
+  const client = await pool.connect();
   try {
-    await pool.query('BEGIN');
+    await client.query('BEGIN');
 
     // 1. Buat tiket permohonan
-    const permohonan = await pool.query(
+    const permohonan = await client.query(
       `INSERT INTO permintaan_stok (id_cabang_pemohon, id_user, status) 
        VALUES ($1, $2, 'Menunggu') RETURNING id_permintaan`,
       [id_cabang_pemohon, id_user]
@@ -17,19 +33,21 @@ const ajukanPermintaan = async (req, res) => {
 
     // 2. Masukkan daftar barang yang diminta
     for (let item of detail_barang) {
-      await pool.query(
+      await client.query(
         `INSERT INTO detail_permintaan (id_permintaan, id_bahan, jumlah_diminta) 
          VALUES ($1, $2, $3)`,
         [id_permintaan, item.id_bahan, item.jumlah_diminta]
       );
     }
 
-    await pool.query('COMMIT');
+    await client.query('COMMIT');
     res.json({ message: 'Permintaan stok berhasil diajukan', id_permintaan });
   } catch (err) {
-    await pool.query('ROLLBACK');
+    await client.query('ROLLBACK');
     console.error(err.message);
     res.status(500).json({ error: 'Gagal mengajukan permintaan stok' });
+  } finally {
+    client.release(); // Kembalikan koneksi ke pool
   }
 };
 
@@ -76,6 +94,24 @@ const updateStatusDanTambahStok = async (req, res) => {
     }
 
     const permintaan = cekPermintaan.rows[0];
+
+    // 1b. Otorisasi berdasarkan status tujuan
+    if (status === 'Selesai') {
+      // Konfirmasi terima barang: hanya cabang pemohon sendiri, atau Superadmin
+      if (!bolehAksesCabang(req.user, permintaan.id_cabang_pemohon)) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Hanya cabang pemohon yang boleh mengonfirmasi penerimaan barang' });
+      }
+      // Cegah stok ditambahkan dua kali
+      if (permintaan.status === 'Selesai') {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'Permintaan ini sudah dikonfirmasi selesai sebelumnya' });
+      }
+    } else if (req.user.role !== 'Superadmin') {
+      // Menunggu / Diproses / Dikirim: tugas gudang pusat → hanya Superadmin
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'Hanya Superadmin (gudang pusat) yang boleh memproses permintaan' });
+    }
 
     // 2. Update status permintaan
     await client.query(

@@ -6,54 +6,84 @@ const catatMutasi = async (req, res) => {
     return res.status(400).json({ error: 'Request body kosong. Kirim data JSON dengan Content-Type: application/json' });
   }
 
-  const { id_bahan, jenis_mutasi, jumlah, keterangan } = req.body;
+  // Ambil nilai dari request (masuk dan keluar default ke 0 jika tidak diisi)
+  const { id_bahan, shift, masuk = 0, keluar = 0, keterangan } = req.body;
 
-  // Identitas diambil dari TOKEN, bukan dari body (tidak bisa dipalsukan)
+  // Identitas diambil dari TOKEN
   const id_user = req.user.id_user;
-  // Superadmin boleh memilih cabang lewat body; role lain selalu cabangnya sendiri
   const id_cabang = req.user.role === 'Superadmin' ? req.body.id_cabang : req.user.id_cabang;
 
-  // Validasi: pastikan semua field wajib tersedia
-  if (!id_cabang || !id_bahan || !jenis_mutasi || !jumlah) {
-    return res.status(400).json({ error: 'Field wajib tidak lengkap: id_cabang, id_bahan, jenis_mutasi, jumlah' });
+  // 1. VALIDASI INPUT (Shift & Field Wajib)
+  if (!id_cabang || !id_bahan || !shift) {
+    return res.status(400).json({ error: 'Field wajib tidak lengkap: id_cabang, id_bahan, shift' });
   }
-  
-  // Gunakan SATU koneksi khusus agar BEGIN, query, dan COMMIT/ROLLBACK
-  // berjalan di sesi database yang sama (pool.query bisa memakai koneksi berbeda).
+
+  // Validasi tipe shift agar meminimalisir human error
+  const allowedShifts = ['Midnight', 'Pagi', 'Sore'];
+  if (!allowedShifts.includes(shift)) {
+    return res.status(400).json({ 
+      error: `Shift tidak valid. Harap pilih salah satu dari: ${allowedShifts.join(', ')}` 
+    });
+  }
+
+  // Pastikan input masuk dan keluar adalah angka yang valid dan tidak negatif
+  if (isNaN(masuk) || isNaN(keluar) || masuk < 0 || keluar < 0) {
+    return res.status(400).json({ error: 'Nilai masuk dan keluar harus berupa angka yang tidak negatif' });
+  }
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN'); 
-    
-    // 1. Simpan ke riwayat mutasi
-    await client.query(
-      `INSERT INTO riwayat_mutasi (id_cabang, id_bahan, jenis_mutasi, jumlah, keterangan, id_user) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [id_cabang, id_bahan, jenis_mutasi, jumlah, keterangan, id_user]
+
+    // 2. AMBIL STOK AWAL (SAW)
+    // Gunakan 'FOR UPDATE' untuk mengunci baris agar mencegah race condition jika ada request bersamaan
+    const cekStok = await client.query(
+      `SELECT jumlah_sekarang FROM stok_inventaris WHERE id_cabang = $1 AND id_bahan = $2 FOR UPDATE`,
+      [id_cabang, id_bahan]
     );
 
-    // 2. Sesuaikan stok di inventaris
-    const operator = jenis_mutasi === 'Masuk' ? '+' : '-';
-    const update = await client.query(
-      `UPDATE stok_inventaris 
-       SET jumlah_sekarang = jumlah_sekarang ${operator} $1, last_updated = CURRENT_TIMESTAMP
-       WHERE id_cabang = $2 AND id_bahan = $3`,
-      [jumlah, id_cabang, id_bahan]
-    );
-
-    // Jika baris stok tidak ada, batalkan juga pencatatan riwayat di langkah 1
-    if (update.rowCount === 0) {
+    if (cekStok.rowCount === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Data stok untuk cabang dan bahan tersebut tidak ditemukan' });
     }
 
+    const stok_awal = cekStok.rows[0].jumlah_sekarang;
+
+    // 3. LOGIKA RUMUS STOK AKHIR (SAK = SAW + Masuk - Keluar)
+    const stok_akhir = stok_awal + Number(masuk) - Number(keluar);
+
+    if (stok_akhir < 0) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Stok akhir tidak boleh kurang dari 0 (Keluar lebih besar dari stok tersedia)' });
+    }
+    
+    // 4. SIMPAN KE RIWAYAT MUTASI (Schema baru)
+    await client.query(
+      `INSERT INTO riwayat_mutasi 
+       (id_cabang, id_bahan, shift, stok_awal, jumlah_masuk, jumlah_keluar, stok_akhir, keterangan, id_user) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [id_cabang, id_bahan, shift, stok_awal, masuk, keluar, stok_akhir, keterangan, id_user]
+    );
+
+    // 5. UPDATE STOK TERKINI DI INVENTARIS
+    await client.query(
+      `UPDATE stok_inventaris 
+       SET jumlah_sekarang = $1, last_updated = CURRENT_TIMESTAMP
+       WHERE id_cabang = $2 AND id_bahan = $3`,
+      [stok_akhir, id_cabang, id_bahan]
+    );
+
     await client.query('COMMIT'); 
-    res.json({ message: `Mutasi stok ${jenis_mutasi} berhasil dicatat!` });
+    res.json({ 
+      message: 'Mutasi stok berhasil dicatat!',
+      data: { shift, stok_awal, masuk, keluar, stok_akhir }
+    });
   } catch (err) {
     await client.query('ROLLBACK'); 
     console.error(err.message);
     res.status(500).json({ error: 'Gagal mencatat mutasi stok' });
   } finally {
-    client.release(); // Kembalikan koneksi ke pool
+    client.release();
   }
 };
 
@@ -64,8 +94,11 @@ const getRiwayatMutasi = async (req, res) => {
         r.id_mutasi, 
         c.nama_cabang, 
         b.nama_bahan, 
-        r.jenis_mutasi, 
-        r.jumlah, 
+        r.shift,
+        r.stok_awal,
+        r.jumlah_masuk,
+        r.jumlah_keluar,
+        r.stok_akhir,
         r.keterangan, 
         r.tanggal_waktu
       FROM riwayat_mutasi r

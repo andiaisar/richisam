@@ -300,6 +300,8 @@ const Defect = () => {
                     <label className="block text-sm font-medium text-ink mb-1">Update Status</label>
                     <select required value={updateStatus} onChange={e => setUpdateStatus(e.target.value)} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange">
                       <option value="DITINJAU">DITINJAU</option>
+                      <option value="DISETUJUI">DISETUJUI</option>
+                      <option value="DITOLAK">DITOLAK</option>
                       <option value="SELESAI">SELESAI</option>
                     </select>
                   </div>

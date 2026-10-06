@@ -53,7 +53,7 @@ const Permintaan = () => {
   const openDetailModal = (ticket) => {
     setSelectedTicket(ticket);
     setUpdateData({ 
-      status: ticket.status === 'DIAJUKAN' ? 'DIPROSES' : ticket.status === 'DIPROSES' ? 'DIKIRIM' : ticket.status, 
+      status: ticket.status === 'DIAJUKAN' ? 'DIPROSES' : (ticket.status === 'DIPROSES' ? 'DIKIRIM' : 'SELESAI'), 
       qty_approved: ticket.qty_approved || ticket.qty_requested 
     });
     setIsDetailModalOpen(true);
@@ -82,11 +82,13 @@ const Permintaan = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      if (!updateData.status) return toast.error('Silakan pilih status');
+      
       const payload = { status: updateData.status };
       if (updateData.status === 'DIPROSES' || updateData.status === 'DIKIRIM') {
          payload.qty_approved = parseInt(updateData.qty_approved);
       }
-      await axiosClient.patch(`/requests/${selectedTicket.id}/status`, payload);
+      await axiosClient.put(`/requests/${selectedTicket.id}`, payload);
       toast.success('Status tiket berhasil diperbarui');
       setIsDetailModalOpen(false);
       fetchTickets();

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 const Outlets = () => {
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchOutlets = async () => {
     try {
@@ -22,6 +23,13 @@ const Outlets = () => {
   useEffect(() => {
     fetchOutlets();
   }, []);
+
+  const filteredOutlets = outlets.filter(o => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return o.nama?.toLowerCase().includes(q) || 
+           o.alamat?.toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -53,6 +61,8 @@ const Outlets = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari nama cabang..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />
@@ -75,8 +85,8 @@ const Outlets = () => {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
-              ) : outlets.length > 0 ? (
-                outlets.map((o) => (
+              ) : filteredOutlets.length > 0 ? (
+                filteredOutlets.map((o) => (
                   <tr key={o.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{o.nama}</td>
                     <td className="px-6 py-4">

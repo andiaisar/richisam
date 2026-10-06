@@ -9,6 +9,7 @@ const Permintaan = () => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchTickets = async () => {
     try {
@@ -25,6 +26,14 @@ const Permintaan = () => {
   useEffect(() => {
     fetchTickets();
   }, [filter]);
+
+  const filteredTickets = tickets.filter(t => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return t.kode_tiket?.toLowerCase().includes(q) || 
+           t.product_name?.toLowerCase().includes(q) ||
+           t.outlet_name?.toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -62,6 +71,8 @@ const Permintaan = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari kode tiket atau produk..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />
@@ -107,8 +118,8 @@ const Permintaan = () => {
                     </div>
                   </td>
                 </tr>
-              ) : tickets.length > 0 ? (
-                tickets.map((t) => (
+              ) : filteredTickets.length > 0 ? (
+                filteredTickets.map((t) => (
                   <tr key={t.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{t.kode_tiket}</td>
                     <td className="px-6 py-4 text-ink/80">{t.product_name}</td>

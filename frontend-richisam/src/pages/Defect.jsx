@@ -9,6 +9,7 @@ const Defect = () => {
   const [defects, setDefects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchDefects = async () => {
     try {
@@ -25,6 +26,14 @@ const Defect = () => {
   useEffect(() => {
     fetchDefects();
   }, [filter]);
+
+  const filteredDefects = defects.filter(d => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return d.product_name?.toLowerCase().includes(q) || 
+           d.keterangan?.toLowerCase().includes(q) ||
+           d.outlet_name?.toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -62,6 +71,8 @@ const Defect = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari produk atau keterangan..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />
@@ -106,8 +117,8 @@ const Defect = () => {
                     </div>
                   </td>
                 </tr>
-              ) : defects.length > 0 ? (
-                defects.map((d) => (
+              ) : filteredDefects.length > 0 ? (
+                filteredDefects.map((d) => (
                   <tr key={d.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4">
                       {d.foto_url ? (

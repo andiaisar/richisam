@@ -9,6 +9,7 @@ const Mutasi = () => {
   const [mutations, setMutations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [shiftFilter, setShiftFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchMutations = async () => {
     try {
@@ -26,9 +27,13 @@ const Mutasi = () => {
     fetchMutations();
   }, []);
 
-  const filteredMutations = shiftFilter === 'ALL' 
-    ? mutations 
-    : mutations.filter(m => m.shift === shiftFilter);
+  const filteredMutations = mutations
+    .filter(m => shiftFilter === 'ALL' || m.shift === shiftFilter)
+    .filter(m => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return m.product_name?.toLowerCase().includes(q) || m.outlet_name?.toLowerCase().includes(q);
+    });
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -66,6 +71,8 @@ const Mutasi = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari produk..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />

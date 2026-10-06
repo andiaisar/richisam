@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchUsers = async () => {
     try {
@@ -22,6 +23,14 @@ const Users = () => {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  const filteredUsers = users.filter(u => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return u.nama?.toLowerCase().includes(q) || 
+           u.username?.toLowerCase().includes(q) ||
+           u.outlet_name?.toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -53,6 +62,8 @@ const Users = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari nama atau username..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />
@@ -76,8 +87,8 @@ const Users = () => {
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
-              ) : users.length > 0 ? (
-                users.map((u) => (
+              ) : filteredUsers.length > 0 ? (
+                filteredUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{u.nama}</td>
                     <td className="px-6 py-4 text-ink/80">{u.username}</td>

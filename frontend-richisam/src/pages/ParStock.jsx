@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 const ParStock = () => {
   const [parStocks, setParStocks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchParStocks = async () => {
     try {
@@ -22,6 +23,13 @@ const ParStock = () => {
   useEffect(() => {
     fetchParStocks();
   }, []);
+
+  const filteredParStocks = parStocks.filter(ps => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return ps.product_name?.toLowerCase().includes(q) || 
+           ps.outlet_name?.toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -53,6 +61,8 @@ const ParStock = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
             <input 
               type="text" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Cari produk atau cabang..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />
@@ -75,8 +85,8 @@ const ParStock = () => {
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
-              ) : parStocks.length > 0 ? (
-                parStocks.map((ps) => (
+              ) : filteredParStocks.length > 0 ? (
+                filteredParStocks.map((ps) => (
                   <tr key={ps.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{ps.outlet_name}</td>
                     <td className="px-6 py-4 text-ink">{ps.product_name}</td>

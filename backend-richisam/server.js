@@ -21,19 +21,23 @@ app.use(bodyParser.json());           // Parsing JSON body
 app.use(bodyParser.urlencoded({ extended: true })); // Parsing form body
 
 // 2. IMPORT ROUTES
-const cabangRoutes = require('./routes/cabangRoutes');
-const bahanRoutes = require('./routes/bahanRoutes');
+const outletRoutes = require('./routes/outletRoutes');
+const productRoutes = require('./routes/productRoutes');
+const parStockRoutes = require('./routes/parStockRoutes');
 const mutasiRoutes = require('./routes/mutasiRoutes');
 const permintaanRoutes = require('./routes/permintaanRoutes');
 const authRoutes = require('./routes/authRoutes');
+const userRoutes = require('./routes/userRoutes');
 const inventarisRoutes = require('./routes/inventarisRoutes');
 const laporanRoutes = require('./routes/laporanRoutes');
 const defectRoutes = require('./routes/defectRoutes');
 
 // 3. GUNAKAN ROUTES
 app.use('/api/auth', authRoutes);
-app.use('/api/cabang', cabangRoutes);
-app.use('/api/bahan', bahanRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/outlets', outletRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/par-stocks', parStockRoutes);
 app.use('/api/mutasi', mutasiRoutes);
 app.use('/api/permintaan', permintaanRoutes);
 app.use('/api/stok-cabang', inventarisRoutes);

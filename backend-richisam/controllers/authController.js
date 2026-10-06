@@ -1,131 +1,111 @@
 const pool = require('../config/db');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { z } = require('zod');
 
-const ROLES_VALID = ['Pegawai', 'Manajer', 'Superadmin'];
+const loginSchema = z.object({
+  username: z.string().min(1, 'Username diperlukan'),
+  password: z.string().min(1, 'Password diperlukan')
+});
 
-// Helper bersama: simpan user baru ke database
-const simpanUserBaru = async (res, { nama_lengkap, username, password, role, id_cabang }) => {
-  // Cek apakah username sudah dipakai
-  const cek = await pool.query('SELECT id_user FROM users WHERE username = $1', [username]);
-  if (cek.rows.length > 0) {
-    return res.status(409).json({ error: 'Username sudah digunakan. Pilih username lain.' });
-  }
-
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  const result = await pool.query(
-    `INSERT INTO users (nama_lengkap, username, password, role, id_cabang)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id_user, nama_lengkap, username, role, id_cabang`,
-    [nama_lengkap, username, passwordHash, role, id_cabang || null]
-  );
-
-  return res.status(201).json({
-    message: 'Akun berhasil dibuat!',
-    user: result.rows[0],
-  });
-};
-
-// POST /api/auth/register — PUBLIK. Role SELALU 'Pegawai' (field role dari client diabaikan)
-const register = async (req, res) => {
-  if (!req.body || Object.keys(req.body).length === 0) {
-    return res.status(400).json({ error: 'Request body kosong.' });
-  }
-
-  const { nama_lengkap, username, password, id_cabang } = req.body;
-
-  if (!nama_lengkap || !username || !password) {
-    return res.status(400).json({ error: 'Field wajib: nama_lengkap, username, password' });
-  }
-
-  try {
-    await simpanUserBaru(res, { nama_lengkap, username, password, role: 'Pegawai', id_cabang });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Gagal membuat akun' });
-  }
-};
-
-// POST /api/auth/users — KHUSUS Superadmin. Boleh membuat akun dengan role apa pun
-const createUser = async (req, res) => {
-  const { nama_lengkap, username, password, role, id_cabang } = req.body || {};
-
-  if (!nama_lengkap || !username || !password || !role) {
-    return res.status(400).json({ error: 'Field wajib: nama_lengkap, username, password, role' });
-  }
-  if (!ROLES_VALID.includes(role)) {
-    return res.status(400).json({ error: `Role tidak valid. Gunakan: ${ROLES_VALID.join(', ')}` });
-  }
-
-  try {
-    await simpanUserBaru(res, { nama_lengkap, username, password, role, id_cabang });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Gagal membuat akun' });
-  }
-};
-
-// PATCH /api/auth/users/:id_user/role — KHUSUS Superadmin. Ubah role (dan opsional cabang) user
-const updateUserRole = async (req, res) => {
-  const { id_user } = req.params;
-  const { role, id_cabang } = req.body || {};
-
-  if (!ROLES_VALID.includes(role)) {
-    return res.status(400).json({ error: `Role tidak valid. Gunakan: ${ROLES_VALID.join(', ')}` });
-  }
-
-  try {
-    const result = await pool.query(
-      `UPDATE users
-       SET role = $1, id_cabang = COALESCE($2, id_cabang)
-       WHERE id_user = $3
-       RETURNING id_user, nama_lengkap, username, role, id_cabang`,
-      [role, id_cabang ?? null, id_user]
-    );
-
-    if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'User tidak ditemukan' });
-    }
-
-    res.json({
-      message: 'Role user berhasil diperbarui. User perlu login ulang agar perubahan berlaku.',
-      user: result.rows[0],
-    });
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Gagal memperbarui role user' });
-  }
-};
+const profileSchema = z.object({
+  nama: z.string().optional(),
+  old_password: z.string().optional(),
+  new_password: z.string().optional()
+});
 
 const login = async (req, res) => {
-  if (!req.body || Object.keys(req.body).length === 0) {
-    return res.status(400).json({ error: 'Request body kosong. Pastikan Content-Type: application/json dan body berisi username & password.' });
-  }
-  const { username, password } = req.body;
-  
   try {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+    }
+
+    const { username, password } = parsed.data;
+
     const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-    if (result.rows.length === 0) return res.status(401).json({ error: 'Username tidak ditemukan' });
+    if (result.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'Username atau password salah' });
+    }
 
     const user = result.rows[0];
-    
-    // Membandingkan password teks dari Postman dengan password hash di database
-    const validPassword = await bcrypt.compare(password, user.password);
-    if (!validPassword) return res.status(401).json({ error: 'Password salah' });
 
-    // Menerbitkan token yang memuat identitas user selama 1 hari
+    if (!user.is_active) {
+      return res.status(403).json({ success: false, message: 'Akun Anda dinonaktifkan' });
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, message: 'Username atau password salah' });
+    }
+
     const token = jwt.sign(
-      { id_user: user.id_user, role: user.role, id_cabang: user.id_cabang },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
+      { id: user.id, role: user.role, outlet_id: user.outlet_id },
+      process.env.JWT_SECRET || 'secret123',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
     );
 
-    res.json({ message: 'Login berhasil', token, role: user.role });
+    const { password_hash, ...userData } = user;
+
+    res.json({ success: true, message: 'Login berhasil', data: { token, user: userData } });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: 'Gagal memproses login' });
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Gagal memproses login' });
   }
 };
 
-module.exports = { register, login, createUser, updateUserRole };
+const me = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT id, nama, username, role, outlet_id, is_active FROM users WHERE id = $1', [req.user.id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
+    }
+    res.json({ success: true, message: 'Data user', data: result.rows[0] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Gagal mengambil data user' });
+  }
+};
+
+const updateProfile = async (req, res) => {
+  try {
+    const parsed = profileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+    }
+
+    const { nama, old_password, new_password } = parsed.data;
+    const userId = req.user.id;
+
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = result.rows[0];
+
+    let newPasswordHash = user.password_hash;
+    
+    if (new_password) {
+      if (!old_password) {
+        return res.status(400).json({ success: false, message: 'Password lama wajib diisi untuk mengubah password' });
+      }
+      const validPassword = await bcrypt.compare(old_password, user.password_hash);
+      if (!validPassword) {
+        return res.status(401).json({ success: false, message: 'Password lama salah' });
+      }
+      newPasswordHash = await bcrypt.hash(new_password, 10);
+    }
+
+    const newNama = nama || user.nama;
+
+    const updateRes = await pool.query(
+      `UPDATE users SET nama = $1, password_hash = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, nama, username, role, outlet_id`,
+      [newNama, newPasswordHash, userId]
+    );
+
+    res.json({ success: true, message: 'Profil berhasil diperbarui', data: updateRes.rows[0] });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Gagal memperbarui profil' });
+  }
+};
+
+module.exports = { login, me, updateProfile };

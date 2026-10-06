@@ -3,6 +3,8 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
 require('dotenv').config();
+const helmet = require('helmet');
+const morgan = require('morgan');
 
 const app = express();
 
@@ -10,6 +12,9 @@ const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 1. MIDDLEWARE HARUS DI ATAS (urutan penting!)
+app.use(helmet());
+app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // Allow serving static images across origins
+app.use(morgan('dev'));
 app.use(express.json());
 app.use(cors());
 app.use(bodyParser.json());           // Parsing JSON body
@@ -38,6 +43,15 @@ app.use('/api/defect', defectRoutes);
 // Cek Status API
 app.get('/', (req, res) => {
   res.json({ message: 'API Sistem Inventaris Richisam Aktif dengan Arsitektur MVC!' });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    success: false,
+    message: err.message || 'Terjadi kesalahan internal pada server'
+  });
 });
 
 const PORT = process.env.PORT || 5000;

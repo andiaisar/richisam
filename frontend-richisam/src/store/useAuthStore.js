@@ -10,8 +10,8 @@ const useAuthStore = create((set) => ({
   login: async (username, password) => {
     try {
       const data = await axiosClient.post('/auth/login', { username, password });
-      Cookies.set('token', data.token, { expires: 1 });
-      set({ user: data.user, isAuthenticated: true });
+      Cookies.set('token', data.data.token, { expires: 1 });
+      set({ user: data.data.user, isAuthenticated: true });
       return { success: true };
     } catch (error) {
       return { 

@@ -10,7 +10,7 @@ const ParStock = () => {
   const fetchParStocks = async () => {
     try {
       setLoading(true);
-      const res = await axiosClient.get('/par-stock');
+      const res = await axiosClient.get('/par-stocks');
       setParStocks(res.data?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil data par stock');

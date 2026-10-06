@@ -6,7 +6,7 @@ const { authenticate } = require('../middlewares/authMiddleware');
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 menit
-  max: 5, // limit 5 request login per windowMs
+  max: 100, // limit dinaikkan untuk development
   message: { success: false, message: 'Terlalu banyak percobaan login. Silakan coba lagi setelah 15 menit.' }
 });
 

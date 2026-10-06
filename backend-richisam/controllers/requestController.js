@@ -7,7 +7,7 @@ const requestSchema = z.object({
 });
 
 const updateSchema = z.object({
-  status: z.enum(['PROSES', 'DIKIRIM', 'SELESAI']),
+  status: z.enum(['DIPROSES', 'DIKIRIM', 'SELESAI']),
   qty_approved: z.number().min(0).optional()
 });
 
@@ -47,8 +47,8 @@ exports.updateStatus = async (req, res) => {
     const { status, qty_approved } = parsed.data;
 
     // RBAC logic here or in service
-    if (status === 'PROSES' || status === 'DIKIRIM') {
-      if (req.user.role === 'STAF_CABANG') return res.status(403).json({ success: false, message: 'Staf tidak bisa mengubah status ke PROSES/DIKIRIM' });
+    if (status === 'DIPROSES' || status === 'DIKIRIM') {
+      if (req.user.role === 'STAF_CABANG') return res.status(403).json({ success: false, message: 'Staf tidak bisa mengubah status ke DIPROSES/DIKIRIM' });
     }
 
     const tiket = await RequestService.updateStatus(id, status, qty_approved, req.user);

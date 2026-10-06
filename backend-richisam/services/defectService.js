@@ -46,7 +46,7 @@ class DefectService {
       if (defectRes.rows.length === 0) throw new Error('Laporan defect tidak ditemukan');
       const defect = defectRes.rows[0];
 
-      if (defect.status !== 'PENDING') throw new Error('Defect sudah diproses');
+      if (defect.status === 'SELESAI' || defect.status === 'DISETUJUI') throw new Error('Defect sudah diproses final');
 
       if (newStatus === 'DISETUJUI') {
          const hour = new Date().getHours();

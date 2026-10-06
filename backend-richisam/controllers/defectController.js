@@ -22,7 +22,7 @@ const defectSchema = z.object({
 });
 
 const updateSchema = z.object({
-  status: z.enum(['DISETUJUI', 'DITOLAK'])
+  status: z.enum(['DITINJAU', 'DISETUJUI', 'DITOLAK', 'SELESAI'])
 });
 
 exports.getDefects = async (req, res) => {
@@ -39,13 +39,13 @@ exports.getDefects = async (req, res) => {
 
 exports.reportDefect = async (req, res) => {
   try {
-    const outlet_id = req.body.outlet_id;
+    const outlet_id = req.body.outlet_id || req.user.outlet_id;
     if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
 
     const parsed = defectSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
 
-    const foto_url = req.file ? `/uploads/${req.file.filename}` : null;
+    const foto_url = req.file ? `/uploads/${req.file.filename}` : '';
 
     const defect = await DefectService.reportDefect(
       outlet_id, 

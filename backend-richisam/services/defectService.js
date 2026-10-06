@@ -5,11 +5,11 @@ class DefectService {
   static async getDefects(page = 1, limit = 10, outlet_id, status) {
     const offset = (page - 1) * limit;
     let query = `
-      SELECT d.*, p.nama AS product_name, o.nama AS outlet_name, u.nama AS reporter_name
+      SELECT d.id, d.outlet_id, d.product_id, d.qty, d.deskripsi AS keterangan, d.foto_url, d.status, d.reported_by, d.created_at, d.updated_at, p.nama AS product_name, o.nama AS outlet_name, u.nama AS reporter_name
       FROM defect_reports d
       JOIN products p ON d.product_id = p.id
       JOIN outlets o ON d.outlet_id = o.id
-      JOIN users u ON d.created_by = u.id
+      JOIN users u ON d.reported_by = u.id
       WHERE 1=1
     `;
     const params = [];
@@ -30,7 +30,7 @@ class DefectService {
 
   static async reportDefect(outlet_id, product_id, qty, keterangan, foto_url, user_id) {
     const result = await pool.query(
-      `INSERT INTO defect_reports (outlet_id, product_id, qty, keterangan, foto_url, created_by) 
+      `INSERT INTO defect_reports (outlet_id, product_id, qty, deskripsi, foto_url, reported_by) 
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [outlet_id, product_id, qty, keterangan, foto_url, user_id]
     );

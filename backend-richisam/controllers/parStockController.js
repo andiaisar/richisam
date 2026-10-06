@@ -11,7 +11,7 @@ const upsertSchema = z.object({
 exports.getParStocks = async (req, res) => {
   try {
     const { outlet_id } = req.query;
-    if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
+    // Allow fetching all if outlet_id is not provided (for Admin Pusat)
 
     const result = await ParStockService.getParStocks(parseInt(outlet_id));
     res.json({ success: true, message: 'Data par stock', data: result });

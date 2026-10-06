@@ -28,7 +28,7 @@ const updateSchema = z.object({
 exports.getDefects = async (req, res) => {
   try {
     const { page, limit, status } = req.query;
-    const outlet_id = req.query.outlet_id || req.body.outlet_id;
+    const outlet_id = req.query.outlet_id || (req.body && req.body.outlet_id);
     
     const result = await DefectService.getDefects(page, limit, outlet_id, status);
     res.json({ success: true, message: 'Daftar laporan defect', data: result });

@@ -10,22 +10,33 @@
   --color-richisam-merah-tua: #ED0303;
   --color-richisam-merah-muda: #EC1F27;
   --color-richisam-kuning: #FFCE00;
+
+  /* Turunan netral & redup (agar tidak terlalu terang/norak) */
+  --color-ink: #1C1714;        /* arang hangat — pengganti hitam murni */
+  --color-ink-soft: #2A231F;
+  --color-cream: #FAF7F4;      /* latar aplikasi */
+  --color-sand: #F1ECE7;       /* hover / surface sekunder */
+  --color-line: #ECE6E0;       /* border halus */
+  --color-muted: #8A7F78;      /* teks sekunder */
+  --color-ember: #E0560C;      /* orange sedikit diredam untuk tombol */
+
+  --font-sans: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* ── CSS Variables ── */
 :root {
   /* Warna teks — cukup gelap agar kontras di semua background */
-  --text:   #3D3540;     /* abu gelap keunguan */
-  --text-h: #180E08;     /* hampir hitam, hangat */
+  --text:   #4A403A;
+  --text-h: #1C1714;
 
   /* Background & border */
   --bg:     #ffffff;
-  --border: #E8E3DF;
+  --border: #ECE6E0;
 
   /* Utilitas */
   --code-bg: #F4F1EE;
-  --sans:    system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans:    'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono:    ui-monospace, Consolas, monospace;
 
   font-family: var(--sans);
@@ -38,7 +49,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Reset dasar ── */
+/* ── Reset dasar ──
+   PENTING: dibungkus @layer base agar utility Tailwind v4 (yang berada di
+   @layer utilities) tetap bisa menimpa warna/margin elemen. */
+@layer base {
 *,
 *::before,
 *::after {
@@ -50,7 +64,7 @@ body {
   padding: 0;
   overflow-x: hidden;
   color: var(--text);
-  background: #F5F2EF;   /* warm cream sebagai default app background */
+  background: #FAF7F4;   /* warm cream sebagai default app background */
 }
 
 #root {
@@ -81,9 +95,15 @@ a {
   text-decoration: none;
 }
 
-a:hover {
-  text-decoration: underline;
+code {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--code-bg);
+  color: var(--text-h);
 }
+} /* end @layer base */
 
 /* ── Scrollbar tipis ── */
 ::-webkit-scrollbar {
@@ -99,13 +119,4 @@ a:hover {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.25);
-}
-
-code {
-  font-family: var(--mono);
-  font-size: 13px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--code-bg);
-  color: var(--text-h);
 }

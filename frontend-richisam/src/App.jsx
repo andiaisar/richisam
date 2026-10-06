@@ -6,6 +6,7 @@ import useAuthStore from './store/useAuthStore';
 // Pages & Layouts
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
+import Dashboard from './pages/Dashboard';
 
 const App = () => {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -16,8 +17,8 @@ const App = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F5F2EF]">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[var(--color-richisam-orange)]"></div>
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <div className="animate-spin rounded-full h-10 w-10 border-[3px] border-line border-t-richisam-orange"></div>
       </div>
     );
   }
@@ -26,9 +27,10 @@ const App = () => {
     <Router>
       <Toaster position="top-center" toastOptions={{
         style: {
-          borderRadius: '10px',
-          background: '#333',
+          borderRadius: '12px',
+          background: '#1C1714',
           color: '#fff',
+          fontSize: '14px',
         },
       }} />
       <Routes>
@@ -39,16 +41,19 @@ const App = () => {
         
         {/* Protected Routes */}
         <Route path="/" element={<DashboardLayout />}>
-          <Route index element={
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-              <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-              <p className="text-gray-500">Selamat datang di RichiStock, halaman utama sedang dalam tahap pengembangan.</p>
-            </div>
-          } />
+          <Route index element={<Dashboard />} />
+          <Route path="*" element={<ComingSoon />} />
         </Route>
       </Routes>
     </Router>
   );
 };
+
+const ComingSoon = () => (
+  <div className="rounded-2xl bg-white border border-dashed border-line p-12 text-center">
+    <p className="text-lg font-semibold text-ink">Halaman sedang dibangun</p>
+    <p className="mt-1 text-sm text-muted">Fitur ini akan tersedia pada langkah berikutnya.</p>
+  </div>
+);
 
 export default App;

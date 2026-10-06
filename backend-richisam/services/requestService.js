@@ -9,7 +9,7 @@ class RequestService {
       FROM restock_tickets t
       JOIN products p ON t.product_id = p.id
       JOIN outlets o ON t.outlet_id = o.id
-      JOIN users u ON t.created_by = u.id
+      JOIN users u ON t.requested_by = u.id
       WHERE 1=1
     `;
     const params = [];
@@ -29,10 +29,11 @@ class RequestService {
   }
 
   static async createRequest(outlet_id, product_id, qty_requested, user_id) {
+    const kode_tiket = 'REQ-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
     const result = await pool.query(
-      `INSERT INTO restock_tickets (outlet_id, product_id, qty_requested, created_by) 
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [outlet_id, product_id, qty_requested, user_id]
+      `INSERT INTO restock_tickets (kode_tiket, outlet_id, product_id, qty_requested, requested_by) 
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [kode_tiket, outlet_id, product_id, qty_requested, user_id]
     );
     return result.rows[0];
   }

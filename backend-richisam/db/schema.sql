@@ -22,7 +22,7 @@ CREATE TYPE user_role_enum AS ENUM ('OWNER', 'ADMIN_PUSAT', 'STAF_CABANG');
 CREATE TYPE shift_enum AS ENUM ('MIDNIGHT', 'PAGI', 'SORE');
 CREATE TYPE sumber_masuk_enum AS ENUM ('MANUAL', 'TIKET');
 CREATE TYPE ticket_status_enum AS ENUM ('DIAJUKAN', 'DIPROSES', 'SELESAI');
-CREATE TYPE defect_status_enum AS ENUM ('BARU', 'DITINJAU', 'SELESAI');
+CREATE TYPE defect_status_enum AS ENUM ('BARU', 'DITINJAU', 'SELESAI', 'DISETUJUI', 'DITOLAK', 'PENDING');
 CREATE TYPE notif_tipe_enum AS ENUM ('PAR_STOCK', 'TIKET', 'DEFECT');
 
 CREATE TABLE outlets (

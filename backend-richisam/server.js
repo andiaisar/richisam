@@ -35,7 +35,7 @@ const mutationRoutes = require('./routes/mutationRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const stockRoutes = require('./routes/stockRoutes');
 const requestRoutes = require('./routes/requestRoutes');
-const laporanRoutes = require('./routes/laporanRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 const newDefectRoutes = require('./routes/defectRoutes');
 
 // 3. GUNAKAN ROUTES
@@ -48,7 +48,7 @@ app.use('/api/mutations', mutationRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/requests', requestRoutes);
-app.use('/api/laporan', laporanRoutes);
+app.use('/api/reports', reportRoutes);
 app.use('/api/defects', newDefectRoutes);
 
 // Cek Status API

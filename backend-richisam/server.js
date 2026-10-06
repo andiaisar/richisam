@@ -24,7 +24,7 @@ app.use(bodyParser.urlencoded({ extended: true })); // Parsing form body
 const outletRoutes = require('./routes/outletRoutes');
 const productRoutes = require('./routes/productRoutes');
 const parStockRoutes = require('./routes/parStockRoutes');
-const mutasiRoutes = require('./routes/mutasiRoutes');
+const mutationRoutes = require('./routes/mutationRoutes');
 const permintaanRoutes = require('./routes/permintaanRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
@@ -38,7 +38,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/outlets', outletRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/par-stocks', parStockRoutes);
-app.use('/api/mutasi', mutasiRoutes);
+app.use('/api/mutations', mutationRoutes);
 app.use('/api/permintaan', permintaanRoutes);
 app.use('/api/stok-cabang', inventarisRoutes);
 app.use('/api/laporan', laporanRoutes);

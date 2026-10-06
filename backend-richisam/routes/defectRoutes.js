@@ -1,10 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const defectController = require('../controllers/defectController');
-const uploadDefect = require('../middlewares/uploadDefect');
+const { authenticate, enforceOutletScope, authorize } = require('../middlewares/authMiddleware');
 
-// Endpoint POST /api/defect/laporkan
-// Menggunakan middleware uploadDefect.single('foto_bukti') untuk memproses form-data
-router.post('/laporkan', uploadDefect.single('foto_bukti'), defectController.laporkanDefect);
+router.use(authenticate, enforceOutletScope);
+
+router.get('/', defectController.getDefects);
+router.post('/', authorize('STAF_CABANG'), defectController.upload.single('foto'), defectController.reportDefect);
+router.put('/:id', authorize('ADMIN_PUSAT'), defectController.processDefect);
 
 module.exports = router;

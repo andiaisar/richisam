@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const NotificationService = require('./notificationService');
 
 class MutationService {
   static getPreviousShift(dateStr, shift) {
@@ -13,9 +14,13 @@ class MutationService {
     throw new Error('Shift tidak valid');
   }
 
-  // Hook kosong untuk fase berikutnya
+  // Hook untuk cek par stock setelah mutasi
   static async checkParStockHook(outlet_id, product_id) {
-    // Akan diimplementasikan di Fase 3D (Notifikasi)
+    try {
+      await NotificationService.checkParStock(outlet_id, product_id);
+    } catch (e) {
+      console.error('Error in checkParStockHook:', e);
+    }
   }
 
   static async getMutationForm(outlet_id, tanggal, shift) {
@@ -28,7 +33,7 @@ class MutationService {
     for (let p of products.rows) {
        // Cek mutasi sebelumnya (SAK)
        const prevMut = await pool.query(
-         'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4',
+         'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4 ORDER BY id DESC LIMIT 1',
          [outlet_id, p.id, prev.date, prev.shift]
        );
        
@@ -77,20 +82,20 @@ class MutationService {
       for (let item of items) {
         if (item.masuk < 0 || item.keluar < 0) throw new Error('Nilai masuk dan keluar tidak boleh negatif');
 
-        // Validasi apakah mutasi sudah ada
+        // Validasi apakah mutasi MANUAL sudah ada
         const exist = await client.query(
-          'SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4 FOR UPDATE',
-          [outlet_id, item.product_id, tanggal, shift]
+          'SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4 AND sumber_masuk = $5 FOR UPDATE',
+          [outlet_id, item.product_id, tanggal, shift, 'MANUAL']
         );
         if (exist.rows.length > 0) {
-           throw new Error(`Mutasi produk ID ${item.product_id} pada tanggal ${tanggal} shift ${shift} sudah ada.`);
+           throw new Error(`Mutasi MANUAL produk ID ${item.product_id} pada tanggal ${tanggal} shift ${shift} sudah ada.`);
         }
 
         // Cari SAW
         let saw = 0;
         const prevMut = await client.query(
-          'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4',
-          [outlet_id, item.product_id, prev.date, prev.shift]
+          'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND (tanggal < $3 OR (tanggal = $3 AND shift != $4)) ORDER BY id DESC LIMIT 1',
+          [outlet_id, item.product_id, tanggal, shift]
         );
         
         if (prevMut.rows.length > 0) {

@@ -1,144 +1,111 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import api from '../utils/api';
+import { useNavigate } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import toast from 'react-hot-toast';
+import { Loader2, PackageSearch } from 'lucide-react';
+import useAuthStore from '../store/useAuthStore';
 
-export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
+const loginSchema = z.object({
+  username: z.string().min(1, 'Username wajib diisi'),
+  password: z.string().min(1, 'Password wajib diisi'),
+});
+
+const Login = () => {
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const login = useAuthStore((state) => state.login);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setError(''); setLoading(true);
-    try {
-      const res = await api.post('/auth/login', { username, password });
-      localStorage.setItem('token', res.data.token);
-      navigate('/dashboard');
-    } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Kredensial tidak valid.');
-    } finally { setLoading(false); }
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(loginSchema),
+  });
+
+  const onSubmit = async (data) => {
+    setIsLoading(true);
+    const res = await login(data.username, data.password);
+    setIsLoading(false);
+
+    if (res.success) {
+      toast.success('Login berhasil!');
+      navigate('/');
+    } else {
+      toast.error(res.message);
+    }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      display: 'flex',
-      background: '#FBF7F4',              /* warm off-white — tidak mencolok */
-      fontFamily: 'var(--sans)',
-    }}>
-      {/* Panel kiri — branding */}
-      <div style={{
-        width: '44%',
-        background: 'linear-gradient(160deg, #1A0F08 0%, #2D1810 60%, #3D2215 100%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '48px 40px',
-        gap: '28px',
-      }} className="hidden md:flex">
-        {/* Logo besar */}
-        <img
-          src="/logo.png"
-          alt="Logo Richisam"
-          style={{ width: '88px', height: '88px', objectFit: 'contain', borderRadius: '16px' }}
-        />
-        <div style={{ textAlign: 'center' }}>
-          <h2 style={{ color: '#fff', fontSize: '28px', fontWeight: '800', margin: '0 0 10px', letterSpacing: '-0.5px' }}>
-            Richisam
-          </h2>
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', lineHeight: '1.7', margin: 0 }}>
-            Sistem Manajemen Inventaris<br />& Permintaan Stok Cabang
+    <div className="min-h-screen w-full flex bg-[#F5F2EF] font-sans">
+      {/* Left side: Branding / Image */}
+      <div className="hidden lg:flex w-1/2 bg-[var(--color-richisam-orange)] relative overflow-hidden flex-col justify-center items-center p-12">
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--color-richisam-orange)] to-[var(--color-richisam-merah-tua)] opacity-90" />
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 left-0 w-80 h-80 bg-[var(--color-richisam-kuning)] opacity-20 rounded-full blur-3xl -translate-x-1/3 translate-y-1/3" />
+        
+        <div className="relative z-10 text-white text-center">
+          <div className="mb-6 flex justify-center">
+            <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm border border-white/30 shadow-xl">
+              <PackageSearch size={64} className="text-white drop-shadow-md" />
+            </div>
+          </div>
+          <h1 className="text-5xl font-bold mb-4 tracking-tight">RichiStock</h1>
+          <p className="text-lg text-white/90 max-w-md mx-auto leading-relaxed">
+            Sistem Inventaris Cerdas & Terintegrasi untuk pemantauan stok real-time yang akurat.
           </p>
-        </div>
-        {/* Strip warna dekoratif */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-          {['#F9610D','#FFCE00','#EC1F27'].map(c => (
-            <div key={c} style={{ width: '32px', height: '4px', borderRadius: '2px', background: c, opacity: 0.7 }} />
-          ))}
         </div>
       </div>
 
-      {/* Panel kanan — form */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '40px 24px',
-      }}>
-        <div style={{ width: '100%', maxWidth: '400px' }}>
-
-          {/* Mobile logo */}
-          <div className="md:hidden" style={{ textAlign: 'center', marginBottom: '28px' }}>
-            <img src="/logo.png" alt="Logo Richisam"
-              style={{ width: '64px', height: '64px', objectFit: 'contain', marginBottom: '8px' }} />
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#1A0F08' }}>Richisam</div>
+      {/* Right side: Login Form */}
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12">
+        <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 relative overflow-hidden">
+          
+          <div className="text-center relative z-10">
+            <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Selamat Datang</h2>
+            <p className="text-gray-500 mt-2">Masuk ke akun Anda untuk melanjutkan</p>
           </div>
 
-          <h1 style={{ margin: '0 0 6px', fontSize: '26px', fontWeight: '800', color: '#1A0F08', letterSpacing: '-0.5px' }}>
-            Selamat datang
-          </h1>
-          <p style={{ margin: '0 0 32px', fontSize: '14px', color: '#9A8F89' }}>
-            Masuk untuk mengakses sistem inventaris
-          </p>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 relative z-10 mt-8">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700 block ml-1">Username</label>
+              <input 
+                {...register('username')}
+                type="text"
+                placeholder="Masukkan username Anda"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-richisam-orange)] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+              />
+              {errors.username && <p className="text-[var(--color-richisam-merah-muda)] text-xs mt-1 ml-1 font-medium">{errors.username.message}</p>}
+            </div>
 
-          {/* Error */}
-          {error && (
-            <div style={{
-              marginBottom: '20px', padding: '12px 14px', borderRadius: '10px',
-              background: 'rgba(237,3,3,0.06)', border: '1px solid rgba(237,3,3,0.15)',
-              fontSize: '13px', color: '#C0392B',
-            }}>⚠️ {error}</div>
-          )}
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700 block ml-1">Password</label>
+              <input 
+                {...register('password')}
+                type="password"
+                placeholder="••••••••"
+                className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[var(--color-richisam-orange)] focus:border-transparent transition-all duration-200 placeholder:text-gray-400"
+              />
+              {errors.password && <p className="text-[var(--color-richisam-merah-muda)] text-xs mt-1 ml-1 font-medium">{errors.password.message}</p>}
+            </div>
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-            {[
-              { id: 'username', label: 'Username', type: 'text', placeholder: 'Masukkan username', val: username, set: setUsername },
-              { id: 'password', label: 'Password', type: 'password', placeholder: '••••••••', val: password, set: setPassword },
-            ].map(({ id, label, type, placeholder, val, set }) => (
-              <div key={id}>
-                <label htmlFor={id} style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#4A3F39', marginBottom: '6px' }}>
-                  {label}
-                </label>
-                <input id={id} type={type} value={val} onChange={e => set(e.target.value)}
-                  required autoFocus={id === 'username'} placeholder={placeholder}
-                  style={{
-                    width: '100%', padding: '12px 14px', borderRadius: '10px', boxSizing: 'border-box',
-                    border: '1.5px solid #E8E0DB', background: '#fff', color: '#1A0F08',
-                    fontSize: '15px', outline: 'none', fontFamily: 'var(--sans)',
-                    transition: 'border-color 0.2s, box-shadow 0.2s',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'var(--color-richisam-orange)'; e.target.style.boxShadow = '0 0 0 3px rgba(249,97,13,0.1)'; }}
-                  onBlur={e => { e.target.style.borderColor = '#E8E0DB'; e.target.style.boxShadow = 'none'; }}
-                />
-              </div>
-            ))}
-
-            <button type="submit" disabled={loading} style={{
-              marginTop: '6px', padding: '13px', borderRadius: '10px', border: 'none',
-              background: 'var(--color-richisam-orange)', color: '#fff',
-              fontSize: '15px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1, transition: 'all 0.2s',
-              boxShadow: '0 4px 14px rgba(249,97,13,0.25)', fontFamily: 'var(--sans)',
-            }}
-              onMouseEnter={e => { if (!loading) e.target.style.background = '#D94E08'; }}
-              onMouseLeave={e => { if (!loading) e.target.style.background = 'var(--color-richisam-orange)'; }}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center py-3.5 px-4 rounded-xl text-white font-medium bg-gradient-to-r from-[var(--color-richisam-orange)] to-[var(--color-richisam-merah-muda)] hover:shadow-lg hover:shadow-[var(--color-richisam-orange)]/30 hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none mt-2"
             >
-              {loading ? 'Memproses...' : 'Masuk →'}
+              {isLoading ? (
+                <>
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
+                  Memproses...
+                </>
+              ) : (
+                'Masuk Sekarang'
+              )}
             </button>
           </form>
-
-          <p style={{ marginTop: '24px', textAlign: 'center', fontSize: '13px', color: '#9A8F89' }}>
-            Belum punya akun?{' '}
-            <Link to="/register" style={{ color: 'var(--color-richisam-orange)', fontWeight: '600', textDecoration: 'none' }}>
-              Daftar di sini
-            </Link>
-          </p>
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default Login;

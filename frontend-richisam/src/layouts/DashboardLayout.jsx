@@ -48,8 +48,8 @@ const SidebarContent = ({ menus, user, onLogout, onNavigate }) => (
   <div className="flex flex-col h-full">
     {/* Brand */}
     <div className="h-16 flex items-center gap-3 px-5 shrink-0">
-      <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-richisam-orange to-richisam-merah-muda flex items-center justify-center shadow-md shadow-richisam-orange/20">
-        <Boxes size={18} className="text-white" />
+      <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg p-1">
+        <img src="/logo.png" alt="Logo Richisam" className="w-full h-full object-contain" />
       </div>
       <span className="text-[17px] font-bold tracking-tight text-white">RichiStock</span>
     </div>

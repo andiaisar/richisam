@@ -67,8 +67,8 @@ const Login = () => {
 
         {/* Logo */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-richisam-orange to-richisam-merah-muda flex items-center justify-center shadow-lg shadow-richisam-orange/20">
-            <Boxes size={22} className="text-white" />
+          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-1 shadow-lg shadow-richisam-orange/20">
+            <img src="/logo.png" alt="Logo Richisam" className="w-full h-full object-contain" />
           </div>
           <div>
             <p className="text-lg font-bold tracking-tight text-white">RichiStock</p>
@@ -117,8 +117,8 @@ const Login = () => {
         <div className="w-full max-w-[400px]">
           {/* Logo mobile */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-richisam-orange to-richisam-merah-muda flex items-center justify-center">
-              <Boxes size={20} className="text-white" />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center p-1 shadow-sm border border-line">
+              <img src="/logo.png" alt="Logo Richisam" className="w-full h-full object-contain" />
             </div>
             <p className="text-lg font-bold text-ink">RichiStock</p>
           </div>

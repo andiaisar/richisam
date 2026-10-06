@@ -7,6 +7,14 @@ import useAuthStore from './store/useAuthStore';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
+import Mutasi from './pages/Mutasi';
+import Permintaan from './pages/Permintaan';
+import Defect from './pages/Defect';
+import Users from './pages/Users';
+import Outlets from './pages/Outlets';
+import Products from './pages/Products';
+import ParStock from './pages/ParStock';
+import Laporan from './pages/Laporan';
 
 const App = () => {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -42,6 +50,14 @@ const App = () => {
         {/* Protected Routes */}
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
+          <Route path="mutasi" element={<Mutasi />} />
+          <Route path="permintaan" element={<Permintaan />} />
+          <Route path="defect" element={<Defect />} />
+          <Route path="users" element={<Users />} />
+          <Route path="outlets" element={<Outlets />} />
+          <Route path="products" element={<Products />} />
+          <Route path="par-stock" element={<ParStock />} />
+          <Route path="laporan" element={<Laporan />} />
           <Route path="*" element={<ComingSoon />} />
         </Route>
       </Routes>

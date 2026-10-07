@@ -12,7 +12,7 @@ const Outlets = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/outlets');
-      setOutlets(res.data?.data || []);
+      setOutlets(res?.data?.data || res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil data cabang');
     } finally {

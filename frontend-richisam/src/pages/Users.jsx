@@ -20,7 +20,7 @@ const Users = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/users');
-      setUsers(res.data?.data || []);
+      setUsers(res?.data?.data || res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil data user');
     } finally {
@@ -31,7 +31,7 @@ const Users = () => {
   const fetchOutlets = async () => {
     try {
       const res = await axiosClient.get('/outlets');
-      setOutlets(res.data?.data || []);
+      setOutlets(res?.data?.data || res?.data || []);
     } catch (e) {}
   };
 

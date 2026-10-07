@@ -25,7 +25,7 @@ const Permintaan = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get(`/requests${filter !== 'ALL' ? `?status=${filter}` : ''}`);
-      setTickets(res.data?.data || []);
+      setTickets(res?.data?.data || res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil data permintaan');
     } finally {
@@ -36,7 +36,7 @@ const Permintaan = () => {
   const fetchProducts = async () => {
     try {
       const res = await axiosClient.get('/products');
-      setProducts(res.data?.data || []);
+      setProducts(res?.data?.data || res?.data || []);
     } catch (e) {}
   };
 

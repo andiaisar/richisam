@@ -18,8 +18,8 @@ const Assets = () => {
     if (user?.role !== 'STAF_CABANG') {
       try {
         const res = await axiosClient.get('/outlets');
-        setOutlets(res.data?.data || []);
-        if (res.data?.data?.length > 0) {
+        setOutlets(res?.data?.data || res?.data || []);
+        if (res?.data?.length > 0) {
           setSelectedOutlet(res.data.data[0].id.toString());
         }
       } catch (e) {}
@@ -39,7 +39,7 @@ const Assets = () => {
       const res = await axiosClient.get(`/assets/stocks`, {
         params: { outlet_id: selectedOutlet }
       });
-      setAssets(res.data?.data || []);
+      setAssets(res?.data?.data || res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil data aset');
     } finally {
@@ -131,9 +131,9 @@ const Assets = () => {
                   const total = qtyBaik + qtyRusak;
 
                   return (
-                    <tr key={a.asset_id} className="hover:bg-cream/30 transition-colors">
+                    <tr key={a.id} className="hover:bg-cream/30 transition-colors">
                       <td className="px-6 py-4 font-medium text-ink">{a.kode}</td>
-                      <td className="px-6 py-4 font-semibold text-ink">{a.asset_name}</td>
+                      <td className="px-6 py-4 font-semibold text-ink">{a.nama}</td>
                       <td className="px-6 py-4 text-muted">{a.kategori || 'Peralatan'}</td>
                       <td className="px-6 py-4 text-center font-bold text-green-700 bg-green-50/30">{qtyBaik}</td>
                       <td className="px-6 py-4 text-center font-bold text-red-700 bg-red-50/30">{qtyRusak}</td>

@@ -25,7 +25,7 @@ const Mutasi = () => {
       const fetchOutlets = async () => {
         try {
           const res = await axiosClient.get('/outlets');
-          setOutlets(res?.data || []);
+          setOutlets(res?.data?.data || res?.data || []);
           if (res?.data?.length > 0) {
             setSelectedOutlet(res.data[0].id.toString());
           }
@@ -46,7 +46,7 @@ const Mutasi = () => {
       const res = await axiosClient.get(`/mutations/form`, {
         params: { outlet_id: selectedOutlet, tanggal, shift }
       });
-      const data = res?.data || [];
+      const data = res?.data?.data || res?.data || [];
       
       const formatted = data.map(item => ({
         product_id: item.product_id,

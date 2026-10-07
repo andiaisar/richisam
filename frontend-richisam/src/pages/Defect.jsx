@@ -27,7 +27,7 @@ const Defect = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get(`/defects${filter !== 'ALL' ? `?status=${filter}` : ''}`);
-      setDefects(res.data?.data || []);
+      setDefects(res?.data?.data || res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil data defect');
     } finally {
@@ -38,7 +38,7 @@ const Defect = () => {
   const fetchProducts = async () => {
     try {
       const res = await axiosClient.get('/products');
-      setProducts(res.data?.data || []);
+      setProducts(res?.data?.data || res?.data || []);
     } catch (e) {}
   };
 

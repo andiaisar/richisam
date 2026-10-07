@@ -23,7 +23,7 @@ const Products = () => {
       setLoading(true);
       // fetch all products by sending limit=1000
       const res = await axiosClient.get('/products?limit=1000');
-      setProducts(res.data?.data?.data || res.data?.data || []);
+      setProducts(res?.data?.data || res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil data produk');
     } finally {

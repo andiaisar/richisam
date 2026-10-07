@@ -32,7 +32,7 @@ const Opname = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/opnames');
-      setOpnames(res?.data || []);
+      setOpnames(res?.data?.data || res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil daftar opname');
     } finally {
@@ -44,7 +44,7 @@ const Opname = () => {
     if (user?.role !== 'STAF_CABANG') {
       try {
         const res = await axiosClient.get('/outlets');
-        setOutlets(res?.data || []);
+        setOutlets(res?.data?.data || res?.data || []);
         if (res?.data?.length > 0) {
           setCreateData(prev => ({ ...prev, outlet_id: res.data[0].id }));
         }
@@ -73,7 +73,7 @@ const Opname = () => {
       setIsCreateModalOpen(false);
       fetchOpnames();
       // Auto open detail
-      if (res?.data) {
+      if (res?.data?.data || res?.data) {
         openDetail(res.data);
       }
     } catch (e) {

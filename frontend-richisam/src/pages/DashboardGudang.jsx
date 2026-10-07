@@ -23,7 +23,7 @@ export default function DashboardGudang() {
     setLoading(true); setError('');
     try {
       const res = await api.get('/permintaan');
-      setTikets(res.data ?? []);
+      setTikets(res?.data ?? []);
     } catch {
       setError('Gagal memuat antrean permintaan. Pastikan backend aktif.');
     } finally { setLoading(false); }

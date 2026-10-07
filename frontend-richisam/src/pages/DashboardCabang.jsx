@@ -23,7 +23,7 @@ export default function DashboardCabang() {
     setLoadingStok(true); setErrorStok('');
     try {
       const res = await api.get(`/stok-cabang/${ID_CABANG}/cek-kurang`);
-      setStokKurang(res.data.data_barang_kurang ?? []);
+      setStokKurang(res?.data?.data_barang_kurang ?? []);
     } catch {
       setErrorStok('Gagal memuat data stok. Pastikan backend aktif.');
     } finally { setLoadingStok(false); }
@@ -33,7 +33,7 @@ export default function DashboardCabang() {
     setLoadingPesanan(true); setErrorPesanan('');
     try {
       const res = await api.get('/permintaan');
-      setPesanan((res.data ?? []).filter(p => p.status === 'Diproses'));
+      setPesanan((res?.data ?? []).filter(p => p.status === 'Diproses'));
     } catch {
       setErrorPesanan('Gagal memuat daftar pesanan.');
     } finally { setLoadingPesanan(false); }

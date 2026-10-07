@@ -16,7 +16,7 @@ const OpeningBalance = () => {
     const fetchOutlets = async () => {
       try {
         const res = await axiosClient.get('/outlets');
-        setOutlets(res.data?.data || []);
+        setOutlets(res?.data?.data || res?.data || []);
       } catch (e) {
         toast.error('Gagal mengambil daftar outlet');
       }
@@ -28,7 +28,7 @@ const OpeningBalance = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/products?limit=1000');
-      const prodList = res.data?.data?.data || res.data?.data || [];
+      const prodList = res?.data?.data || res?.data || [];
       // Sort by urutan
       prodList.sort((a,b) => (a.urutan || 0) - (b.urutan || 0));
       setProducts(prodList);

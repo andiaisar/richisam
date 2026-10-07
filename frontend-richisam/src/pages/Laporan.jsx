@@ -24,8 +24,8 @@ const Laporan = () => {
       const fetchOutlets = async () => {
         try {
           const res = await axiosClient.get('/outlets');
-          setOutlets(res.data?.data || []);
-          if (res.data?.data?.length > 0) {
+          setOutlets(res?.data?.data || res?.data || []);
+          if (res?.data?.length > 0) {
             setSelectedOutlet(res.data.data[0].id.toString());
           }
         } catch (e) {}

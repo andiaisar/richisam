@@ -28,6 +28,7 @@ const MENUS = {
         { to: '/users', label: 'Manajemen User', icon: Users },
         { to: '/outlets', label: 'Cabang', icon: Store },
         { to: '/products', label: 'Produk', icon: Package },
+        { to: '/opening-balance', label: 'Stok Awal', icon: Boxes },
         { to: '/par-stock', label: 'Par Stock', icon: Gauge },
       ],
     },

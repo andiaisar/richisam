@@ -5,7 +5,10 @@ const productSchema = z.object({
   kode: z.string().min(1, 'Kode wajib diisi'),
   nama: z.string().min(1, 'Nama wajib diisi'),
   satuan: z.string().min(1, 'Satuan wajib diisi'),
-  kategori: z.string().optional()
+  kategori: z.string().optional(),
+  urutan: z.number().int().optional(),
+  harga: z.number().min(0).optional(),
+  satuan_perlu_konfirmasi: z.boolean().optional()
 });
 
 exports.getProducts = async (req, res) => {

@@ -50,3 +50,22 @@ exports.exportMutationsExcel = async (req, res) => {
     res.status(500).json({ success: false, message: e.message });
   }
 };
+
+exports.exportMonthlyExcel = async (req, res) => {
+  try {
+    const { bulan, tahun } = req.query;
+    if (!bulan || !tahun) return res.status(400).json({ success: false, message: 'bulan dan tahun diperlukan' });
+
+    const outlet_id = req.query.outlet_id || req.body.outlet_id; // body.outlet_id dari enforceOutletScope kalau role staf
+    if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
+
+    const buffer = await ReportService.exportMonthlyExcel(parseInt(outlet_id), parseInt(bulan), parseInt(tahun));
+
+    const monthStr = bulan.toString().padStart(2, '0');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="Laporan_Stok_Outlet_${outlet_id}_${monthStr}-${tahun}.xlsx"`);
+    res.send(buffer);
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};

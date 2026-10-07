@@ -42,8 +42,8 @@ class ProductService {
       if (cekKode.rows.length > 0) throw new Error('Kode produk sudah digunakan');
 
       const res = await client.query(
-        'INSERT INTO products (kode, nama, satuan, kategori) VALUES ($1, $2, $3, $4) RETURNING *',
-        [data.kode, data.nama, data.satuan, data.kategori]
+        'INSERT INTO products (kode, nama, satuan, kategori, urutan, harga, satuan_perlu_konfirmasi) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+        [data.kode, data.nama, data.satuan, data.kategori, data.urutan || 0, data.harga || 0, data.satuan_perlu_konfirmasi || false]
       );
       const newProduct = res.rows[0];
 
@@ -73,8 +73,17 @@ class ProductService {
     }
 
     const res = await pool.query(
-      'UPDATE products SET kode = $1, nama = $2, satuan = $3, kategori = $4, updated_at = CURRENT_TIMESTAMP WHERE id = $5 RETURNING *',
-      [data.kode || existing.kode, data.nama || existing.nama, data.satuan || existing.satuan, data.kategori || existing.kategori, id]
+      'UPDATE products SET kode = $1, nama = $2, satuan = $3, kategori = $4, urutan = $5, harga = $6, satuan_perlu_konfirmasi = $7, updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *',
+      [
+        data.kode || existing.kode, 
+        data.nama || existing.nama, 
+        data.satuan || existing.satuan, 
+        data.kategori !== undefined ? data.kategori : existing.kategori,
+        data.urutan !== undefined ? data.urutan : existing.urutan,
+        data.harga !== undefined ? data.harga : existing.harga,
+        data.satuan_perlu_konfirmasi !== undefined ? data.satuan_perlu_konfirmasi : existing.satuan_perlu_konfirmasi,
+        id
+      ]
     );
     return res.rows[0];
   }

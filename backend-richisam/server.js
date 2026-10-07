@@ -41,6 +41,7 @@ const newDefectRoutes = require('./routes/defectRoutes');
 const openingBalanceRoutes = require('./routes/openingBalanceRoutes');
 const opnameRoutes = require('./routes/opnameRoutes');
 const assetRoutes = require('./routes/assetRoutes');
+const importRoutes = require('./routes/importRoutes');
 
 // 3. GUNAKAN ROUTES
 app.use('/api/auth', authRoutes);
@@ -57,6 +58,7 @@ app.use('/api/defects', newDefectRoutes);
 app.use('/api/opening-balances', openingBalanceRoutes);
 app.use('/api/opnames', opnameRoutes);
 app.use('/api/assets', assetRoutes);
+app.use('/api/import', importRoutes);
 
 // Cek Status API
 app.get('/', (req, res) => {

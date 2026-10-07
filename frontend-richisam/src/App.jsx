@@ -14,6 +14,7 @@ import Users from './pages/Users';
 import Outlets from './pages/Outlets';
 import Products from './pages/Products';
 import OpeningBalance from './pages/OpeningBalance';
+import Opname from './pages/Opname';
 import ParStock from './pages/ParStock';
 import Laporan from './pages/Laporan';
 
@@ -58,6 +59,7 @@ const App = () => {
           <Route path="outlets" element={<Outlets />} />
           <Route path="products" element={<Products />} />
           <Route path="opening-balance" element={<OpeningBalance />} />
+          <Route path="opname" element={<Opname />} />
           <Route path="par-stock" element={<ParStock />} />
           <Route path="laporan" element={<Laporan />} />
           <Route path="*" element={<ComingSoon />} />

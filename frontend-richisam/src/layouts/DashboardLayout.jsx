@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, Navigate, NavLink, useLocation } from 'react-router-dom';
 import {
   Boxes, LayoutDashboard, ArrowLeftRight, PackagePlus, PackageX, Users, Store,
-  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight,
+  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import axiosClient from '../api/axiosClient';
@@ -16,6 +16,7 @@ const MENUS = {
       items: [
         { to: '/mutasi', label: 'Mutasi Stok', icon: ArrowLeftRight },
         { to: '/permintaan', label: 'Permintaan Barang', icon: PackagePlus },
+        { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Laporan Defect', icon: PackageX },
       ],
     },
@@ -36,6 +37,7 @@ const MENUS = {
       section: 'Operasional',
       items: [
         { to: '/permintaan', label: 'Tiket Permintaan', icon: ClipboardList },
+        { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Defect & Retur', icon: PackageX },
         { to: '/laporan', label: 'Laporan', icon: FileBarChart },
       ],

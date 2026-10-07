@@ -8,7 +8,8 @@
     "start": "node server.js",
     "migrate": "node db/migrate.js",
     "migrate:master": "node db/migrate_master.js",
-    "seed": "node db/seed.js"
+    "seed": "node db/seed.js",
+    "seed:master": "node db/seed_master.js"
   },
   "keywords": [],
   "author": "",
@@ -17,6 +18,7 @@
     "bcrypt": "^6.0.0",
     "body-parser": "^2.3.0",
     "cors": "^2.8.6",
+    "csv-parse": "^7.0.3",
     "dotenv": "^17.4.2",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",

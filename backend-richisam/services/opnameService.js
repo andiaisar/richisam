@@ -39,7 +39,7 @@ class OpnameService {
         await client.query(
           `INSERT INTO stock_opname_items (opname_id, product_id, qty_sistem, qty_fisik, selisih, harga_snapshot)
            VALUES ($1, $2, $3, $4, $5, $6)`,
-          [opname_id, p.id, p.qty_current, null, null, p.harga]
+          [opname_id, p.id, p.qty_current, 0, 0, p.harga]
         );
       }
       
@@ -55,7 +55,7 @@ class OpnameService {
         await client.query(
           `INSERT INTO asset_opname_items (opname_id, asset_id, qty_sistem, qty_fisik, selisih)
            VALUES ($1, $2, $3, $4, $5)`,
-          [opname_id, a.id, a.qty_baik, null, null]
+          [opname_id, a.id, a.qty_baik, 0, 0]
         );
       }
       

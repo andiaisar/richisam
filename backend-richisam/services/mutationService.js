@@ -27,7 +27,7 @@ class MutationService {
     
     const products = await pool.query(
       `SELECT p.id, p.nama, p.satuan, p.harga, p.urutan,
-       COALESCE(ps.qty_minimum, 0) as par_stock
+       COALESCE(ps.min_qty, 0) as par_stock
        FROM products p 
        LEFT JOIN par_stocks ps ON ps.product_id = p.id AND ps.outlet_id = $1
        WHERE p.is_active = true 

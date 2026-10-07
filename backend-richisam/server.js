@@ -13,8 +13,6 @@ const app = express();
 // Init cron jobs
 initCronJobs();
 
-// Menyajikan folder public agar file yang diupload (mis. foto defect) bisa diakses via URL
-app.use(express.static(path.join(__dirname, 'public')));
 
 // 1. MIDDLEWARE HARUS DI ATAS (urutan penting!)
 app.use(helmet());
@@ -24,6 +22,9 @@ app.use(express.json());
 app.use(cors());
 app.use(bodyParser.json());           // Parsing JSON body
 app.use(bodyParser.urlencoded({ extended: true })); // Parsing form body
+
+// Menyajikan folder public agar file yang diupload (mis. foto defect) bisa diakses via URL
+app.use(express.static(path.join(__dirname, 'public')));
 
 // 2. IMPORT ROUTES
 const authRoutes = require('./routes/authRoutes');

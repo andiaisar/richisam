@@ -1,0 +1,69 @@
+urutan,nama,harga,kategori_usulan,satuan_dugaan_perlu_konfirmasi
+1,AYAM MARINASI 1 EKOR,34123.0,Protein & Frozen,pcs/pack/unit
+2,AYAM MARINASI POTONG,5390.0,Protein & Frozen,pcs/pack/unit
+3,BERAS,13.6,Bahan Pokok & Sayur,gram/ml (harga per satuan terkecil)
+4,TEH,5800.0,Bahan Pokok & Sayur,pcs/pack/unit
+5,GULA,18.0,Bahan Pokok & Sayur,gram/ml (harga per satuan terkecil)
+6,GAS,20000.0,Operasional,pcs/pack/unit
+7,KEJU SLICE,992.0,Bahan Pokok & Sayur,pcs/pack/unit
+8,KENTANG,3091.0,Bahan Pokok & Sayur,pcs/pack/unit
+9,LOMBOK BIJI,35.0,Bahan Pokok & Sayur,gram/ml (harga per satuan terkecil)
+10,BAWANG PUTIH,9000.0,Bahan Pokok & Sayur,pcs/pack/unit
+11,MINYAK,17.0,Bahan Pokok & Sayur,gram/ml (harga per satuan terkecil)
+12,GALON,0.57,Minuman,gram/ml (harga per satuan terkecil)
+13,PLASTIK SAMPAH,13.0,Kebersihan,gram/ml (harga per satuan terkecil)
+14,ROTI BURGER,2000.0,Bahan Pokok & Sayur,pcs/pack/unit
+15,SAMBAL MATAH,28.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+16,SAMBAL RICA,45.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+17,SAMBAL RICHIS,27.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+18,SAMBAL BAWANG,32.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+19,SAUCE RICHISAM,28.56,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+20,SAUCE KEJU,54.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+21,SAUCE ORIGINAL,18.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+22,SAUCE BBQ,4316.0,Saus & Bumbu,pcs/pack/unit
+23,TEPUNG KRISPY,60410.0,Bahan Pokok & Sayur,pcs/pack/unit
+24,SABUN CUCI PIRING,3.0,Kebersihan,gram/ml (harga per satuan terkecil)
+25,FROZEN AYAM UNGKEP ISI 4,35263.0,Protein & Frozen,pcs/pack/unit
+26,FROZEN AYAM UNGKEP ISI 8,40949.0,Protein & Frozen,pcs/pack/unit
+27,CUP SAMBAL T.A,90.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+28,CUP SAMBAL DINE IN,186.0,Saus & Bumbu,pcs/pack/unit
+29,KERTAS KENTANG,370.0,Bahan Pokok & Sayur,pcs/pack/unit
+30,KERTAS NASI PUTIH,7500.0,Kemasan & Packaging,pcs/pack/unit
+31,MENTEGA,5500.0,Bahan Pokok & Sayur,pcs/pack/unit
+32,PELAPIS NASI COKLAT,7177.0,Kemasan & Packaging,pcs/pack/unit
+33,PLASTIK TANGAN,5417.0,Kemasan & Packaging,pcs/pack/unit
+34,SAUCE TOMAT SACHET,5020.0,Saus & Bumbu,pcs/pack/unit
+35,SAUCE SAMBAL SACHET,5140.0,Saus & Bumbu,pcs/pack/unit
+36,SELOTIP,0.0,Operasional,
+37,INDOMIE GORENG,2950.0,Protein & Frozen,pcs/pack/unit
+38,BUMBU KENTANG,4000.0,Bahan Pokok & Sayur,pcs/pack/unit
+39,BAYAM GORENG,112.6,Protein & Frozen,pcs/pack/unit
+40,AIR MINERAL,1458.0,Minuman,pcs/pack/unit
+41,LOYALTI CARD,0.0,Operasional,
+42,KERTAS THERMAL,4700.0,Operasional,pcs/pack/unit
+43,TISSU MEJA,2791.0,Kebersihan,pcs/pack/unit
+44,TISSU HAND TOWEL,7400.0,Kebersihan,pcs/pack/unit
+45,SABUN LANTAI,5.0,Kebersihan,gram/ml (harga per satuan terkecil)
+46,GARPU SENDOK PELASTIK,400.0,Kemasan & Packaging,pcs/pack/unit
+47,GELAS TAKE AWAY,7000.0,Kemasan & Packaging,pcs/pack/unit
+48,GELAS TA LARGE,7000.0,Kemasan & Packaging,pcs/pack/unit
+49,KECAP,22.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+50,KEMASAN ALA CARTE,800.0,Kemasan & Packaging,pcs/pack/unit
+51,KEMASAN BESAR,700.0,Kemasan & Packaging,pcs/pack/unit
+52,MANGGO SYRUP,11400.0,Minuman,pcs/pack/unit
+53,ORANGE SYRUP,11400.0,Minuman,pcs/pack/unit
+54,SIRUP LEMON,21800.0,Minuman,pcs/pack/unit
+55,PIPET NO STERIL,13000.0,Kemasan & Packaging,pcs/pack/unit
+56,PIPET STERIL,25000.0,Kemasan & Packaging,pcs/pack/unit
+57,PLASTIK BESAR 28,11385.0,Kemasan & Packaging,pcs/pack/unit
+58,PELASTIK BESAR 35,15840.0,Kemasan & Packaging,pcs/pack/unit
+59,PELASTIK SEDANG 24,8778.0,Kemasan & Packaging,pcs/pack/unit
+60,PELASTIK KECIL15,4719.0,Kemasan & Packaging,pcs/pack/unit
+61,PLASTIK CUP SEAL,94050.0,Kemasan & Packaging,pcs/pack/unit
+62,BUAH LEMON,9285.0,Bahan Pokok & Sayur,pcs/pack/unit
+63,SPRITE,11300.0,Minuman,pcs/pack/unit
+64,SABUN CUCI TANGAN,5.0,Kebersihan,gram/ml (harga per satuan terkecil)
+65,BIJI SELASIH,363.0,Bahan Pokok & Sayur,pcs/pack/unit
+66,NUTRISARI ANGGUR,1300.0,Minuman,pcs/pack/unit
+67,SAUCE PILLOW,12.0,Saus & Bumbu,gram/ml (harga per satuan terkecil)
+68,KEMASAN HOOK,2300.0,Kemasan & Packaging,pcs/pack/unit

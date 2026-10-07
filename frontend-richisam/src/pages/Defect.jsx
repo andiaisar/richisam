@@ -74,7 +74,7 @@ const Defect = () => {
       }
 
       await axiosClient.post('/defects', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': undefined }
       });
       toast.success('Laporan defect berhasil dikirim');
       setIsModalOpen(false);
@@ -173,8 +173,8 @@ const Defect = () => {
                   <tr key={d.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4">
                       {d.foto_url ? (
-                        <a href={`http://localhost:5000${d.foto_url}`} target="_blank" rel="noreferrer">
-                          <img src={`http://localhost:5000${d.foto_url}`} alt="Defect" className="h-10 w-10 rounded-md object-cover border border-line hover:opacity-80 transition-opacity" />
+                        <a href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${d.foto_url}`} target="_blank" rel="noreferrer">
+                          <img src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${d.foto_url}`} alt="Defect" className="h-10 w-10 rounded-md object-cover border border-line hover:opacity-80 transition-opacity" />
                         </a>
                       ) : (
                         <div className="h-10 w-10 rounded-md bg-cream flex items-center justify-center border border-line text-muted">
@@ -289,7 +289,7 @@ const Defect = () => {
                 {selectedDefect.foto_url && (
                    <div className="mt-3">
                      <span className="font-medium text-ink block mb-1">Foto Bukti:</span>
-                     <img src={`http://localhost:5000${selectedDefect.foto_url}`} alt="Bukti" className="w-full h-auto max-h-40 object-contain rounded border border-line bg-white" />
+                     <img src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${selectedDefect.foto_url}`} alt="Bukti" className="w-full h-auto max-h-40 object-contain rounded border border-line bg-white" />
                    </div>
                 )}
               </div>

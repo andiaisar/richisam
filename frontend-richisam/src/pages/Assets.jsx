@@ -56,7 +56,7 @@ const Assets = () => {
   const filteredAssets = assets.filter(a => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
-    return a.asset_name?.toLowerCase().includes(q) || a.kode?.toLowerCase().includes(q);
+    return a.nama?.toLowerCase().includes(q) || a.kode?.toLowerCase().includes(q);
   });
 
   return (

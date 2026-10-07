@@ -32,7 +32,7 @@ const Opname = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/opnames');
-      setOpnames(res.data?.data || []);
+      setOpnames(res?.data || []);
     } catch (e) {
       toast.error('Gagal mengambil daftar opname');
     } finally {
@@ -44,9 +44,9 @@ const Opname = () => {
     if (user?.role !== 'STAF_CABANG') {
       try {
         const res = await axiosClient.get('/outlets');
-        setOutlets(res.data?.data || []);
-        if (res.data?.data?.length > 0) {
-          setCreateData(prev => ({ ...prev, outlet_id: res.data.data[0].id }));
+        setOutlets(res?.data || []);
+        if (res?.data?.length > 0) {
+          setCreateData(prev => ({ ...prev, outlet_id: res.data[0].id }));
         }
       } catch (e) {}
     } else {
@@ -73,8 +73,8 @@ const Opname = () => {
       setIsCreateModalOpen(false);
       fetchOpnames();
       // Auto open detail
-      if (res.data?.data) {
-        openDetail(res.data.data);
+      if (res?.data) {
+        openDetail(res.data);
       }
     } catch (e) {
       toast.error(e.response?.data?.message || 'Gagal membuat opname');
@@ -89,8 +89,7 @@ const Opname = () => {
     setItemsLoading(true);
     try {
       const res = await axiosClient.get(`/opnames/${opname.id}`);
-      // combine stock items (we only handle stock items here, asset items can be ignored or handled separately if needed, but Prompt says "opname_items")
-      const stockItems = res.data?.data?.stockItems || [];
+      const stockItems = res?.data?.items || [];
       setItems(stockItems.map(item => ({
         ...item,
         qty_fisik: item.qty_fisik !== null ? item.qty_fisik : item.qty_sistem,
@@ -123,8 +122,8 @@ const Opname = () => {
     setSavingItems(true);
     try {
       const payload = {
-        stockItems: items.map(i => ({
-          id: i.id,
+        items: items.map(i => ({
+          product_id: i.product_id,
           qty_fisik: i.qty_fisik,
           alasan: i.alasan
         }))

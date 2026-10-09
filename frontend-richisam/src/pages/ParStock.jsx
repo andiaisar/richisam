@@ -1,9 +1,11 @@
+import useAuthStore from '../store/useAuthStore';
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { Gauge, Search, Plus, RefreshCw, FileText, X, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const ParStock = () => {
+  const { user } = useAuthStore();
   const [parStocks, setParStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');

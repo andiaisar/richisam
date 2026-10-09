@@ -12,6 +12,6 @@ const upload = multer({
 router.use(authenticate);
 
 // POST /api/import/mutations
-router.post('/mutations', authorize('ADMIN_PUSAT', 'OWNER'), upload.single('file'), importController.importMutations);
+router.post('/mutations', authorize('ADMIN_PUSAT'), upload.single('file'), importController.importMutations);
 
 module.exports = router;

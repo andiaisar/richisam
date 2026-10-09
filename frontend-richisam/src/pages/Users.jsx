@@ -1,9 +1,11 @@
+import useAuthStore from '../store/useAuthStore';
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { Users as UsersIcon, Search, Plus, RefreshCw, FileText, X, Key } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Users = () => {
+  const { user } = useAuthStore();
   const [users, setUsers] = useState([]);
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);

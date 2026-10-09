@@ -122,8 +122,8 @@ const Dashboard = () => {
           <div className="p-0 flex-1">
             {lowStocks.length > 0 ? (
               <ul className="divide-y divide-line">
-                {lowStocks.map((item) => (
-                  <li key={item.id} className="p-4 hover:bg-cream/50 transition-colors flex items-center justify-between group">
+                {lowStocks.map((item, idx) => (
+                  <li key={`${item.outlet_id}-${item.product_id}-${idx}`} className="p-4 hover:bg-cream/50 transition-colors flex items-center justify-between group">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center border border-red-100">
                         <Package className="h-4 w-4 text-richisam-red" />

@@ -45,9 +45,45 @@ const MENUS = {
       ],
     },
   ],
+  OWNER: [
+    { section: 'Utama', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
+    {
+      section: 'Master Data',
+      items: [
+        { to: '/users', label: 'Manajemen User', icon: Users },
+        { to: '/outlets', label: 'Cabang', icon: Store },
+        { to: '/products', label: 'Produk', icon: Package },
+        { to: '/par-stock', label: 'Par Stock', icon: Gauge },
+      ],
+    },
+    {
+      section: 'Operasional',
+      items: [
+        { to: '/permintaan', label: 'Tiket Permintaan', icon: ClipboardList },
+        { to: '/mutasi', label: 'Mutasi Stok', icon: ArrowLeftRight },
+        { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
+        { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
+        { to: '/defect', label: 'Defect & Retur', icon: PackageX },
+        { to: '/laporan', label: 'Laporan', icon: FileBarChart },
+      ],
+    },
+  ],
+  ADMIN_GUDANG: [
+    { section: 'Utama', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
+    {
+      section: 'Operasional',
+      items: [
+        { to: '/permintaan', label: 'Tiket Permintaan', icon: ClipboardList },
+        { to: '/mutasi', label: 'Mutasi Stok', icon: ArrowLeftRight },
+        { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
+        { to: '/defect', label: 'Defect & Retur', icon: PackageX },
+        { to: '/laporan', label: 'Laporan', icon: FileBarChart },
+      ],
+    },
+  ],
 };
 
-const ROLE_LABEL = { ADMIN_PUSAT: 'Admin Pusat', STAF_CABANG: 'Staf Cabang' };
+const ROLE_LABEL = { ADMIN_PUSAT: 'Admin Pusat', STAF_CABANG: 'Staf Cabang', ADMIN_GUDANG: 'Admin Gudang', OWNER: 'Owner' };
 
 const SidebarContent = ({ menus, user, onLogout, onNavigate }) => (
   <div className="flex flex-col h-full">

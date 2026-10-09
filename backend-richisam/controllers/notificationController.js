@@ -12,7 +12,7 @@ exports.getNotifications = async (req, res) => {
       if (userRes.rows.length > 0) outlet_id = userRes.rows[0].outlet_id;
     }
 
-    if (!outlet_id && req.user.role !== 'ADMIN_PUSAT') {
+    if (!outlet_id && req.user.role !== 'ADMIN_PUSAT' && req.user.role !== 'OWNER') {
       return res.status(403).json({ success: false, message: 'User tidak memiliki akses outlet' });
     }
 

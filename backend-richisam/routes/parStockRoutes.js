@@ -5,6 +5,6 @@ const { authenticate, authorize, enforceOutletScope } = require('../middlewares/
 
 router.use(authenticate, enforceOutletScope);
 router.get('/', parStockController.getParStocks); 
-router.put('/', authorize('ADMIN_PUSAT'), parStockController.upsertParStocks); 
+router.put('/', authorize('ADMIN_PUSAT', 'OWNER'), parStockController.upsertParStocks); 
 
 module.exports = router;

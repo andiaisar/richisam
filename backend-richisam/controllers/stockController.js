@@ -12,9 +12,20 @@ exports.getLowStocks = async (req, res) => {
 
 exports.getStocks = async (req, res) => {
   try {
+    const { page, limit } = req.query;
     const outlet_id = req.query.outlet_id || (req.body && req.body.outlet_id);
     const result = await StockService.getStocks(outlet_id ? parseInt(outlet_id) : null, page, limit);
     res.json({ success: true, message: 'Daftar stok', data: result });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.getRadarStock = async (req, res) => {
+  try {
+    const product_id = parseInt(req.params.product_id);
+    const result = await StockService.getRadarStock(product_id);
+    res.json({ success: true, message: 'Radar ketersediaan stok cabang', data: result });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
   }

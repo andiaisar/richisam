@@ -48,5 +48,17 @@ class StockService {
     const result = await pool.query(query, params);
     return { data: result.rows, meta: { total, page: parseInt(page), limit: parseInt(limit) } };
   }
+  static async getRadarStock(product_id) {
+    const query = `
+      SELECT o.id as outlet_id, o.nama AS outlet_name, s.qty_current, COALESCE(ps.min_qty, 0) as min_qty
+      FROM stocks s
+      JOIN outlets o ON s.outlet_id = o.id
+      LEFT JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
+      WHERE s.product_id = $1
+      ORDER BY s.qty_current DESC
+    `;
+    const result = await pool.query(query, [product_id]);
+    return result.rows;
+  }
 }
 module.exports = StockService;

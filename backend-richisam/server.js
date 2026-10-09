@@ -59,6 +59,7 @@ app.use('/api/opening-balances', openingBalanceRoutes);
 app.use('/api/opnames', opnameRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/transfers', require('./routes/transferRoutes'));
 
 // Cek Status API
 app.get('/', (req, res) => {

@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import Mutasi from './pages/Mutasi';
+import Transfer from './pages/Transfer';
 import Permintaan from './pages/Permintaan';
 import Defect from './pages/Defect';
 import Users from './pages/Users';
@@ -54,6 +55,7 @@ const App = () => {
         <Route path="/" element={<DashboardLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="mutasi" element={<Mutasi />} />
+          <Route path="transfer" element={<Transfer />} />
           <Route path="permintaan" element={<Permintaan />} />
           <Route path="defect" element={<Defect />} />
           <Route path="users" element={<Users />} />

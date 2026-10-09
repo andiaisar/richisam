@@ -5,6 +5,8 @@ const productSchema = z.object({
   kode: z.string().min(1, 'Kode wajib diisi'),
   nama: z.string().min(1, 'Nama wajib diisi'),
   satuan: z.string().min(1, 'Satuan wajib diisi'),
+  satuan_besar: z.string().optional(),
+  konversi: z.number().int().min(1).optional(),
   kategori: z.string().optional(),
   urutan: z.number().int().optional(),
   harga: z.number().min(0).optional(),

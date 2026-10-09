@@ -81,7 +81,12 @@ class RequestService {
          const tanggal = new Date().toISOString().split('T')[0];
 
          for (const item of items) {
-           const qty = item.qty_dikirim || item.qty_diminta;
+           const qty_awal = item.qty_dikirim || item.qty_diminta;
+           
+           // Ambil konversi produk
+           const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
+           const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
+           const qty = qty_awal * konversi;
            
            const prevMut = await client.query(
             'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',

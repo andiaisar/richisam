@@ -14,7 +14,7 @@ const Products = () => {
   // Modal state for Edit/Add
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({ kode: '', nama: '', kategori: '', satuan: '', urutan: 0, harga: 0, satuan_perlu_konfirmasi: false });
+  const [formData, setFormData] = useState({ kode: '', nama: '', kategori: '', satuan: '', satuan_besar: '', konversi: 1, urutan: 0, harga: 0, satuan_perlu_konfirmasi: false });
 
   // Bulk edit state
   const [isBulkOpen, setIsBulkOpen] = useState(false);
@@ -61,13 +61,15 @@ const Products = () => {
         nama: product.nama || '',
         kategori: product.kategori || '',
         satuan: product.satuan || '',
+        satuan_besar: product.satuan_besar || product.satuan || '',
+        konversi: product.konversi || 1,
         urutan: product.urutan || 0,
         harga: product.harga || 0,
         satuan_perlu_konfirmasi: product.satuan_perlu_konfirmasi || false
       });
     } else {
       setEditingProduct(null);
-      setFormData({ kode: '', nama: '', kategori: '', satuan: '', urutan: 0, harga: 0, satuan_perlu_konfirmasi: false });
+      setFormData({ kode: '', nama: '', kategori: '', satuan: '', satuan_besar: '', konversi: 1, urutan: 0, harga: 0, satuan_perlu_konfirmasi: false });
     }
     setIsModalOpen(true);
   };
@@ -148,7 +150,11 @@ const Products = () => {
           </button>
           {user?.role !== 'OWNER' && (
             <button 
-              onClick={() => openModal()}
+              onClick={() => {
+                setEditingProduct(null);
+                setFormData({ sku: '', nama: '', kategori: 'Bahan Baku', satuan: 'pcs', satuan_besar: 'pcs', konversi: 1 });
+                setIsModalOpen(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm"
             >
               <Plus size={18} />
@@ -193,7 +199,9 @@ const Products = () => {
                 <th className="px-6 py-4">Kode</th>
                 <th className="px-6 py-4">Nama Produk</th>
                 <th className="px-6 py-4">Kategori</th>
-                <th className="px-6 py-4">Satuan</th>
+                <th className="px-6 py-4">Satuan Besar</th>
+                <th className="px-6 py-4">Satuan Kecil</th>
+                <th className="px-6 py-4">Rasio (Konversi)</th>
                 <th className="px-6 py-4">Harga</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
@@ -215,11 +223,19 @@ const Products = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
-                        <span>{p.satuan}</span>
+                        <span className="font-medium text-ink">{p.satuan_besar || p.satuan}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-ink">{p.satuan}</span>
                         {p.satuan_perlu_konfirmasi && (
                           <span title="Satuan perlu konfirmasi" className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-ink/80 text-sm">
+                      1 <span className="font-semibold">{p.satuan_besar || p.satuan}</span> = {p.konversi || 1} <span className="font-semibold">{p.satuan}</span>
                     </td>
                     <td className="px-6 py-4 text-ink font-medium">{formatRupiah(p.harga)}</td>
                     <td className="px-6 py-4 text-right">
@@ -268,8 +284,18 @@ const Products = () => {
                   <input type="text" value={formData.kategori} onChange={e => setFormData({...formData, kategori: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-ink">Satuan</label>
-                  <input type="text" required value={formData.satuan} onChange={e => setFormData({...formData, satuan: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <label className="text-sm font-medium text-ink">Satuan Kecil (Dipakai Cabang)</label>
+                  <input type="text" placeholder="Misal: Gram" required value={formData.satuan} onChange={e => setFormData({...formData, satuan: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-ink">Satuan Besar (Gudang)</label>
+                  <input type="text" placeholder="Misal: Karung" required value={formData.satuan_besar} onChange={e => setFormData({...formData, satuan_besar: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-ink">Rasio (1 {formData.satuan_besar || 'Besar'} = X {formData.satuan || 'Kecil'})</label>
+                  <input type="number" required min="1" value={formData.konversi} onChange={e => setFormData({...formData, konversi: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
                 </div>
               </div>
               <div className="space-y-1.5">

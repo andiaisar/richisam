@@ -50,10 +50,19 @@ const Outlets = () => {
           >
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm">
-            <Plus size={18} />
-            Tambah Cabang
-          </button>
+          {user?.role !== 'OWNER' && (
+            <button 
+              onClick={() => {
+                setFormData({ nama: '', alamat: '', is_active: true });
+                setModalMode('add');
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm"
+            >
+              <Plus size={18} />
+              Tambah Cabang
+            </button>
+          )}
         </div>
       </div>
 

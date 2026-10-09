@@ -146,13 +146,15 @@ const Products = () => {
           >
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
-          <button 
-            onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm"
-          >
-            <Plus size={18} />
-            Tambah Produk
-          </button>
+          {user?.role !== 'OWNER' && (
+            <button 
+              onClick={() => openModal()}
+              className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm"
+            >
+              <Plus size={18} />
+              Tambah Produk
+            </button>
+          )}
         </div>
       </div>
 

@@ -129,10 +129,12 @@ const Users = () => {
           <button onClick={fetchUsers} className="p-2 rounded-lg border border-line bg-white hover:bg-cream text-ink transition-colors">
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
-          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm">
-            <Plus size={18} />
-            Tambah User
-          </button>
+          {user?.role !== 'OWNER' && (
+            <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm">
+              <Plus size={18} />
+              Tambah User
+            </button>
+          )}
         </div>
       </div>
 

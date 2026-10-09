@@ -136,5 +136,71 @@ class RequestService {
       client.release();
     }
   }
+
+  static async createEmergencyRequest(outlet_id, items, req_user) {
+    const kode_tiket = 'CITO-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      
+      const ticketResult = await client.query(
+        `INSERT INTO restock_tickets (kode_tiket, outlet_id, requested_by, processed_by, received_by, status, catatan) 
+         VALUES ($1, $2, $3, $4, $4, 'SELESAI', 'PENGAMBILAN DARURAT (CITO)') RETURNING *`,
+        [kode_tiket, outlet_id, req_user.id, req_user.id]
+      );
+      const ticket = ticketResult.rows[0];
+
+      const hour = new Date().getHours();
+      let shift = 'PAGI';
+      if (hour >= 6 && hour < 14) shift = 'PAGI';
+      else if (hour >= 14 && hour < 22) shift = 'SORE';
+      const tanggal = new Date().toISOString().split('T')[0];
+
+      for (const item of items) {
+        await client.query(
+          `INSERT INTO restock_ticket_items (ticket_id, product_id, qty_diminta, qty_dikirim) 
+           VALUES ($1, $2, $3, $4)`,
+          [ticket.id, item.product_id, item.qty, item.qty]
+        );
+
+        // Ambil konversi produk
+        const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
+        const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
+        const qtyToOutlet = item.qty * konversi;
+
+        const prevMut = await client.query(
+         'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
+         [outlet_id, item.product_id]
+        );
+        
+        let saw = 0;
+        if (prevMut.rows.length > 0) {
+          saw = prevMut.rows[0].sak;
+        } else {
+          const stock = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [outlet_id, item.product_id]);
+          saw = stock.rows.length > 0 ? stock.rows[0].qty_current : 0;
+        }
+
+        const sak = saw + qtyToOutlet;
+
+        await client.query(
+          `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'TIKET', $10)`,
+          [item.product_id, outlet_id, tanggal, shift, saw, qtyToOutlet, 0, sak, req_user.id, ticket.id]
+        );
+
+        await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, outlet_id, item.product_id]);
+        await NotificationService.checkParStock(outlet_id, item.product_id);
+      }
+
+      await client.query('COMMIT');
+      return ticket;
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
 }
 module.exports = RequestService;

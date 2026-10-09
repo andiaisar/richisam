@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X } from 'lucide-react';
+import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X, AlertTriangle, Check } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -19,6 +19,12 @@ const Permintaan = () => {
   // Form states
   const [formData, setFormData] = useState({ product_id: '', qty_requested: '' });
   const [updateData, setUpdateData] = useState({ status: '', qty_approved: '' });
+  
+  // Emergency Form State
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState(false);
+  const [emergencyData, setEmergencyData] = useState({ outlet_id: '', product_id: '', qty: '', password: '' });
+  const [outlets, setOutlets] = useState([]);
+
   const [submitting, setSubmitting] = useState(false);
 
   const fetchTickets = async () => {
@@ -40,10 +46,51 @@ const Permintaan = () => {
     } catch (e) {}
   };
 
+  const fetchOutlets = async () => {
+    try {
+      const res = await axiosClient.get('/outlets');
+      setOutlets(res?.data?.data || res?.data || []);
+    } catch (e) {}
+  };
+
   useEffect(() => {
     fetchTickets();
     fetchProducts();
+    if (user?.role === 'ADMIN_PUSAT') {
+      fetchOutlets();
+    }
   }, [filter]);
+
+  const openEmergencyModal = () => {
+    setEmergencyData({ outlet_id: '', product_id: '', qty: '', password: '' });
+    setIsEmergencyModalOpen(true);
+  };
+
+  const handleEmergencySubmit = async (e) => {
+    e.preventDefault();
+    if (!emergencyData.outlet_id || !emergencyData.product_id || !emergencyData.qty || !emergencyData.password) {
+      toast.error('Mohon lengkapi semua field termasuk PIN/Password');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await axiosClient.post('/requests/emergency', {
+        outlet_id: parseInt(emergencyData.outlet_id),
+        items: [{
+          product_id: parseInt(emergencyData.product_id),
+          qty: parseInt(emergencyData.qty)
+        }],
+        password: emergencyData.password
+      });
+      toast.success('Pengambilan Darurat Berhasil!');
+      setIsEmergencyModalOpen(false);
+      fetchTickets();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal memproses pengambilan darurat');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const openAddModal = () => {
     setFormData({ product_id: '', qty_requested: '' });
@@ -86,7 +133,10 @@ const Permintaan = () => {
       
       const payload = { status: updateData.status };
       if (updateData.status === 'DIPROSES' || updateData.status === 'DIKIRIM') {
-         payload.qty_approved = parseInt(updateData.qty_approved);
+         const qty = parseInt(updateData.qty_approved);
+         if (!isNaN(qty)) {
+           payload.qty_approved = qty;
+         }
       }
       await axiosClient.put(`/requests/${selectedTicket.id}`, payload);
       toast.success('Status tiket berhasil diperbarui');
@@ -122,6 +172,12 @@ const Permintaan = () => {
           <button onClick={fetchTickets} className="p-2 rounded-lg border border-line bg-white hover:bg-cream text-ink transition-colors" title="Muat Ulang">
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
+          {user?.role === 'ADMIN_PUSAT' && (
+            <button onClick={openEmergencyModal} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm">
+              <AlertTriangle size={18} />
+              Pengambilan Cito (Darurat)
+            </button>
+          )}
           {user?.role === 'STAF_CABANG' && (
             <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm">
               <Plus size={18} />
@@ -199,6 +255,55 @@ const Permintaan = () => {
           </table>
         </div>
       </div>
+
+      {/* Modal Emergency Request (CITO) */}
+      {isEmergencyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border-2 border-red-500">
+            <div className="flex items-center justify-between p-5 border-b border-line bg-red-50">
+              <h2 className="font-bold text-red-700 flex items-center gap-2"><AlertTriangle size={20}/> Pengambilan Darurat (CITO)</h2>
+              <button onClick={() => setIsEmergencyModalOpen(false)} className="text-muted hover:text-ink"><X size={20}/></button>
+            </div>
+            <form onSubmit={handleEmergencySubmit} className="p-5 space-y-4">
+              <div className="bg-red-50 text-red-800 p-3 rounded-lg text-sm mb-4 border border-red-200">
+                Fitur ini akan langsung memotong stok Gudang Pusat dan mencatatnya sebagai transaksi <b>SELESAI</b> tanpa persetujuan lebih lanjut. Gunakan hanya saat keadaan darurat.
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-ink">Cabang Yang Meminta</label>
+                <select required value={emergencyData.outlet_id} onChange={e => setEmergencyData({...emergencyData, outlet_id: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 bg-white">
+                  <option value="">Pilih Cabang</option>
+                  {outlets.map(o => <option key={o.id} value={o.id}>{o.nama}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-ink">Pilih Produk</label>
+                <select required value={emergencyData.product_id} onChange={e => setEmergencyData({...emergencyData, product_id: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 bg-white">
+                  <option value="">Pilih Produk</option>
+                  {products.map(p => <option key={p.id} value={p.id}>{p.kode} - {p.nama} ({p.satuan})</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-ink">Jumlah Fisik Diambil (Sesuai Satuan Di Atas)</label>
+                <input type="number" required min="1" value={emergencyData.qty} onChange={e => setEmergencyData({...emergencyData, qty: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500" placeholder="Masukkan jumlah"/>
+              </div>
+              <div className="space-y-1.5 pt-2">
+                <label className="text-sm font-bold text-red-700 flex items-center gap-2">
+                   Otorisasi Admin Gudang
+                </label>
+                <input type="password" required value={emergencyData.password} onChange={e => setEmergencyData({...emergencyData, password: e.target.value})} className="w-full px-3 py-2 border border-red-300 bg-red-50 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500" placeholder="Masukkan password Anda sebagai Tanda Tangan Digital"/>
+              </div>
+              
+              <div className="pt-4 flex justify-end gap-3 border-t border-line mt-6">
+                <button type="button" onClick={() => setIsEmergencyModalOpen(false)} className="px-4 py-2 text-muted hover:text-ink font-medium">Batal</button>
+                <button type="submit" disabled={submitting} className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 disabled:opacity-50">
+                  {submitting ? <RefreshCw size={18} className="animate-spin" /> : <Check size={18} />}
+                  Sahkan Pengambilan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Modal Add Request */}
       {isModalOpen && (

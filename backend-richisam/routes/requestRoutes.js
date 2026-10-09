@@ -6,6 +6,7 @@ const { authenticate, enforceOutletScope, authorize } = require('../middlewares/
 router.use(authenticate, enforceOutletScope);
 
 router.get('/', requestController.getRequests);
+router.post('/emergency', authorize('ADMIN_PUSAT'), requestController.emergencyRequest);
 router.post('/', authorize('STAF_CABANG'), requestController.createRequest);
 router.put('/:id', requestController.updateStatus);
 

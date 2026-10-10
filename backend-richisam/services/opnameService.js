@@ -213,7 +213,53 @@ class OpnameService {
       ORDER BY ast.urutan ASC
     `, [id]);
     
-    return { ...o.rows[0], items: items.rows, asset_items: asset_items.rows };
+    let total_loss_value = 0;
+    let total_surplus_value = 0;
+    let items_with_loss = [];
+
+    const processedItems = items.rows.map(item => {
+      const harga = parseFloat(item.harga_snapshot || 0);
+      const selisih = parseInt(item.selisih || 0);
+      const nilai = selisih * harga;
+      
+      if (selisih < 0) {
+        const lossVal = Math.abs(selisih) * harga;
+        total_loss_value += lossVal;
+        items_with_loss.push({
+          id: item.id,
+          product_name: item.nama,
+          satuan: item.satuan,
+          selisih,
+          loss_value: lossVal
+        });
+      } else if (selisih > 0) {
+        total_surplus_value += nilai;
+      }
+
+      return {
+        ...item,
+        nilai_selisih: nilai,
+        is_loss: selisih < 0,
+        is_surplus: selisih > 0
+      };
+    });
+
+    items_with_loss.sort((a, b) => b.loss_value - a.loss_value);
+
+    const loss_summary = {
+      total_loss_value,
+      total_surplus_value,
+      net_difference_value: total_surplus_value - total_loss_value,
+      loss_items_count: items_with_loss.length,
+      top_loss_items: items_with_loss.slice(0, 5)
+    };
+
+    return { 
+      ...o.rows[0], 
+      items: processedItems, 
+      asset_items: asset_items.rows,
+      loss_summary
+    };
   }
 }
 

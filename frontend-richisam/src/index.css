@@ -11,30 +11,25 @@
   --color-richisam-merah-muda: #EC1F27;
   --color-richisam-kuning: #FFCE00;
 
-  /* Turunan netral & redup (agar tidak terlalu terang/norak) */
-  --color-ink: #1C1714;        /* arang hangat — pengganti hitam murni */
-  --color-ink-soft: #2A231F;
-  --color-cream: #FAF7F4;      /* latar aplikasi */
-  --color-sand: #F1ECE7;       /* hover / surface sekunder */
-  --color-line: #ECE6E0;       /* border halus */
-  --color-muted: #8A7F78;      /* teks sekunder */
-  --color-ember: #E0560C;      /* orange sedikit diredam untuk tombol */
+  /* Turunan netral & tema dark luxury lembut serasi halaman login */
+  --color-ink: #FFFFFF;        /* judul / teks kontras utama */
+  --color-ink-soft: #FAF7F4;   /* teks terang sekunder */
+  --color-cream: #140F0D;      /* latar input / sub-surface */
+  --color-sand: #1E1815;       /* hover / surface sekunder */
+  --color-line: #2D241E;       /* border halus luxury dark */
+  --color-muted: #9E938B;      /* teks sekunder abu-abu lembut */
+  --color-ember: #E0560C;      /* orange tombol */
 
   --font-sans: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* ── CSS Variables ── */
 :root {
-  /* Warna teks — cukup gelap agar kontras di semua background */
-  --text:   #4A403A;
-  --text-h: #1C1714;
-
-  /* Background & border */
-  --bg:     #ffffff;
-  --border: #ECE6E0;
-
-  /* Utilitas */
-  --code-bg: #F4F1EE;
+  --text:   #FAF7F4;
+  --text-h: #FFFFFF;
+  --bg:     #120E0C;
+  --border: #2D241E;
+  --code-bg: #1A1412;
   --sans:    'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: 'Plus Jakarta Sans', system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono:    ui-monospace, Consolas, monospace;
@@ -49,63 +44,123 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── Reset dasar ──
-   PENTING: dibungkus @layer base agar utility Tailwind v4 (yang berada di
-   @layer utilities) tetap bisa menimpa warna/margin elemen. */
+/* ── Reset dasar ── */
 @layer base {
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    color: #FAF7F4;
+    background: #120E0C;   /* soft luxury dark theme matching login page */
+    color-scheme: dark;
+  }
+
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #120E0C;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--heading);
+    color: #FFFFFF;
+    margin: 0;
+    line-height: 1.3;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    color: var(--text);
+  }
+
+  a {
+    color: var(--color-richisam-orange);
+    text-decoration: none;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--code-bg);
+    color: var(--text-h);
+  }
 }
 
-body {
-  margin: 0;
-  padding: 0;
-  overflow-x: hidden;
-  color: var(--text);
-  background: #FAF7F4;   /* warm cream sebagai default app background */
+/* ── Penyesuaian Global Luxury Dark Theme Untuk Semua Komponen ── */
+.bg-white {
+  background-color: #1A1412 !important;
+  color: #FAF7F4;
 }
 
-#root {
-  width: 100%;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+/* Modal and dialogs */
+.fixed .bg-white,
+div[role="dialog"] .bg-white {
+  background-color: #1A1412 !important;
+  border-color: #382E28 !important;
 }
 
-/* ── Reset heading agar tidak override komponen React ──
-   Tailwind dan flowbite yang mengatur ukuran heading di dalam komponen */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--heading);
-  color: var(--text-h);
-  margin: 0;           /* hapus margin default browser */
-  line-height: 1.3;
-  font-weight: 600;
-  /* TIDAK ada font-size di sini — biarkan Tailwind/komponen yang mengatur */
+/* Form controls & inputs */
+input, select, textarea {
+  color-scheme: dark;
 }
 
-p {
-  margin: 0;
-  color: var(--text);
+input.bg-white, select.bg-white, textarea.bg-white,
+input.bg-cream, select.bg-cream, textarea.bg-cream {
+  background-color: #140F0D !important;
+  color: #FFFFFF !important;
+  border-color: #2D241E !important;
 }
 
-a {
-  color: var(--color-richisam-orange);
-  text-decoration: none;
+input:focus, select:focus, textarea:focus {
+  border-color: #F9610D !important;
+  outline: none;
 }
 
-code {
-  font-family: var(--mono);
-  font-size: 13px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: var(--code-bg);
-  color: var(--text-h);
+/* Tables */
+table th {
+  background-color: #16110F !important;
+  color: #FFFFFF !important;
+  border-color: #241C18 !important;
 }
-} /* end @layer base */
 
-/* ── Scrollbar tipis ── */
+table td {
+  border-color: #241C18 !important;
+  color: #FAF7F4;
+}
+
+table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Soft alerts */
+.bg-red-50 {
+  background-color: rgba(236, 31, 39, 0.12) !important;
+}
+.bg-green-50 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+.bg-yellow-50 {
+  background-color: rgba(255, 206, 0, 0.12) !important;
+}
+.bg-orange-50 {
+  background-color: rgba(249, 97, 13, 0.12) !important;
+}
+.bg-gray-50 {
+  background-color: #140F0D !important;
+}
+
+/* ── Scrollbar tipis dark ── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -114,9 +169,9 @@ code {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.15);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(255, 255, 255, 0.25);
 }

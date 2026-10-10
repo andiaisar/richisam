@@ -60,6 +60,8 @@ app.use('/api/opnames', opnameRoutes);
 app.use('/api/assets', assetRoutes);
 app.use('/api/import', importRoutes);
 app.use('/api/transfers', require('./routes/transferRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
+app.use('/api/batches', require('./routes/batchRoutes'));
 
 // Cek Status API
 app.get('/', (req, res) => {

@@ -8,7 +8,9 @@ const Mutasi = () => {
   const { user } = useAuthStore();
   
   const [outlets, setOutlets] = useState([]);
-  const [selectedOutlet, setSelectedOutlet] = useState('');
+  const [selectedOutlet, setSelectedOutlet] = useState(() => {
+    return user?.role === 'STAF_CABANG' ? user.outlet_id?.toString() || '' : '';
+  });
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [shift, setShift] = useState('PAGI');
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,13 +31,11 @@ const Mutasi = () => {
           if (res?.data?.length > 0) {
             setSelectedOutlet(res.data[0].id.toString());
           }
-        } catch (e) {
+        } catch {
           toast.error('Gagal memuat cabang');
         }
       };
       fetchOutlets();
-    } else {
-      setSelectedOutlet(user.outlet_id?.toString() || '');
     }
   }, [user]);
 
@@ -152,21 +152,23 @@ const Mutasi = () => {
   const totalKeluar = formItems.reduce((acc, item) => acc + calculateK(item), 0);
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-[1400px]">
+    <div className="space-y-6 animate-fade-in max-w-[1400px] text-white">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
-            <ArrowLeftRight className="h-6 w-6 text-richisam-orange" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-2.5 tracking-tight">
+            <ArrowLeftRight className="h-7 w-7 text-[#F9610D]" />
             Input Mutasi Harian
           </h1>
-          <p className="mt-1 text-sm text-muted">Laporan pemakaian dan hitung fisik stok persediaan.</p>
+          <p className="mt-1 text-xs sm:text-sm text-stone-400">
+            Laporan pemakaian dan hitung fisik stok persediaan bahan baku.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={handleSave} 
             disabled={formItems.length === 0 || loading || submitting} 
-            className="flex items-center gap-2 px-6 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#F9610D] to-[#E25304] hover:from-[#FA6E20] hover:to-[#EB5B09] text-white rounded-xl font-bold shadow-lg shadow-[#F9610D]/20 transition-all disabled:opacity-50 cursor-pointer text-sm"
           >
             {submitting ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
             Simpan Mutasi
@@ -174,16 +176,16 @@ const Mutasi = () => {
         </div>
       </div>
 
-      <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden flex flex-col">
+      <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl shadow-xl overflow-hidden flex flex-col">
         {/* Filter Bar */}
-        <div className="p-4 border-b border-line bg-cream/30 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <div className="p-5 border-b border-[#241C18] bg-[#140F0D]/60 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
           {user?.role !== 'STAF_CABANG' && (
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-ink">Cabang/Outlet</label>
+              <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">Cabang / Outlet</label>
               <select 
                 value={selectedOutlet}
                 onChange={e => setSelectedOutlet(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20"
+                className="w-full px-3.5 py-2.5 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white focus:outline-none focus:border-[#F9610D]"
               >
                 <option value="">-- Pilih Outlet --</option>
                 {outlets.map(o => (
@@ -193,23 +195,23 @@ const Mutasi = () => {
             </div>
           )}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink">Tanggal</label>
+            <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">Tanggal</label>
             <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
               <input 
                 type="date"
                 value={tanggal}
                 onChange={e => setTanggal(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20"
+                className="w-full pl-10 pr-3.5 py-2.5 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white focus:outline-none focus:border-[#F9610D]"
               />
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-ink">Shift</label>
+            <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">Shift</label>
             <select 
               value={shift}
               onChange={e => setShift(e.target.value)}
-              className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20"
+              className="w-full px-3.5 py-2.5 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white focus:outline-none focus:border-[#F9610D]"
             >
               <option value="MIDNIGHT">MIDNIGHT</option>
               <option value="PAGI">PAGI</option>
@@ -220,7 +222,7 @@ const Mutasi = () => {
             <button 
               onClick={fetchForm}
               disabled={!selectedOutlet}
-              className="w-full sm:w-auto px-4 py-2 bg-ink text-white rounded-lg text-sm font-medium hover:bg-ink/90 transition-colors disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-2.5 bg-[#221B17] hover:bg-[#2B231E] border border-stone-700/80 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-40 cursor-pointer shadow-sm flex items-center justify-center gap-2"
             >
               Tampilkan Form
             </button>
@@ -229,13 +231,13 @@ const Mutasi = () => {
 
         {/* Search Bar (Client side filter) */}
         {formItems.length > 0 && !loading && (
-          <div className="px-4 py-2 border-b border-line bg-white">
+          <div className="px-5 py-3 border-b border-[#241C18] bg-[#140F0D]/40">
             <input 
               type="text" 
               placeholder="Cari produk (Filter baris)..." 
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              className="w-full sm:w-80 px-3 py-1.5 border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20"
+              className="w-full sm:w-80 px-4 py-2 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#F9610D]"
             />
           </div>
         )}
@@ -244,24 +246,24 @@ const Mutasi = () => {
         <div className="overflow-x-auto">
           {loading ? (
             <div className="py-24 flex flex-col items-center justify-center">
-              <RefreshCw className="animate-spin text-richisam-orange mb-3" size={32} />
-              <p className="text-muted text-sm">Menyiapkan form mutasi...</p>
+              <RefreshCw className="animate-spin text-[#F9610D] mb-3" size={32} />
+              <p className="text-stone-400 text-sm font-medium">Menyiapkan form mutasi...</p>
             </div>
           ) : formItems.length > 0 ? (
             <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-cream/50 text-muted font-semibold border-b border-line sticky top-0 z-10">
+              <thead className="bg-[#16110F] text-stone-300 font-bold border-b border-[#2D241E] sticky top-0 z-10 text-xs uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-3 w-12 text-center">No</th>
-                  <th className="px-4 py-3 min-w-[200px]">Nama Produk</th>
-                  <th className="px-4 py-3 text-center">Satuan</th>
-                  <th className="px-4 py-3 text-right text-gray-500" title="Stok Awal (diambil dari SAK shift sebelumnya)">SAW</th>
-                  <th className="px-4 py-3 w-32">Masuk (M)</th>
-                  <th className="px-4 py-3 w-32 text-richisam-orange font-bold">Fisik (SAK)</th>
-                  <th className="px-4 py-3 text-right text-red-600" title="Keluar/Pemakaian">Keluar (K)</th>
-                  <th className="px-4 py-3 text-right">Nilai SAK</th>
+                  <th className="px-4 py-3.5 w-14 text-center">No</th>
+                  <th className="px-4 py-3.5 min-w-[200px]">Nama Produk</th>
+                  <th className="px-4 py-3.5 text-center">Satuan</th>
+                  <th className="px-4 py-3.5 text-right text-stone-300" title="Stok Awal (diambil dari SAK shift sebelumnya)">SAW</th>
+                  <th className="px-4 py-3.5 w-32">Masuk (M)</th>
+                  <th className="px-4 py-3.5 w-32 text-[#FFCE00] font-bold">Fisik (SAK)</th>
+                  <th className="px-4 py-3.5 text-right text-[#EC1F27]" title="Keluar/Pemakaian">Keluar (K)</th>
+                  <th className="px-4 py-3.5 text-right">Nilai SAK</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-line">
+              <tbody className="divide-y divide-[#241C18]">
                 {formItems
                   .filter(item => {
                     if (!searchQuery) return true;
@@ -275,28 +277,35 @@ const Mutasi = () => {
                   return (
                     <tr 
                       key={item.product_id} 
-                      className={`hover:bg-cream/30 transition-colors ${isBelowPar ? 'bg-orange-50/50' : ''}`}
+                      className={`transition-colors hover:bg-white/[0.03] ${isBelowPar ? 'bg-[#F9610D]/5' : ''}`}
                     >
-                      <td className="px-4 py-2.5 text-center text-muted">{item.urutan}</td>
-                      <td className="px-4 py-2.5">
-                        <p className="font-semibold text-ink">{item.nama}</p>
-                        <p className="text-xs text-muted">Par: {item.par_stock} • {formatRupiah(item.harga)}</p>
+                      {/* Nomor Urut Selalu Terlihat dengan Jelas */}
+                      <td className="px-4 py-3 text-center font-bold text-stone-300">
+                        {item.urutan || (idx + 1)}
                       </td>
-                      <td className="px-4 py-2.5 text-center text-muted">{item.satuan}</td>
-                      <td className="px-4 py-2.5 text-right font-medium text-gray-600 bg-gray-50/50">{item.saw}</td>
-                      <td className="px-4 py-2.5">
+                      <td className="px-4 py-3">
+                        <p className="font-bold text-white">{item.nama}</p>
+                        <p className="text-xs text-stone-400 mt-0.5">Par: {item.par_stock} • {formatRupiah(item.harga)}</p>
+                      </td>
+                      <td className="px-4 py-3 text-center font-medium text-stone-300">{item.satuan}</td>
+                      <td className="px-4 py-3 text-right font-black text-stone-200 bg-[#140F0D]/60">{item.saw}</td>
+                      
+                      {/* Input Masuk (M) */}
+                      <td className="px-4 py-3">
                         <input
                           type="number"
                           min="0"
-                          value={item.masuk === 0 ? '' : item.masuk} // allow empty visually
+                          value={item.masuk === 0 ? '' : item.masuk}
                           placeholder="0"
                           onChange={e => handleInputChange(item.product_id, 'masuk', e.target.value)}
                           onKeyDown={e => handleKeyDown(e, item.product_id, 'masuk', idx)}
                           ref={el => inputRefs.current[`${idx}-masuk`] = el}
-                          className="w-full px-2 py-1.5 text-right border border-line rounded focus:ring-1 focus:ring-richisam-orange/50 focus:border-richisam-orange outline-none bg-white text-green-700 font-medium"
+                          className="w-full px-2.5 py-1.5 text-right border border-[#2D241E] rounded-lg focus:ring-1 focus:ring-[#F9610D] focus:border-[#F9610D] outline-none bg-[#140F0D] text-emerald-400 font-bold placeholder:text-stone-600 text-sm"
                         />
                       </td>
-                      <td className="px-4 py-2.5">
+
+                      {/* Input Fisik (SAK) */}
+                      <td className="px-4 py-3">
                         <input
                           type="number"
                           min="0"
@@ -305,38 +314,42 @@ const Mutasi = () => {
                           onChange={e => handleInputChange(item.product_id, 'sak', e.target.value)}
                           onKeyDown={e => handleKeyDown(e, item.product_id, 'sak', idx)}
                           ref={el => inputRefs.current[`${idx}-sak`] = el}
-                          className={`w-full px-2 py-1.5 text-right border rounded focus:ring-1 focus:outline-none font-bold ${
+                          className={`w-full px-2.5 py-1.5 text-right border rounded-lg focus:ring-1 focus:outline-none font-black text-sm ${
                             isBelowPar 
-                              ? 'border-orange-300 text-orange-700 bg-orange-50 focus:ring-orange-400 focus:border-orange-400' 
-                              : 'border-line text-ink bg-white focus:ring-richisam-orange/50 focus:border-richisam-orange'
+                              ? 'border-[#F9610D] text-[#FFCE00] bg-orange-950/30 focus:ring-[#F9610D]' 
+                              : 'border-[#2D241E] text-white bg-[#140F0D] focus:border-[#F9610D] focus:ring-[#F9610D]'
                           }`}
                         />
                       </td>
-                      <td className="px-4 py-2.5 text-right font-bold bg-gray-50/50">
-                        <span className={isNegativeK ? 'text-red-600 flex items-center justify-end gap-1' : 'text-ink'}>
+
+                      {/* Keluar (K) */}
+                      <td className="px-4 py-3 text-right font-black bg-[#140F0D]/60">
+                        <span className={isNegativeK ? 'text-[#EC1F27] flex items-center justify-end gap-1' : 'text-stone-200'}>
                           {isNegativeK && <AlertCircle size={14} />}
                           {k}
                         </span>
                       </td>
-                      <td className="px-4 py-2.5 text-right text-muted font-medium bg-gray-50/50">
+
+                      {/* Nilai SAK */}
+                      <td className="px-4 py-3 text-right text-stone-200 font-semibold bg-[#140F0D]/60">
                         {formatRupiah(calculateTotalHarga(item))}
                       </td>
                     </tr>
                   )
                 })}
               </tbody>
-              <tfoot className="bg-cream border-t-2 border-line sticky bottom-0 z-10">
+              <tfoot className="bg-[#16110F] border-t-2 border-[#2D241E] sticky bottom-0 z-10 text-white font-bold">
                 <tr>
-                  <td colSpan={6} className="px-4 py-3 text-right font-bold text-ink">Total Pengeluaran (K)</td>
-                  <td className="px-4 py-3 text-right font-bold text-red-600">{totalKeluar}</td>
-                  <td className="px-4 py-3 text-right font-bold text-ink">{formatRupiah(totalPersediaan)}</td>
+                  <td colSpan={6} className="px-4 py-3.5 text-right font-bold text-stone-300">Total Pengeluaran (K)</td>
+                  <td className="px-4 py-3.5 text-right font-black text-[#EC1F27] text-base">{totalKeluar}</td>
+                  <td className="px-4 py-3.5 text-right font-black text-[#FFCE00] text-base">{formatRupiah(totalPersediaan)}</td>
                 </tr>
               </tfoot>
             </table>
           ) : (
             <div className="py-24 text-center">
-              <FileText size={48} className="mx-auto text-line mb-3" />
-              <p className="text-muted text-sm font-medium">Pilih cabang, tanggal, dan shift lalu tekan Tampilkan Form</p>
+              <FileText size={48} className="mx-auto text-stone-600 mb-3" />
+              <p className="text-stone-400 text-sm font-semibold">Pilih cabang, tanggal, dan shift lalu tekan Tampilkan Form</p>
             </div>
           )}
         </div>

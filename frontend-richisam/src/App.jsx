@@ -19,6 +19,8 @@ import Assets from './pages/Assets';
 import Opname from './pages/Opname';
 import ParStock from './pages/ParStock';
 import Laporan from './pages/Laporan';
+import Analytics from './pages/Analytics';
+import Kadaluarsa from './pages/Kadaluarsa';
 
 const App = () => {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -66,6 +68,8 @@ const App = () => {
           <Route path="opname" element={<Opname />} />
           <Route path="par-stock" element={<ParStock />} />
           <Route path="laporan" element={<Laporan />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="kadaluarsa" element={<Kadaluarsa />} />
           <Route path="*" element={<ComingSoon />} />
         </Route>
       </Routes>

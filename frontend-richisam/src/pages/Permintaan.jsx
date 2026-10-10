@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X, AlertTriangle, Check } from 'lucide-react';
+import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X, AlertTriangle, Check, Printer } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import SuratJalanModal from '../components/SuratJalanModal';
 
 const Permintaan = () => {
   const { user } = useAuthStore();
@@ -15,6 +16,10 @@ const Permintaan = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
+
+  // Surat Jalan State
+  const [isSuratJalanOpen, setIsSuratJalanOpen] = useState(false);
+  const [selectedSuratJalan, setSelectedSuratJalan] = useState(null);
 
   // Form states
   const [formData, setFormData] = useState({ product_id: '', qty_requested: '' });
@@ -239,10 +244,37 @@ const Permintaan = () => {
                       <StatusBadge status={t.status} />
                     </td>
                     <td className="px-6 py-4 text-muted">{new Date(t.created_at).toLocaleDateString('id-ID')}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button onClick={() => openDetailModal(t)} className="text-richisam-orange hover:text-richisam-merah-muda font-medium text-sm transition-colors">
+                    <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                      <button onClick={() => openDetailModal(t)} className="text-richisam-orange hover:text-richisam-merah-muda font-medium text-sm transition-colors cursor-pointer">
                         {(user?.role === 'STAF_CABANG' && t.status === 'DIKIRIM') || (user?.role !== 'STAF_CABANG' && t.status !== 'SELESAI') ? 'Proses' : 'Detail'}
                       </button>
+                      {(t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
+                        <button 
+                          onClick={() => {
+                            setSelectedSuratJalan({
+                              kode_transfer: t.kode_tiket,
+                              created_at: t.created_at,
+                              from_outlet_name: 'Gudang Pusat Richisam',
+                              from_outlet_address: 'Makassar, Sulawesi Selatan',
+                              to_outlet_name: t.outlet_name,
+                              to_outlet_address: 'Makassar, Sulawesi Selatan',
+                              creator_name: user?.nama || 'Admin/Staf',
+                              catatan: `Surat Pengiriman Barang untuk Tiket Permintaan: ${t.kode_tiket}`,
+                              items: [{
+                                product_kode: t.product_kode || 'PRD',
+                                product_name: t.product_name,
+                                product_satuan: t.product_satuan || 'pcs',
+                                qty: t.qty_approved || t.qty_requested
+                              }]
+                            });
+                            setIsSuratJalanOpen(true);
+                          }}
+                          className="p-1.5 text-stone-500 hover:text-white hover:bg-stone-800 rounded-lg transition-all cursor-pointer"
+                          title="Cetak Surat Jalan"
+                        >
+                          <Printer size={15} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -390,10 +422,46 @@ const Permintaan = () => {
                   <p className="text-sm text-green-600 text-center font-medium mt-4">Tiket ini telah diselesaikan.</p>
                 )
               )}
+
+              <div className="pt-4 border-t border-line mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSuratJalan({
+                      kode_transfer: selectedTicket.kode_tiket,
+                      created_at: selectedTicket.created_at,
+                      from_outlet_name: 'Gudang Pusat Richisam',
+                      from_outlet_address: 'Makassar, Sulawesi Selatan',
+                      to_outlet_name: selectedTicket.outlet_name,
+                      to_outlet_address: 'Makassar, Sulawesi Selatan',
+                      creator_name: user?.nama || 'Admin/Staf',
+                      catatan: `Surat Pengiriman Barang untuk Tiket Permintaan: ${selectedTicket.kode_tiket}`,
+                      items: [{
+                        product_kode: selectedTicket.product_kode || 'PRD',
+                        product_name: selectedTicket.product_name,
+                        product_satuan: selectedTicket.product_satuan || 'pcs',
+                        qty: selectedTicket.qty_approved || selectedTicket.qty_requested
+                      }]
+                    });
+                    setIsSuratJalanOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  <Printer size={16} />
+                  <span>Cetak Surat Jalan (Delivery Note)</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* Surat Jalan Modal */}
+      <SuratJalanModal
+        isOpen={isSuratJalanOpen}
+        onClose={() => setIsSuratJalanOpen(false)}
+        data={selectedSuratJalan}
+      />
     </div>
   );
 };

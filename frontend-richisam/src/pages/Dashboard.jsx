@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import { Link } from 'react-router-dom';
+import VisualChartsSection from '../components/VisualChartsSection';
 
 const Dashboard = () => {
   const { user } = useAuthStore();
@@ -351,6 +352,9 @@ const Dashboard = () => {
           </div>
         </div>
       </section>
+
+      {/* ── SEKSI VISUAL ANALYTICS: GRAFIK & TREN OPERASIONAL (Pilar 4) ── */}
+      <VisualChartsSection />
 
       {/* ── SEKSI 3: SUMMARY LISTS & RECENT TRANSACTIONS (Model 'Summary' pada Referensi) ── */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">

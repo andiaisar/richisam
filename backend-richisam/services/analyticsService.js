@@ -130,6 +130,113 @@ class AnalyticsService {
       next_forecast_date: tglBesok
     };
   }
+
+  /**
+   * Mengambil Data Grafik Visual Analytics (Line, Bar, Donut, Stacked)
+   */
+  static async getVisualCharts(outlet_id = null) {
+    let outletCondition = outlet_id ? `AND m.outlet_id = ${parseInt(outlet_id)}` : '';
+    let outletStockCondition = outlet_id ? `AND s.outlet_id = ${parseInt(outlet_id)}` : '';
+
+    // 1. Top 5 Fast Moving Products (Konsumsi Tertinggi)
+    const fastMovingQuery = `
+      SELECT p.id, p.nama, p.satuan, p.harga,
+             SUM(m.keluar) as total_keluar,
+             (SUM(m.keluar) * COALESCE(p.harga, 0)) as total_nilai
+      FROM stock_mutations m
+      JOIN products p ON m.product_id = p.id
+      WHERE 1=1 ${outletCondition}
+      GROUP BY p.id, p.nama, p.satuan, p.harga
+      ORDER BY total_keluar DESC
+      LIMIT 5
+    `;
+    const fastMovingRes = await pool.query(fastMovingQuery);
+
+    // 2. Daily Usage Trend for Top 3 Key Items
+    const top3Ids = fastMovingRes.rows.slice(0, 3).map(r => r.id);
+    let dailyTrends = [];
+    if (top3Ids.length > 0) {
+      const trendQuery = `
+        SELECT m.tanggal, p.nama, SUM(m.keluar) as qty
+        FROM stock_mutations m
+        JOIN products p ON m.product_id = p.id
+        WHERE p.id = ANY($1) ${outletCondition}
+        GROUP BY m.tanggal, p.nama
+        ORDER BY m.tanggal ASC
+      `;
+      const trendRes = await pool.query(trendQuery, [top3Ids]);
+      
+      const dateMap = new Map();
+      for (const row of trendRes.rows) {
+        const dStr = row.tanggal.toISOString().split('T')[0];
+        const dateObj = new Date(row.tanggal);
+        const label = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        
+        if (!dateMap.has(dStr)) {
+          dateMap.set(dStr, { tanggal: label, rawDate: dStr });
+        }
+        const entry = dateMap.get(dStr);
+        const shortName = row.nama.length > 15 ? row.nama.substring(0, 14) + '..' : row.nama;
+        entry[shortName] = parseInt(row.qty);
+      }
+      dailyTrends = Array.from(dateMap.values());
+    }
+
+    // 3. Category Distribution (Item count & Total current stock)
+    const categoryQuery = `
+      SELECT 
+        COALESCE(p.kategori, 'Bahan Umum') as kategori,
+        COUNT(DISTINCT p.id) as total_item,
+        COALESCE(SUM(s.qty_current), 0) as total_stok,
+        COALESCE(SUM(s.qty_current * p.harga), 0) as total_nilai
+      FROM products p
+      LEFT JOIN stocks s ON p.id = s.product_id ${outletStockCondition}
+      WHERE p.is_active = true
+      GROUP BY p.kategori
+      ORDER BY total_item DESC
+    `;
+    const catRes = await pool.query(categoryQuery);
+    
+    const colors = ['#F9610D', '#FFCE00', '#10B981', '#6366F1', '#EC4899', '#14B8A6', '#F59E0B', '#8B5CF6'];
+    const categoryDistribution = catRes.rows.map((row, idx) => ({
+      name: row.kategori,
+      total_item: parseInt(row.total_item),
+      total_stok: parseInt(row.total_stok),
+      total_nilai: parseFloat(row.total_nilai),
+      color: colors[idx % colors.length]
+    }));
+
+    // 4. In vs Out Logistics Ratio per Outlet
+    const inOutQuery = `
+      SELECT o.nama as branch_name,
+             COALESCE(SUM(m.masuk), 0) as total_masuk,
+             COALESCE(SUM(m.keluar), 0) as total_keluar
+      FROM outlets o
+      LEFT JOIN stock_mutations m ON o.id = m.outlet_id
+      WHERE o.is_active = true
+      GROUP BY o.id, o.nama
+      ORDER BY o.tipe DESC, o.id ASC
+    `;
+    const inOutRes = await pool.query(inOutQuery);
+    const branchComparison = inOutRes.rows.map(r => ({
+      cabang: r.branch_name.replace('Richisam', '').trim(),
+      masuk: parseInt(r.total_masuk),
+      keluar: parseInt(r.total_keluar)
+    }));
+
+    return {
+      top_products: fastMovingRes.rows.map(r => ({
+        id: r.id,
+        nama: r.nama,
+        satuan: r.satuan,
+        qty: parseInt(r.total_keluar),
+        nilai: parseFloat(r.total_nilai)
+      })),
+      daily_usage_trend: dailyTrends,
+      category_distribution: categoryDistribution,
+      branch_comparison: branchComparison
+    };
+  }
 }
 
 module.exports = AnalyticsService;

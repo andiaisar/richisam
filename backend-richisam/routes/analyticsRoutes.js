@@ -5,5 +5,6 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 
 router.get('/abc-analysis', verifyToken, analyticsController.getABCAnalysis);
 router.get('/forecast', verifyToken, analyticsController.getDemandForecast);
+router.get('/visual-charts', verifyToken, analyticsController.getVisualCharts);
 
 module.exports = router;

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { LineChart, Search, Box, TrendingUp, AlertTriangle, ChevronRight, Activity, Zap } from 'lucide-react';
+import { LineChart, Search, Box, TrendingUp, AlertTriangle, ChevronRight, Activity, Zap, BarChart3 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import VisualChartsSection from '../components/VisualChartsSection';
 
 const Analytics = () => {
   const { user } = useAuthStore();
@@ -141,6 +142,14 @@ const Analytics = () => {
           }`}
         >
           <TrendingUp size={18} /> Prediksi Kebutuhan (Forecasting)
+        </button>
+        <button
+          onClick={() => setActiveTab('charts')}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+            activeTab === 'charts' ? 'bg-richisam-orange text-white shadow-md' : 'text-muted hover:text-white hover:bg-white/5'
+          }`}
+        >
+          <BarChart3 size={18} /> Visual Analytics & Grafik Tren
         </button>
       </div>
 
@@ -332,6 +341,15 @@ const Analytics = () => {
             </div>
           ) : null}
         </div>
+      )}
+
+      {/* TAB 3: VISUAL CHARTS & TREN OPERASIONAL */}
+      {activeTab === 'charts' && (
+        <VisualChartsSection 
+          initialOutletId={selectedOutlet} 
+          title="Visual Analytics Lanjutan"
+          subtitle={`Analisis grafik tren pemakaian harian, perputaran stok, dan arus logistik cabang`}
+        />
       )}
     </div>
   );

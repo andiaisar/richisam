@@ -39,7 +39,19 @@ const getDemandForecast = async (req, res) => {
   }
 };
 
+const getVisualCharts = async (req, res) => {
+  try {
+    const outlet_id = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : (req.query.outlet_id || null);
+    const result = await AnalyticsService.getVisualCharts(outlet_id);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    console.error('getVisualCharts error:', error);
+    res.status(500).json({ success: false, error: 'Gagal mengambil data grafik visual' });
+  }
+};
+
 module.exports = {
   getABCAnalysis,
-  getDemandForecast
+  getDemandForecast,
+  getVisualCharts
 };

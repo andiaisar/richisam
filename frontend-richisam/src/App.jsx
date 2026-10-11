@@ -21,6 +21,8 @@ import ParStock from './pages/ParStock';
 import Laporan from './pages/Laporan';
 import Analytics from './pages/Analytics';
 import Kadaluarsa from './pages/Kadaluarsa';
+import ShiftClosing from './pages/ShiftClosing';
+import AuditTrail from './pages/AuditTrail';
 
 const App = () => {
   const { checkAuth, isLoading, isAuthenticated } = useAuthStore();
@@ -70,6 +72,8 @@ const App = () => {
           <Route path="laporan" element={<Laporan />} />
           <Route path="analytics" element={<Analytics />} />
           <Route path="kadaluarsa" element={<Kadaluarsa />} />
+          <Route path="shift-closing" element={<ShiftClosing />} />
+          <Route path="audit-trail" element={<AuditTrail />} />
           <Route path="*" element={<ComingSoon />} />
         </Route>
       </Routes>

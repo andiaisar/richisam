@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, Navigate, NavLink, useLocation } from 'react-router-dom';
 import {
   Boxes, LayoutDashboard, ArrowLeftRight, PackagePlus, PackageX, Users, Store,
-  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock
+  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import axiosClient from '../api/axiosClient';
@@ -21,6 +21,7 @@ const MENUS = {
         { to: '/permintaan', label: 'Permintaan Barang', icon: PackagePlus },
         { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Laporan Defect', icon: PackageX },
+        { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
       ],
     },
   ],
@@ -45,8 +46,10 @@ const MENUS = {
         { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
         { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Defect & Retur', icon: PackageX },
+        { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
         { to: '/laporan', label: 'Laporan', icon: FileBarChart },
         { to: '/analytics', label: 'Analitik & Prediksi', icon: LineChart },
+        { to: '/audit-trail', label: 'Log Aktivitas (Audit)', icon: ShieldAlert },
       ],
     },
   ],
@@ -71,8 +74,10 @@ const MENUS = {
         { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
         { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Defect & Retur', icon: PackageX },
+        { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
         { to: '/laporan', label: 'Laporan', icon: FileBarChart },
         { to: '/analytics', label: 'Analitik & Prediksi', icon: LineChart },
+        { to: '/audit-trail', label: 'Log Aktivitas (Audit)', icon: ShieldAlert },
       ],
     },
   ],
@@ -86,8 +91,10 @@ const MENUS = {
         { to: '/kadaluarsa', label: 'Masa Kadaluarsa', icon: CalendarClock },
         { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Defect & Retur', icon: PackageX },
+        { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
         { to: '/laporan', label: 'Laporan', icon: FileBarChart },
         { to: '/analytics', label: 'Analitik & Prediksi', icon: LineChart },
+        { to: '/audit-trail', label: 'Log Aktivitas (Audit)', icon: ShieldAlert },
       ],
     },
   ],

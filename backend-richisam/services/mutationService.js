@@ -1,5 +1,7 @@
 const pool = require('../config/db');
 const NotificationService = require('./notificationService');
+const ShiftService = require('./shiftService');
+const AuditService = require('./auditService');
 
 class MutationService {
   static getPreviousShift(dateStr, shift) {
@@ -95,6 +97,12 @@ class MutationService {
   }
 
   static async createMutations(outlet_id, tanggal, shift, items, user_id) {
+    // 1. Cek Kunci Shift (Pilar 3: Data Immutability Locking)
+    const isLocked = await ShiftService.isShiftLocked(outlet_id, tanggal, shift);
+    if (isLocked) {
+      throw new Error(`Shift ${shift} pada tanggal ${tanggal} telah ditutup dan dikunci (Tutup Buku Shift). Perubahan mutasi tidak diizinkan.`);
+    }
+
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -166,6 +174,16 @@ class MutationService {
       for (let item of items) {
         await this.checkParStockHook(outlet_id, item.product_id);
       }
+
+      // Rekam jejak ke AUDIT TRAIL
+      AuditService.logAction({
+        userId: user_id,
+        outletId: outlet_id,
+        module: 'MUTASI',
+        action: 'CREATE',
+        description: `Mencatat mutasi harian ${shift} tanggal ${tanggal} (${items.length} item).`,
+        details: { items_count: items.length, tanggal, shift }
+      });
       
     } catch (e) {
       await client.query('ROLLBACK');
@@ -175,7 +193,7 @@ class MutationService {
     }
   }
   
-  static async updateMutation(id, masuk, sak) {
+  static async updateMutation(id, masuk, sak, userId = null) {
      // Koreksi mutasi (harus shift terbaru yg belum diikuti mutasi lain)
      const client = await pool.connect();
      try {
@@ -184,6 +202,13 @@ class MutationService {
        const mut = await client.query('SELECT * FROM stock_mutations WHERE id = $1 FOR UPDATE', [id]);
        if (mut.rows.length === 0) throw new Error('Mutasi tidak ditemukan');
        const m = mut.rows[0];
+
+       // Cek Kunci Shift
+       const dateStr = typeof m.tanggal === 'string' ? m.tanggal : m.tanggal.toISOString().split('T')[0];
+       const isLocked = await ShiftService.isShiftLocked(m.outlet_id, dateStr, m.shift);
+       if (isLocked) {
+         throw new Error(`Shift ${m.shift} pada tanggal ${dateStr} telah ditutup & dikunci. Tidak dapat diubah.`);
+       }
        
        // Cek apakah ada mutasi setelahnya
        const nextMut = await client.query(
@@ -210,6 +235,16 @@ class MutationService {
        
        await client.query('COMMIT');
        await this.checkParStockHook(m.outlet_id, m.product_id);
+
+       // Rekam ke AUDIT TRAIL
+       AuditService.logAction({
+         userId,
+         outletId: m.outlet_id,
+         module: 'MUTASI',
+         action: 'UPDATE',
+         description: `Mengubah data mutasi ID #${id} (Masuk: ${m.masuk} -> ${masuk}, SAK: ${m.sak} -> ${sak}).`,
+         details: { mutation_id: id, product_id: m.product_id, old: { masuk: m.masuk, sak: m.sak }, new: { masuk, sak } }
+       });
      } catch(e) {
        await client.query('ROLLBACK');
        throw e;

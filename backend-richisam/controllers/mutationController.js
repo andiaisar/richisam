@@ -58,7 +58,7 @@ exports.updateMutation = async (req, res) => {
     if (masuk === undefined || sak === undefined) {
       return res.status(400).json({ success: false, message: 'masuk dan sak diperlukan' });
     }
-    await MutationService.updateMutation(parseInt(id), masuk, sak);
+    await MutationService.updateMutation(parseInt(id), masuk, sak, req.user?.id);
     res.json({ success: true, message: 'Mutasi berhasil diupdate' });
   } catch (e) {
     res.status(400).json({ success: false, message: e.message });

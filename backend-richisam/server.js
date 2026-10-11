@@ -62,6 +62,8 @@ app.use('/api/import', importRoutes);
 app.use('/api/transfers', require('./routes/transferRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/batches', require('./routes/batchRoutes'));
+app.use('/api/audit', require('./routes/auditRoutes'));
+app.use('/api/shifts', require('./routes/shiftRoutes'));
 
 // Cek Status API
 app.get('/', (req, res) => {

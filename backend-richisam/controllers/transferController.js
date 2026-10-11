@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const TransferService = require('../services/transferService');
+const AuditService = require('../services/auditService');
 
 const transferSchema = z.object({
   from_outlet_id: z.coerce.number(),
@@ -41,6 +42,16 @@ exports.createTransfer = async (req, res) => {
       req.user.id,
       parsed.data.catatan
     );
+
+    // Rekam ke AUDIT TRAIL
+    AuditService.logAction({
+      userId: req.user.id,
+      outletId: parsed.data.from_outlet_id,
+      module: 'TRANSFER',
+      action: 'CREATE',
+      description: `Mengirim transfer stok ${parsed.data.items.length} item ke Cabang #${parsed.data.to_outlet_id}. Catatan: ${parsed.data.catatan || '-'}`,
+      details: { from_outlet_id: parsed.data.from_outlet_id, to_outlet_id: parsed.data.to_outlet_id, items_count: parsed.data.items.length }
+    });
 
     res.status(201).json({ 
       success: true, 

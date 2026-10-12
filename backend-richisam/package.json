@@ -9,7 +9,8 @@
     "migrate": "node db/migrate.js",
     "migrate:master": "node db/migrate_master.js",
     "seed": "node db/seed.js",
-    "seed:master": "node db/seed_master.js"
+    "seed:master": "node db/seed_master.js",
+    "reset:data": "node db/reset_data.js"
   },
   "keywords": [],
   "author": "",

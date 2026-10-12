@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { FileBarChart, Download, Calendar, Store, Table2 } from 'lucide-react';
+import { FileBarChart, Download, Calendar, Store, Table2, FileSpreadsheet, Sparkles } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -24,11 +24,14 @@ const Laporan = () => {
       const fetchOutlets = async () => {
         try {
           const res = await axiosClient.get('/outlets');
-          setOutlets(res?.data?.data || res?.data || []);
-          if (res?.data?.length > 0) {
-            setSelectedOutlet(res.data.data[0].id.toString());
+          const list = res?.data?.data || res?.data || [];
+          setOutlets(list);
+          if (list.length > 0) {
+            setSelectedOutlet(list[0].id.toString());
           }
-        } catch (e) {}
+        } catch (e) {
+          console.error('Error fetching outlets', e);
+        }
       };
       fetchOutlets();
     } else {
@@ -93,44 +96,63 @@ const Laporan = () => {
   };
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-5xl">
-      <div>
-        <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
-          <FileBarChart className="h-6 w-6 text-richisam-orange" />
-          Ekspor Laporan
-        </h1>
-        <p className="mt-1 text-sm text-muted">Unduh laporan mutasi dan persediaan ke dalam format Excel.</p>
+    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto pb-12 text-white">
+      {/* ── HEADER TITLE & SUBTITLE ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <span className="px-2.5 py-0.5 rounded-full bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30 text-[10px] font-bold uppercase tracking-wider">
+              Modul Rekapitulasi & Dokumen
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#1A1412] border border-[#2D241E] text-xs font-medium text-stone-300">
+              <FileSpreadsheet size={13} className="text-emerald-400" />
+              Format Excel (.xlsx)
+            </span>
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white mt-2 tracking-tight flex items-center gap-2.5">
+            <FileBarChart className="text-[#F9610D]" size={28} />
+            Ekspor Laporan Inventaris
+          </h1>
+          <p className="mt-1 text-xs sm:text-sm text-stone-400">
+            Unduh rekonsiliasi mutasi persediaan, format bulanan mitra 31 sheet, dan data mentah pergerakan stok.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Mitra Format Card */}
-        <div className="bg-white border-2 border-richisam-orange/20 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-richisam-orange/5 rounded-bl-[100px] -z-10 group-hover:scale-110 transition-transform"></div>
+        {/* ── KARTU 1: FORMAT BULANAN MITRA (31 SHEET) ── */}
+        <div className="bg-[#1A1412] border border-[#2D241E] hover:border-[#F9610D]/40 rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden flex flex-col justify-between group transition-all">
+          <div className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#F9610D]/10 blur-3xl group-hover:scale-125 transition-transform" />
           
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-bold text-ink">Export Excel (Format Mitra)</h3>
-                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded uppercase tracking-wide">Rekomendasi</span>
-              </div>
-              <p className="text-sm text-muted">Unduh laporan bulanan sesuai dengan struktur spreadsheet 31 sheet asli.</p>
-            </div>
-            <div className="p-3 bg-richisam-orange/10 rounded-xl text-richisam-orange shrink-0">
-              <Table2 size={24} />
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            {user?.role !== 'STAF_CABANG' && (
+          <div>
+            <div className="flex items-start justify-between mb-5">
               <div>
-                <label className="block text-xs font-semibold text-ink mb-1">Cabang / Outlet</label>
-                <div className="relative">
-                  <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#F9610D]/20 text-[#F9610D] border border-[#F9610D]/35 text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1">
+                    <Sparkles size={11} /> Rekomendasi Resmi
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-white tracking-tight">Format Spreadsheet Mitra (31 Sheet)</h3>
+                <p className="text-xs text-stone-400 mt-1 leading-relaxed">
+                  Struktur rekonsiliasi mutasi lengkap 31 tanggal per bulan sesuai template pembukuan resmi operasional Richisam.
+                </p>
+              </div>
+              <div className="p-3 bg-[#F9610D]/10 rounded-2xl text-[#F9610D] border border-[#F9610D]/20 shrink-0">
+                <Table2 size={24} />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {user?.role !== 'STAF_CABANG' && (
+                <div>
+                  <label className="block text-xs font-bold text-stone-300 mb-1.5 flex items-center gap-1.5">
+                    <Store size={13} className="text-[#F9610D]" /> Cabang Restoran
+                  </label>
                   <select 
                     value={selectedOutlet}
                     onChange={(e) => setSelectedOutlet(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange"
+                    className="w-full bg-[#120E0C] border border-[#2D241E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-medium focus:outline-none focus:border-[#F9610D]"
                   >
                     <option value="">-- Pilih Cabang --</option>
                     {outlets.map(o => (
@@ -138,108 +160,126 @@ const Laporan = () => {
                     ))}
                   </select>
                 </div>
-              </div>
-            )}
-            
-            <div className="flex gap-4">
-              <div className="flex-1">
-                <label className="block text-xs font-semibold text-ink mb-1">Bulan</label>
-                <select 
-                  value={bulan}
-                  onChange={(e) => setBulan(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange"
-                >
-                  {Array.from({length: 12}, (_, i) => i + 1).map(m => (
-                    <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs font-semibold text-ink mb-1">Tahun</label>
-                <input 
-                  type="number" 
-                  value={tahun}
-                  onChange={(e) => setTahun(e.target.value)}
-                  min="2020" max="2100"
-                  className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange"
-                />
-              </div>
-            </div>
-            
-            <button 
-              onClick={handleMitraExport}
-              disabled={mitraLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-richisam-orange hover:bg-[#d9530a] disabled:bg-richisam-orange/50 text-white rounded-lg font-bold transition-colors shadow-sm mt-4"
-            >
-              {mitraLoading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-              ) : (
-                <>
-                  <Download size={18} />
-                  Download Format Mitra
-                </>
               )}
-            </button>
-          </div>
-        </div>
-
-        {/* Custom Range Card */}
-        <div className="bg-white border border-line rounded-2xl p-6 shadow-sm">
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h3 className="text-lg font-bold text-ink">Export Custom (Rentang Tanggal)</h3>
-              <p className="text-sm text-muted mt-1">Ekspor data pergerakan stok mentah berdasarkan tanggal tertentu.</p>
-            </div>
-            <div className="p-3 bg-cream rounded-xl text-ink shrink-0">
-              <Download size={24} />
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-stone-300 mb-1.5">Bulan</label>
+                  <select 
+                    value={bulan}
+                    onChange={(e) => setBulan(e.target.value)}
+                    className="w-full bg-[#120E0C] border border-[#2D241E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-medium focus:outline-none focus:border-[#F9610D]"
+                  >
+                    {Array.from({length: 12}, (_, i) => i + 1).map(m => (
+                      <option key={m} value={m}>{new Date(0, m - 1).toLocaleString('id-ID', { month: 'long' })}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-stone-300 mb-1.5">Tahun</label>
+                  <input 
+                    type="number" 
+                    value={tahun}
+                    onChange={(e) => setTahun(e.target.value)}
+                    min="2020" max="2100"
+                    className="w-full bg-[#120E0C] border border-[#2D241E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-medium focus:outline-none focus:border-[#F9610D]"
+                  />
+                </div>
+              </div>
             </div>
           </div>
           
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-ink mb-1">Tanggal Mulai</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+          <button 
+            onClick={handleMitraExport}
+            disabled={mitraLoading}
+            className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-[#F9610D] to-[#BA4F18] hover:from-[#e55307] hover:to-[#a83d0d] disabled:opacity-50 text-white rounded-2xl font-black text-xs sm:text-sm transition-all shadow-xl shadow-[#F9610D]/25 mt-6 cursor-pointer"
+          >
+            {mitraLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                <span>Menyiapkan Spreadsheet 31 Sheet...</span>
+              </div>
+            ) : (
+              <>
+                <Download size={17} />
+                Unduh Format Mitra Bulanan
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* ── KARTU 2: EXPORT CUSTOM (RENTANG TANGGAL - DATA MENTAH) ── */}
+        <div className="bg-[#1A1412] border border-[#2D241E] hover:border-[#FFCE00]/40 rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden flex flex-col justify-between group transition-all">
+          <div className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#FFCE00]/10 blur-3xl group-hover:scale-125 transition-transform" />
+          
+          <div>
+            <div className="flex items-start justify-between mb-5">
+              <div>
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#FFCE00]/15 text-[#FFCE00] border border-[#FFCE00]/30 text-[10px] font-extrabold uppercase tracking-wide">
+                    Ekspor Kustom
+                  </span>
+                </div>
+                <h3 className="text-lg font-black text-white tracking-tight">Export Excel (Data Mentah)</h3>
+                <p className="text-xs text-stone-400 mt-1 leading-relaxed">
+                  Ekspor pergerakan mutasi stok mentah (*raw data*) berdasarkan rentang tanggal tertentu yang Anda tentukan.
+                </p>
+              </div>
+              <div className="p-3 bg-[#FFCE00]/10 rounded-2xl text-[#FFCE00] border border-[#FFCE00]/20 shrink-0">
+                <Download size={24} />
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-stone-300 mb-1.5 flex items-center gap-1.5">
+                  <Calendar size={13} className="text-[#FFCE00]" /> Tanggal Mulai
+                </label>
                 <input 
                   type="date" 
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange"
+                  className="w-full bg-[#120E0C] border border-[#2D241E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-medium focus:outline-none focus:border-[#FFCE00]"
                 />
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-ink mb-1">Tanggal Akhir</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+
+              <div>
+                <label className="block text-xs font-bold text-stone-300 mb-1.5 flex items-center gap-1.5">
+                  <Calendar size={13} className="text-[#FFCE00]" /> Tanggal Akhir
+                </label>
                 <input 
                   type="date" 
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange"
+                  className="w-full bg-[#120E0C] border border-[#2D241E] rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white font-medium focus:outline-none focus:border-[#FFCE00]"
                 />
               </div>
             </div>
-            
-            <button 
-              onClick={handleCustomExport}
-              disabled={customLoading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-ink hover:bg-ink/90 disabled:bg-ink/50 text-white rounded-lg font-medium transition-colors shadow-sm mt-4"
-            >
-              {customLoading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
-              ) : (
-                <>
-                  <Download size={18} />
-                  Unduh Excel Mentah
-                </>
-              )}
-            </button>
           </div>
+          
+          {/* Tombol Unduh Excel Mentah dengan kontras tinggi dan teks putih terang terbaca jelas */}
+          <button 
+            onClick={handleCustomExport}
+            disabled={customLoading}
+            className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-[#251D18] hover:bg-[#342720] border border-[#3E3027] hover:border-[#FFCE00]/60 text-white rounded-2xl font-black text-xs sm:text-sm transition-all shadow-lg hover:shadow-[#FFCE00]/10 mt-6 cursor-pointer disabled:opacity-50"
+          >
+            {customLoading ? (
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
+                <span className="text-white">Mengekspor Data...</span>
+              </div>
+            ) : (
+              <>
+                <Download size={17} className="text-[#FFCE00]" />
+                <span className="text-white font-black tracking-wide">Unduh Excel Mentah</span>
+              </>
+            )}
+          </button>
         </div>
 
       </div>
     </div>
   );
 };
+
 export default Laporan;

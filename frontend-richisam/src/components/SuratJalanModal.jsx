@@ -3,7 +3,7 @@ import { Printer, X, CheckCircle2, ShieldCheck, Truck, Store, Calendar, FileText
 
 const SuratJalanModal = ({ isOpen, onClose, data }) => {
   if (!isOpen || !data) return null;
-
+  
   const handlePrint = () => {
     window.print();
   };

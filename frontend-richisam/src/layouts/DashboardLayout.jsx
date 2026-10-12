@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
-import { Outlet, Navigate, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Boxes, LayoutDashboard, ArrowLeftRight, PackagePlus, PackageX, Users, Store,
-  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert, Sun, Moon
+  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert, Sun, Moon, CheckCheck
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import useAuthStore from '../store/useAuthStore';
 import useThemeStore from '../store/useThemeStore';
 import axiosClient from '../api/axiosClient';
@@ -192,29 +193,69 @@ const SidebarContent = ({ menus, user, onLogout, onNavigate }) => (
 const DashboardLayout = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
+  const navigate = useNavigate();
   const isLight = theme === 'light';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [selectedNotif, setSelectedNotif] = useState(null);
   const notifRef = useRef(null);
   const location = useLocation();
 
+  const fetchNotifs = async () => {
+    try {
+      const [countRes, listRes] = await Promise.all([
+        axiosClient.get('/notifications/unread-count'),
+        axiosClient.get('/notifications?limit=10')
+      ]);
+      const count = countRes.data?.count ?? countRes.data?.data ?? 0;
+      const list = Array.isArray(listRes.data?.data)
+        ? listRes.data.data
+        : Array.isArray(listRes.data?.data?.data)
+          ? listRes.data.data.data
+          : [];
+      setUnreadCount(Number(count) || 0);
+      setNotifications(list);
+    } catch {
+      console.error('Failed to fetch notifications');
+    }
+  };
+
   useEffect(() => {
-    const fetchNotifs = async () => {
-      try {
-        const [countRes, listRes] = await Promise.all([
-          axiosClient.get('/notifications/unread-count'),
-          axiosClient.get('/notifications?limit=5')
-        ]);
-        setUnreadCount(countRes.data?.count || 0);
-        setNotifications(listRes.data?.data || []);
-      } catch {
-        console.error('Failed to fetch notifications');
-      }
-    };
-    if (isAuthenticated) fetchNotifs();
+    if (!isAuthenticated) return;
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 30000);
+    return () => clearInterval(interval);
   }, [isAuthenticated]);
+
+  const handleNotificationClick = async (notif) => {
+    setSelectedNotif(notif);
+    setNotifOpen(false);
+    if (!notif.is_read) {
+      try {
+        await axiosClient.patch(`/notifications/${notif.id}/read`);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, is_read: true } : n))
+        );
+        setUnreadCount((prev) => Math.max(0, prev - 1));
+      } catch (err) {
+        console.error('Failed to mark notification as read', err);
+      }
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await axiosClient.patch('/notifications/read-all');
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+      toast.success('Semua notifikasi ditandai dibaca');
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+      toast.error('Gagal menandai semua notifikasi');
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -272,7 +313,7 @@ const DashboardLayout = () => {
       {/* Main Layout Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#120E0C]">
         {/* Top Header */}
-        <header className="h-18 shrink-0 flex items-center justify-between gap-4 px-4 sm:px-8 bg-[#16110F]/90 backdrop-blur-md border-b border-[#241C18]">
+        <header className="h-18 shrink-0 flex items-center justify-between gap-4 px-4 sm:px-8 bg-[#16110F]/90 backdrop-blur-md border-b border-[#241C18] relative z-40">
           <div className="flex items-center gap-3 min-w-0">
             <button
               id="btn-open-menu"
@@ -334,19 +375,39 @@ const DashboardLayout = () => {
               >
                 <Bell size={18} />
                 {unreadCount > 0 && (
-                  <span className="absolute top-2 right-2.5 w-2 h-2 rounded-full bg-[#EC1F27] ring-2 ring-[#181310]" />
+                  <span 
+                    id="badge-notification-count"
+                    className="absolute -top-1.5 -right-1.5 min-w-[1.25rem] h-5 px-1 rounded-full bg-[#EC1F27] text-white text-[10px] font-black flex items-center justify-center shadow-md animate-pulse border-2 border-[#120E0C]"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
                 )}
               </button>
 
               {/* Notification Dropdown */}
               {notifOpen && (
-                <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-[#382E28] bg-[#1A1412] shadow-2xl overflow-hidden z-50 animate-fade-in origin-top-right text-white">
+                <div 
+                  id="dropdown-notifications"
+                  className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-[#382E28] bg-[#1A1412] shadow-2xl overflow-hidden z-[100] animate-fade-in origin-top-right text-white"
+                >
                   <div className="border-b border-[#2D241E] px-4 py-3 flex items-center justify-between bg-[#15100E]">
-                    <h3 className="font-bold text-white text-sm">Notifikasi</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-white text-sm">Notifikasi</h3>
+                      {unreadCount > 0 && (
+                        <span className="text-[10px] font-bold bg-[#F9610D]/20 text-[#F9610D] px-2 py-0.5 rounded-full border border-[#F9610D]/30">
+                          {unreadCount} Baru
+                        </span>
+                      )}
+                    </div>
                     {unreadCount > 0 && (
-                      <span className="text-[10px] font-bold bg-[#F9610D]/20 text-[#F9610D] px-2 py-0.5 rounded-full border border-[#F9610D]/30">
-                        {unreadCount} Baru
-                      </span>
+                      <button 
+                        id="btn-mark-all-read-header"
+                        onClick={handleMarkAllAsRead}
+                        className="text-xs font-semibold text-[#F9610D] hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <CheckCheck size={14} />
+                        Tandai dibaca
+                      </button>
                     )}
                   </div>
                   <div className="max-h-80 overflow-y-auto">
@@ -355,29 +416,49 @@ const DashboardLayout = () => {
                         {notifications.map((n) => (
                           <li
                             key={n.id}
-                            className={`p-4 hover:bg-white/[0.03] transition-colors ${
+                            onClick={() => handleNotificationClick(n)}
+                            className={`p-3.5 hover:bg-white/[0.04] transition-colors cursor-pointer flex items-start gap-3 ${
                               !n.is_read ? 'bg-[#F9610D]/5' : ''
                             }`}
                           >
-                            <p className={`text-sm ${!n.is_read ? 'font-semibold text-white' : 'text-stone-300'}`}>
-                              {n.pesan}
-                            </p>
-                            <p className="text-xs text-stone-500 mt-1">{new Date(n.created_at).toLocaleString('id-ID')}</p>
+                            <span className={`mt-1.5 w-2 h-2 shrink-0 rounded-full ${!n.is_read ? 'bg-[#F9610D]' : 'bg-transparent'}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-xs sm:text-sm line-clamp-2 ${!n.is_read ? 'font-semibold text-white' : 'text-stone-300'}`}>
+                                {n.pesan}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#F9610D] bg-[#F9610D]/10 px-1.5 py-0.5 rounded">
+                                  {n.tipe}
+                                </span>
+                                <span className="text-[11px] text-stone-500">
+                                  {new Date(n.created_at).toLocaleString('id-ID', {
+                                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                  })}
+                                </span>
+                              </div>
+                            </div>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <div className="p-6 text-center">
-                        <Bell className="mx-auto h-6 w-6 text-stone-600 mb-2" />
+                      <div className="p-8 text-center">
+                        <Bell className="mx-auto h-7 w-7 text-stone-600 mb-2" />
                         <p className="text-xs text-stone-400">Tidak ada notifikasi baru</p>
                       </div>
                     )}
                   </div>
-                  <div className="border-t border-[#2D241E] p-2.5 text-center bg-[#15100E]">
-                    <button className="text-xs font-semibold text-[#F9610D] hover:underline cursor-pointer">
-                      Tandai semua dibaca
-                    </button>
-                  </div>
+                  {notifications.length > 0 && (
+                    <div className="border-t border-[#2D241E] p-2.5 text-center bg-[#15100E]">
+                      <button 
+                        id="btn-mark-all-read-footer"
+                        onClick={handleMarkAllAsRead}
+                        className="text-xs font-semibold text-[#F9610D] hover:underline cursor-pointer flex items-center justify-center gap-1.5 w-full"
+                      >
+                        <CheckCheck size={14} />
+                        Tandai semua telah dibaca
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -391,6 +472,75 @@ const DashboardLayout = () => {
           </div>
         </main>
       </div>
+
+      {/* Modal Detail Notifikasi (Berada di Paling Depan Layar / z-[9999]) */}
+      {selectedNotif && (
+        <div 
+          id="modal-notification-detail"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
+          onClick={() => setSelectedNotif(null)}
+        >
+          <div 
+            className="relative w-full max-w-md rounded-3xl border border-[#382E28] bg-[#1A1412] p-6 shadow-2xl overflow-hidden text-white"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30">
+                  <Bell size={24} />
+                </div>
+                <div>
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#F9610D]/20 text-[#F9610D] border border-[#F9610D]/40">
+                    {selectedNotif.tipe === 'PAR_STOCK' ? 'Peringatan Stok Kritis' : selectedNotif.tipe}
+                  </span>
+                  <p className="text-xs text-stone-400 mt-1">
+                    {new Date(selectedNotif.created_at).toLocaleString('id-ID', {
+                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+              <button 
+                id="btn-close-notif-modal"
+                onClick={() => setSelectedNotif(null)}
+                className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                aria-label="Tutup modal"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="my-5 p-4 rounded-2xl bg-[#140F0D] border border-[#2D241E]">
+              <p className="text-sm sm:text-base font-medium text-stone-100 leading-relaxed">
+                {selectedNotif.pesan}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                id="btn-notif-modal-dismiss"
+                onClick={() => setSelectedNotif(null)}
+                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-stone-300 hover:text-white hover:bg-white/5 border border-stone-700/80 transition-colors cursor-pointer"
+              >
+                Tutup
+              </button>
+              {selectedNotif.tipe === 'PAR_STOCK' && (
+                <button
+                  id="btn-notif-modal-action"
+                  onClick={() => {
+                    setSelectedNotif(null);
+                    navigate(user?.role === 'STAF_CABANG' ? '/permintaan' : '/mutasi');
+                  }}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold bg-[#F9610D] hover:bg-[#d9530a] text-white shadow-lg shadow-[#F9610D]/25 transition-all cursor-pointer flex items-center gap-2"
+                >
+                  <ArrowLeftRight size={16} />
+                  {user?.role === 'STAF_CABANG' ? 'Ajukan Permintaan' : 'Cek Stok Mutasi'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

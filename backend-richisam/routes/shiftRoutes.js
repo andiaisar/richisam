@@ -5,6 +5,7 @@ const { verifyToken } = require('../middlewares/authMiddleware');
 
 router.use(verifyToken);
 
+router.get('/outlets-status', shiftController.getOutletsStatus);
 router.get('/summary', shiftController.getShiftSummary);
 router.post('/close', shiftController.closeShift);
 router.post('/unlock/:id', shiftController.unlockShift);

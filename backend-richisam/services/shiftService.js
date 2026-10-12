@@ -80,6 +80,8 @@ class ShiftService {
       tanggal: date,
       shift: shiftName,
       is_locked: existingClosing ? existingClosing.status === 'CLOSED' : false,
+      is_unlocked: existingClosing ? existingClosing.status === 'UNLOCKED' : false,
+      status: existingClosing ? existingClosing.status : 'OPEN',
       closing_info: existingClosing,
       stats: {
         total_transaksi: parseInt(mutasiRes.rows[0]?.total_transaksi || 0),
@@ -242,15 +244,52 @@ class ShiftService {
   }
 
   /**
+   * Status shift seluruh cabang untuk monitoring Owner & Admin Pusat
+   */
+  static async getOutletsStatus(date, shiftName) {
+    const outletsRes = await pool.query(
+      `SELECT id, nama, tipe FROM outlets WHERE is_active = true ORDER BY (CASE WHEN tipe = 'CABANG' THEN 0 ELSE 1 END), id ASC`
+    );
+
+    const closingsRes = await pool.query(
+      `SELECT sc.*, o.nama as outlet_nama, u.nama as closed_by_nama, un.nama as unlocked_by_nama
+       FROM shift_closings sc
+       JOIN outlets o ON sc.outlet_id = o.id
+       LEFT JOIN users u ON sc.closed_by_id = u.id
+       LEFT JOIN users un ON sc.unlocked_by_id = un.id
+       WHERE sc.shift_date = $1 AND sc.shift_name = $2`,
+      [date, shiftName]
+    );
+
+    const closingsMap = {};
+    for (const c of closingsRes.rows) {
+      closingsMap[c.outlet_id] = c;
+    }
+
+    return outletsRes.rows.map(o => {
+      const closing = closingsMap[o.id] || null;
+      return {
+        outlet_id: o.id,
+        outlet_nama: o.nama,
+        outlet_tipe: o.tipe,
+        status: closing ? closing.status : 'OPEN',
+        is_locked: closing ? closing.status === 'CLOSED' : false,
+        is_unlocked: closing ? closing.status === 'UNLOCKED' : false,
+        closing_info: closing
+      };
+    });
+  }
+
+  /**
    * Riwayat Tutup Buku Shift
    */
-  static async getShiftHistory({ outletId = null, page = 1, limit = 15, startDate = null, endDate = null }) {
+  static async getShiftHistory({ outletId = null, page = 1, limit = 15, startDate = null, endDate = null, status = null }) {
     const offset = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
     const conditions = [];
     const values = [];
     let paramIndex = 1;
 
-    if (outletId) {
+    if (outletId && outletId !== 'ALL') {
       conditions.push(`sc.outlet_id = $${paramIndex++}`);
       values.push(parseInt(outletId));
     }
@@ -263,6 +302,11 @@ class ShiftService {
     if (endDate) {
       conditions.push(`sc.shift_date <= $${paramIndex++}`);
       values.push(endDate);
+    }
+
+    if (status && status !== 'ALL') {
+      conditions.push(`sc.status = $${paramIndex++}`);
+      values.push(status);
     }
 
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

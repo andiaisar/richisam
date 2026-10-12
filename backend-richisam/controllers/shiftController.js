@@ -1,6 +1,27 @@
 const ShiftService = require('../services/shiftService');
 const pool = require('../config/db');
 
+exports.getOutletsStatus = async (req, res) => {
+  try {
+    let { tanggal, shift } = req.query;
+    if (!tanggal) tanggal = new Date().toISOString().split('T')[0];
+    if (!shift) shift = 'PAGI';
+
+    const list = await ShiftService.getOutletsStatus(tanggal, shift);
+    res.json({
+      success: true,
+      message: 'Status shift seluruh cabang',
+      data: list
+    });
+  } catch (err) {
+    console.error('shiftController.getOutletsStatus error:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Gagal memuat status shift cabang: ' + err.message
+    });
+  }
+};
+
 exports.getShiftSummary = async (req, res) => {
   try {
     let { outlet_id, tanggal, shift } = req.query;
@@ -55,6 +76,12 @@ exports.closeShift = async (req, res) => {
 
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || null;
 
+    let userName = req.user.nama || req.user.username;
+    if (!userName) {
+      const uRes = await pool.query('SELECT nama FROM users WHERE id = $1', [req.user.id]);
+      userName = uRes.rows[0]?.nama || 'Staf';
+    }
+
     const result = await ShiftService.closeShift({
       outletId: parseInt(outlet_id),
       date: tanggal,
@@ -62,7 +89,7 @@ exports.closeShift = async (req, res) => {
       notes: notes || '',
       userId: req.user.id,
       userRole: req.user.role,
-      userName: req.user.nama || req.user.username,
+      userName,
       ipAddress
     });
 
@@ -87,11 +114,17 @@ exports.unlockShift = async (req, res) => {
 
     const ipAddress = req.ip || req.headers['x-forwarded-for'] || null;
 
+    let userName = req.user.nama || req.user.username;
+    if (!userName) {
+      const uRes = await pool.query('SELECT nama FROM users WHERE id = $1', [req.user.id]);
+      userName = uRes.rows[0]?.nama || 'Supervisor';
+    }
+
     const result = await ShiftService.unlockShift({
       closingId: parseInt(id),
       userId: req.user.id,
       userRole: req.user.role,
-      userName: req.user.nama || req.user.username,
+      userName,
       reason: reason || 'Koreksi administratif',
       ipAddress
     });
@@ -112,10 +145,12 @@ exports.unlockShift = async (req, res) => {
 
 exports.getHistory = async (req, res) => {
   try {
-    let { outlet_id, page, limit, start_date, end_date } = req.query;
+    let { outlet_id, page, limit, start_date, end_date, status } = req.query;
 
     if (req.user.role === 'STAF_CABANG') {
       outlet_id = req.user.outlet_id;
+    } else if (outlet_id === 'ALL' || outlet_id === '' || outlet_id === 'undefined' || outlet_id === 'null') {
+      outlet_id = null;
     }
 
     const result = await ShiftService.getShiftHistory({
@@ -123,7 +158,8 @@ exports.getHistory = async (req, res) => {
       page: page || 1,
       limit: limit || 15,
       startDate: start_date,
-      endDate: end_date
+      endDate: end_date,
+      status: status || null
     });
 
     res.json({

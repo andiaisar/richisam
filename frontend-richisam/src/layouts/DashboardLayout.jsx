@@ -2,9 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, Navigate, NavLink, useLocation } from 'react-router-dom';
 import {
   Boxes, LayoutDashboard, ArrowLeftRight, PackagePlus, PackageX, Users, Store,
-  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert
+  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert, Sun, Moon
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
+import useThemeStore from '../store/useThemeStore';
 import axiosClient from '../api/axiosClient';
 
 /* Menu per role (RBAC) - Seluruh menu tetap dipertahankan 100% */
@@ -190,6 +191,8 @@ const SidebarContent = ({ menus, user, onLogout, onNavigate }) => (
 
 const DashboardLayout = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
+  const { theme, toggleTheme } = useThemeStore();
+  const isLight = theme === 'light';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -294,6 +297,28 @@ const DashboardLayout = () => {
           <div className="flex items-center gap-2 sm:gap-4">
             <span className="hidden md:inline text-xs text-stone-400 font-medium">{today}</span>
             <span className="hidden md:block w-px h-5 bg-[#2D241E]" />
+
+            {/* Theme Toggle */}
+            <button
+              id="btn-theme-toggle"
+              type="button"
+              onClick={toggleTheme}
+              role="switch"
+              aria-checked={isLight}
+              aria-label={isLight ? 'Aktifkan mode gelap' : 'Aktifkan mode terang'}
+              title={isLight ? 'Mode Gelap' : 'Mode Terang'}
+              className="relative h-10 w-[4.5rem] shrink-0 rounded-xl border border-[#2D241E] bg-[#181310] p-1 transition-colors cursor-pointer hover:border-[#F9610D]/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F9610D]/60"
+            >
+              <span
+                className={`absolute top-1 left-1 h-8 w-8 rounded-lg bg-gradient-to-br from-[#FFCE00] to-[#F9610D] shadow-md transition-transform duration-300 ease-out ${
+                  isLight ? 'translate-x-8' : 'translate-x-0'
+                }`}
+              />
+              <span className="relative z-10 flex h-full items-center justify-between px-[0.4rem]">
+                <Moon size={16} className={`transition-colors ${isLight ? 'text-stone-400' : 'text-[#1C1714]'}`} />
+                <Sun size={16} className={`transition-colors ${isLight ? 'text-[#1C1714]' : 'text-stone-500'}`} />
+              </span>
+            </button>
 
             {/* Notification Button */}
             <div className="relative" ref={notifRef}>

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "flowbite-react/plugin/tailwindcss";
 @source "../.flowbite-react/class-list.json";
+@import "./theme-light.css";
 
 /* Konfigurasi warna brand Richisam untuk Tailwind v4 */
 @theme {

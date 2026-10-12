@@ -1,0 +1,367 @@
+/* ════════════════════════════════════════════════════════════════════
+   RichiStock — Mode Terang (Warm Cream)
+   Aktif bila <html data-theme="light">. Mode gelap tetap default.
+
+   Komponen ditulis dengan kelas warna gelap ber-hardcode
+   (mis. bg-[#1A1412], text-white). Daripada menulis ulang setiap
+   halaman, lapisan ini memetakan kelas-kelas tersebut ke palet terang.
+   Pencocokan memakai [class~="..."] (token persis) supaya varian
+   hover:/opacity tidak ikut tertimpa secara tidak sengaja.
+   ════════════════════════════════════════════════════════════════════ */
+
+html[data-theme="light"] {
+  --lt-page: #F6F1EB;
+  --lt-card: #FFFFFF;
+  --lt-sub: #F9F5F0;
+  --lt-soft: #F0E8DE;
+  --lt-soft-hover: #E6DCD1;
+  --lt-border: #E8DED3;
+  --lt-border-strong: #D4C5B5;
+  --lt-text: #140F0D;
+  --lt-text-2: #241B16;
+  --lt-text-3: #4A3E36;
+  --lt-text-4: #66564B;
+  --lt-gold: #A87A00;
+
+  /* Token tema Tailwind (text-ink, bg-cream, border-line, text-muted, ...) */
+  --color-ink: #140F0D;
+  --color-ink-soft: #241B16;
+  --color-cream: #F9F5F0;
+  --color-sand: #F0E8DE;
+  --color-line: #E8DED3;
+  --color-muted: #4A3E36;
+
+  --text: #241B16;
+  --text-h: #140F0D;
+  --bg: #F6F1EB;
+  --border: #E8DED3;
+  --code-bg: #F0E8DE;
+
+  color: var(--lt-text-2);
+  background: var(--lt-page);
+}
+
+html[data-theme="light"] body,
+html[data-theme="light"] #root {
+  background: var(--lt-page);
+  color: var(--lt-text-2);
+  color-scheme: light;
+}
+
+html[data-theme="light"] h1,
+html[data-theme="light"] h2,
+html[data-theme="light"] h3,
+html[data-theme="light"] h4,
+html[data-theme="light"] h5,
+html[data-theme="light"] h6 {
+  color: var(--lt-text);
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea {
+  color-scheme: light;
+}
+
+/* ── Permukaan: halaman, kartu, sub-permukaan ── */
+html[data-theme="light"] :is(
+  [class*="bg-[#120E0C]"]
+) {
+  background-color: var(--lt-page) !important;
+}
+
+html[data-theme="light"] :is(
+  [class*="bg-[#1A1412]"],
+  [class*="bg-[#16110F]"],
+  [class*="bg-[#1C1714]"],
+  [class*="bg-[#1C1613]"],
+  [class*="bg-[#1E1714]"],
+  [class*="bg-[#181210]"],
+  [class*="bg-[#181310]"],
+  [class*="bg-[#15100E]"],
+  .bg-white
+) {
+  background-color: var(--lt-card) !important;
+}
+
+html[data-theme="light"] [class*="bg-[#16110F]/90"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+}
+
+html[data-theme="light"] .bg-white {
+  color: var(--lt-text-2);
+}
+
+/* Bidang input dan panel dalam kartu (termasuk varian opacity seperti /60, /40) */
+html[data-theme="light"] :is(
+  [class*="bg-[#140F0D]"],
+  [class*="bg-[#130E0C]"],
+  [class*="bg-[#0E0B0A]"],
+  .bg-cream,
+  .bg-gray-50
+) {
+  background-color: var(--lt-sub) !important;
+}
+
+/* Input yang memakai latar halaman tetap tampil sebagai bidang isian putih bersih ber-border rapi */
+html[data-theme="light"] :is(input, select, textarea):is(
+  [class*="bg-[#120E0C]"],
+  [class*="bg-[#140F0D]"],
+  [class*="bg-[#130E0C]"],
+  [class*="bg-[#16110F]"],
+  .bg-white,
+  .bg-cream
+) {
+  background-color: #FFFFFF !important;
+  color: var(--lt-text) !important;
+  border-color: var(--lt-border-strong) !important;
+}
+
+/* Label form selalu tajam dengan kontras penuh */
+html[data-theme="light"] label {
+  color: var(--lt-text) !important;
+}
+
+/* Chip, ikon kotak, tombol sekunder */
+html[data-theme="light"] :is(
+  [class~="bg-[#221B17]"],
+  [class~="bg-[#2B231E]"],
+  [class~="bg-[#2D241E]"],
+  [class~="bg-[#251D18]"],
+  [class~="bg-[#251D19]"],
+  [class~="bg-[#241A16]"],
+  [class~="bg-stone-800"],
+  [class~="bg-stone-700"]
+) {
+  background-color: var(--lt-soft) !important;
+}
+
+html[data-theme="light"] :is(
+  [class~="hover:bg-[#342720]"],
+  [class~="hover:bg-[#2B231E]"],
+  [class~="hover:bg-[#221B17]"],
+  [class~="hover:bg-[#1E1714]"]
+):hover {
+  background-color: var(--lt-soft-hover) !important;
+}
+
+/* Overlay putih transparan → bayangan gelap tipis di mode terang */
+html[data-theme="light"] :is(
+  [class~="bg-white/5"],
+  [class~="bg-white/10"],
+  [class~="bg-white/[0.02]"],
+  [class~="bg-white/[0.03]"],
+  [class~="bg-white/[0.05]"]
+) {
+  background-color: rgba(31, 22, 17, 0.05) !important;
+}
+
+html[data-theme="light"] :is(
+  [class~="hover:bg-white/5"],
+  [class~="hover:bg-white/10"],
+  [class~="hover:bg-white/[0.02]"],
+  [class~="hover:bg-white/[0.03]"],
+  [class~="hover:bg-white/[0.05]"],
+  [class~="hover:bg-white/[0.06]"]
+):hover {
+  background-color: rgba(31, 22, 17, 0.06) !important;
+}
+
+/* ── Garis & pembatas ── */
+html[data-theme="light"] :is(
+  [class~="border-[#2D241E]"],
+  [class~="border-[#241C18]"],
+  [class~="border-[#241B17]"],
+  [class~="border-[#3D302A]"],
+  [class~="border-[#3E3027]"],
+  [class~="border-[#3D2D24]"],
+  [class~="border-[#382E28]"],
+  [class~="border-stone-800"],
+  [class~="border-stone-700"]
+) {
+  border-color: var(--lt-border) !important;
+}
+
+html[data-theme="light"] :is(
+  [class~="divide-[#241C18]"],
+  [class~="divide-[#241B17]"],
+  [class~="divide-[#2D241E]"]
+) > :not(:last-child) {
+  border-color: var(--lt-border) !important;
+}
+
+html[data-theme="light"] [class~="ring-[#181310]"] {
+  --tw-ring-color: #FFFFFF;
+}
+
+/* ── Gradien banner gelap ── */
+html[data-theme="light"] :is([class*="via-[#1A1412]"], [class*="via-[#241B17]"]) {
+  --tw-gradient-via: #FFFFFF;
+}
+html[data-theme="light"] :is([class*="to-[#120E0C]"], [class*="to-[#1E1714]"]) {
+  --tw-gradient-to: var(--lt-sub);
+}
+html[data-theme="light"] [class*="from-[#1E1714]"] {
+  --tw-gradient-from: #FFFFFF;
+}
+html[data-theme="light"] [class*="from-emerald-950"] {
+  --tw-gradient-from: rgba(16, 185, 129, 0.14);
+}
+html[data-theme="light"] [class*="from-amber-950"] {
+  --tw-gradient-from: rgba(245, 158, 11, 0.16);
+}
+
+/* ── Teks ── */
+html[data-theme="light"] .text-white {
+  color: var(--lt-text);
+}
+html[data-theme="light"] :is([class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
+  color: var(--lt-text-3);
+}
+html[data-theme="light"] :is([class~="hover:text-white"], [class~="group-hover:text-white"]):hover {
+  color: var(--lt-text);
+}
+html[data-theme="light"] :is(.text-stone-200, .text-stone-300) {
+  color: var(--lt-text-2);
+}
+html[data-theme="light"] .text-stone-400 {
+  color: var(--lt-text-3);
+}
+html[data-theme="light"] :is(.text-stone-500, .text-stone-600) {
+  color: var(--lt-text-4);
+}
+html[data-theme="light"] [class~="text-[#FFCE00]"] {
+  color: var(--lt-gold);
+}
+
+/* Warna status: versi lebih pekat agar kontras di latar terang */
+html[data-theme="light"] :is(.text-emerald-300, .text-emerald-400) { color: #047857; }
+html[data-theme="light"] :is(.text-red-200, .text-red-300, .text-red-400, .text-rose-400) { color: #C8102E; }
+html[data-theme="light"] :is(.text-amber-300, .text-amber-400) { color: #B45309; }
+html[data-theme="light"] :is(.text-blue-400, .text-indigo-400) { color: #1D4ED8; }
+html[data-theme="light"] .text-purple-300 { color: #6D28D9; }
+html[data-theme="light"] :is(.text-orange-200, .text-orange-400) { color: #C2410C; }
+
+/* ── Permukaan aksen solid: teks harus tetap putih ── */
+html[data-theme="light"] :is(
+  [class~="bg-[#F9610D]"],
+  [class~="bg-richisam-orange"],
+  [class~="bg-[#EC1F27]"],
+  [class~="bg-[#d9530a]"],
+  [class~="bg-ember"],
+  [class*="from-[#F9610D]"],
+  [class*="from-[#BA4F18]"],
+  [class*="from-[#FA6E20]"],
+  [class*="from-[#FFCE00]"],
+  [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"],
+  [class~="bg-red-500"],
+  [class~="bg-red-600"],
+  [class~="bg-green-600"],
+  [class~="bg-blue-600"],
+  [class~="bg-black"]
+) :is(.text-white, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]),
+html[data-theme="light"] :is(
+  [class~="bg-[#F9610D]"],
+  [class~="bg-richisam-orange"],
+  [class~="bg-[#EC1F27]"],
+  [class~="bg-[#d9530a]"],
+  [class~="bg-ember"],
+  [class*="from-[#F9610D]"],
+  [class*="from-[#BA4F18]"],
+  [class*="from-[#FA6E20]"],
+  [class*="from-[#FFCE00]"],
+  [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"],
+  [class~="bg-red-500"],
+  [class~="bg-red-600"],
+  [class~="bg-green-600"],
+  [class~="bg-blue-600"],
+  [class~="bg-black"]
+):is(.text-white, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
+  color: #FFFFFF;
+}
+
+html[data-theme="light"] :is(
+  [class~="bg-[#F9610D]"],
+  [class~="bg-richisam-orange"],
+  [class*="from-[#F9610D]"],
+  [class*="from-[#BA4F18]"]
+) :is(p, h1, h2, h3, h4) {
+  color: inherit;
+}
+
+/* Tint gelap transparan di luar kartu aksen → panel terang tipis */
+html[data-theme="light"] [class*="bg-black/"]:not(.fixed):not(:is(
+  [class*="from-[#F9610D]"],
+  [class*="from-[#BA4F18]"],
+  [class~="bg-[#F9610D]"]
+) *) {
+  background-color: rgba(31, 22, 17, 0.04) !important;
+}
+
+/* Dark warning/danger 950 backgrounds -> clean soft pastels */
+html[data-theme="light"] :is([class*="bg-orange-950"], [class*="bg-amber-950"]) {
+  background-color: rgba(249, 97, 13, 0.12) !important;
+}
+html[data-theme="light"] [class*="bg-red-950"] {
+  background-color: rgba(236, 31, 39, 0.12) !important;
+}
+html[data-theme="light"] [class*="bg-emerald-950"] {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+}
+
+/* ── Tabel ── */
+html[data-theme="light"] table th {
+  background-color: var(--lt-sub) !important;
+  color: var(--lt-text-2) !important;
+  border-color: var(--lt-border) !important;
+}
+html[data-theme="light"] table td {
+  border-color: var(--lt-border) !important;
+  color: var(--lt-text-2);
+}
+html[data-theme="light"] table tr:hover td {
+  background-color: rgba(249, 97, 13, 0.04) !important;
+}
+
+/* Modal */
+html[data-theme="light"] .fixed .bg-white,
+html[data-theme="light"] div[role="dialog"] .bg-white {
+  background-color: #FFFFFF !important;
+  border-color: var(--lt-border) !important;
+}
+html[data-theme="light"] :is([class~="bg-black/80"], [class~="bg-black/70"]).fixed {
+  background-color: rgba(31, 22, 17, 0.45) !important;
+}
+
+/* Bayangan lebih lembut di latar terang */
+html[data-theme="light"] :is(.shadow-xl, .shadow-2xl) {
+  --tw-shadow-color: rgba(80, 50, 30, 0.08);
+}
+
+/* ── Grafik Recharts (atribut SVG) ── */
+html[data-theme="light"] .recharts-wrapper [stroke="#241C18"],
+html[data-theme="light"] .recharts-wrapper [stroke="#2D241E"] {
+  stroke: #EDE4DA;
+}
+html[data-theme="light"] .recharts-wrapper [stroke="#1A1412"] {
+  stroke: #FFFFFF;
+}
+html[data-theme="light"] .recharts-wrapper .recharts-cartesian-axis-tick-value {
+  fill: var(--lt-text-3);
+}
+
+/* Scrollbar */
+html[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(31, 22, 17, 0.18);
+}
+html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(31, 22, 17, 0.3);
+}
+
+/* Transisi halus saat berganti mode */
+html.theme-switching,
+html.theme-switching * {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease !important;
+}

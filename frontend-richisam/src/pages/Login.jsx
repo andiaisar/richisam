@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +20,16 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
+
+  // Halaman login didesain khusus gelap; kembalikan tema pilihan user saat keluar
+  useEffect(() => {
+    const root = document.documentElement;
+    const previous = root.getAttribute('data-theme');
+    root.setAttribute('data-theme', 'dark');
+    return () => {
+      if (previous) root.setAttribute('data-theme', previous);
+    };
+  }, []);
 
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);

@@ -9,6 +9,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <title>RichiStock — Sistem Inventaris</title>
+    <script>
+      // Terapkan tema tersimpan sebelum React render agar tidak ada kedipan warna
+      (function () {
+        try {
+          var t = localStorage.getItem('richistock-theme');
+          if (t !== 'light' && t !== 'dark') t = 'dark';
+          document.documentElement.setAttribute('data-theme', t);
+          document.documentElement.style.colorScheme = t;
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

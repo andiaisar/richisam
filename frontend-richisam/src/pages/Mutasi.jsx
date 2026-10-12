@@ -222,7 +222,7 @@ const Mutasi = () => {
             <button 
               onClick={fetchForm}
               disabled={!selectedOutlet}
-              className="w-full sm:w-auto px-6 py-2.5 bg-[#221B17] hover:bg-[#2B231E] border border-stone-700/80 text-white rounded-xl text-sm font-bold transition-all disabled:opacity-40 cursor-pointer shadow-sm flex items-center justify-center gap-2"
+              className="w-full sm:w-auto px-6 py-2.5 bg-[#F9610D] hover:bg-[#d9530a] text-white rounded-xl text-sm font-bold transition-all disabled:opacity-40 cursor-pointer shadow-md shadow-[#F9610D]/20 flex items-center justify-center gap-2"
             >
               Tampilkan Form
             </button>

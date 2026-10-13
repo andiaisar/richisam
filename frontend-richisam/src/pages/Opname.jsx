@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import BeritaAcaraOpnameModal from '../components/BeritaAcaraOpnameModal';
 
 const Opname = () => {
   const { user } = useAuthStore();
@@ -30,6 +31,7 @@ const Opname = () => {
   const [finalizing, setFinalizing] = useState(false);
   
   const [showFinalizeModal, setShowFinalizeModal] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   const [applyAdjustment, setApplyAdjustment] = useState(false);
   const [searchTableQuery, setSearchTableQuery] = useState('');
 
@@ -258,9 +260,9 @@ const Opname = () => {
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => window.print()}
+              onClick={() => setShowPrintModal(true)}
               className="flex items-center gap-2 px-4 py-2.5 bg-[#1C1613] hover:bg-[#251D19] border border-[#2D241E] text-stone-300 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-              title="Cetak ringkasan hasil opname"
+              title="Cetak Berita Acara Hasil Opname Resmi"
             >
               <Printer size={15} />
               <span>Cetak Hasil</span>
@@ -597,6 +599,14 @@ const Opname = () => {
             </div>
           </div>
         )}
+
+        {/* Modal Berita Acara Cetak Resmi */}
+        <BeritaAcaraOpnameModal
+          isOpen={showPrintModal}
+          onClose={() => setShowPrintModal(false)}
+          opname={selectedOpname}
+          items={items}
+        />
       </div>
     );
   }

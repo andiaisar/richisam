@@ -176,3 +176,73 @@ table tr:hover td {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
 }
+
+/* ── Styling Kertas Berita Acara Cetak (Tampil Putih Bersih Seperti Kertas Asli) ── */
+.berita-acara-sheet {
+  background-color: #FFFFFF !important;
+  color: #111827 !important;
+}
+
+.berita-acara-sheet :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: #111827 !important;
+}
+
+.berita-acara-sheet :is(p, span, div) {
+  color: #1F2937 !important;
+}
+
+.berita-acara-sheet table th {
+  background-color: #F3F4F6 !important;
+  color: #111827 !important;
+  border-color: #000000 !important;
+}
+
+.berita-acara-sheet table td {
+  border-color: #374151 !important;
+  color: #111827 !important;
+}
+
+/* ── Media Print Global: Format Dokumen Cetak Bersih, Elegan, dan Pas A4 ── */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Isolasi print: hanya tampilkan area cetak resmi (.printable-area) */
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-area,
+  .printable-area * {
+    visibility: visible;
+  }
+
+  .printable-area {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+  }
+
+  html, body, #root, main {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 10mm 12mm 12mm 12mm;
+  }
+}

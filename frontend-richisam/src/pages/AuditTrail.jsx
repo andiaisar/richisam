@@ -66,7 +66,7 @@ const AuditTrail = () => {
   const fetchStats = async () => {
     try {
       const res = await axiosClient.get('/audit/stats');
-      setStats(res.data?.data || null);
+      setStats(res?.data || res || null);
     } catch (e) {
       console.error('Error fetching audit stats', e);
     }
@@ -87,9 +87,11 @@ const AuditTrail = () => {
           search: search || undefined
         }
       });
-      setLogs(res.data?.data || []);
-      if (res.data?.pagination) {
-        setPagination(res.data.pagination);
+      const logList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : (res?.data?.data || []));
+      setLogs(logList);
+      const pag = res?.pagination || res?.data?.pagination;
+      if (pag) {
+        setPagination(pag);
       }
     } catch (e) {
       toast.error('Gagal mengambil audit trail: ' + (e.response?.data?.message || e.message));

@@ -51,7 +51,8 @@ const Laporan = () => {
         responseType: 'blob',
       });
       
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const blob = res instanceof Blob ? res : new Blob([res?.data || res]);
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `Laporan_Mutasi_${startDate}_to_${endDate}.xlsx`);
@@ -80,7 +81,8 @@ const Laporan = () => {
       const outletName = outlets.find(o => o.id.toString() === selectedOutlet.toString())?.nama || 'Outlet';
       const filename = `Laporan_Stok_${outletName}_${String(bulan).padStart(2, '0')}-${tahun}.xlsx`;
 
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const blob = res instanceof Blob ? res : new Blob([res?.data || res]);
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', filename);

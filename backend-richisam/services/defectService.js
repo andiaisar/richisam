@@ -34,6 +34,21 @@ class DefectService {
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [outlet_id, product_id, qty, keterangan, foto_url, user_id]
     );
+
+    // Notifikasi ke PUSAT bahwa ada defect baru yang dilaporkan
+    try {
+      const info = await pool.query(
+        'SELECT o.nama as outlet_name, p.nama as product_name FROM outlets o, products p WHERE o.id = $1 AND p.id = $2',
+        [outlet_id, product_id]
+      );
+      const outletName = info.rows[0]?.outlet_name || 'Cabang';
+      const prodName = info.rows[0]?.product_name || 'Produk';
+      const pesan = `Laporan Defect Baru: ${outletName} melaporkan ${qty} unit ${prodName} rusak/cacat (${keterangan || '-'}). Menunggu review Pusat.`;
+      await NotificationService.notifyPusat({ product_id, tipe: 'DEFECT', pesan });
+    } catch (err) {
+      console.error('Error sending defect notification to pusat:', err);
+    }
+
     return result.rows[0];
   }
 
@@ -86,6 +101,26 @@ class DefectService {
         'UPDATE defect_reports SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
         [newStatus, id]
       );
+
+      // Notifikasi ke cabang terkait peninjauan defect oleh Pusat
+      const prodInfo = await client.query('SELECT nama FROM products WHERE id = $1', [defect.product_id]);
+      const prodName = prodInfo.rows[0]?.nama || 'Produk';
+
+      let pesan = '';
+      if (newStatus === 'DISETUJUI') {
+        pesan = `Laporan Defect Disetujui: Laporan defect ${prodName} (${defect.qty} unit) telah disetujui Pusat. Stok otomatis disesuaikan.`;
+      } else if (newStatus === 'DITOLAK') {
+        pesan = `Laporan Defect Ditolak: Laporan defect ${prodName} (${defect.qty} unit) telah ditolak oleh Pusat.`;
+      } else if (newStatus === 'DITINJAU') {
+        pesan = `Laporan Defect Ditinjau: Laporan defect ${prodName} (${defect.qty} unit) sedang dalam proses peninjauan Pusat.`;
+      }
+
+      if (pesan) {
+        await NotificationService.notifyOutlet(
+          { outlet_id: defect.outlet_id, product_id: defect.product_id, tipe: 'DEFECT', pesan },
+          client
+        );
+      }
 
       await client.query('COMMIT');
       return resUpdate.rows[0];

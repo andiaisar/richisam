@@ -190,6 +190,76 @@ const SidebarContent = ({ menus, user, onLogout, onNavigate }) => (
   </div>
 );
 
+const getNotifConfig = (tipe) => {
+  switch (tipe) {
+    case 'KADALUARSA':
+      return {
+        label: 'Kadaluarsa / FEFO',
+        title: 'Peringatan Kadaluarsa & FEFO',
+        badgeBg: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+        dotBg: 'bg-rose-500',
+        modalIconBg: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+        icon: CalendarClock,
+        actionLabel: () => 'Cek Masa Kadaluwarsa',
+        actionPath: () => '/kadaluarsa',
+        actionIcon: CalendarClock,
+        buttonBg: 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/25',
+      };
+    case 'PAR_STOCK':
+      return {
+        label: 'Par Stock',
+        title: 'Peringatan Stok Kritis (Par Stock)',
+        badgeBg: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+        dotBg: 'bg-amber-500',
+        modalIconBg: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+        icon: Gauge,
+        actionLabel: (role) => (role === 'STAF_CABANG' ? 'Ajukan Permintaan Restock' : 'Cek Stok & Mutasi'),
+        actionPath: (role) => (role === 'STAF_CABANG' ? '/permintaan' : '/mutasi'),
+        actionIcon: ArrowLeftRight,
+        buttonBg: 'bg-amber-600 hover:bg-amber-700 shadow-amber-600/25',
+      };
+    case 'TIKET':
+      return {
+        label: 'Tiket & Pengiriman',
+        title: 'Tiket Permintaan & Surat Jalan',
+        badgeBg: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+        dotBg: 'bg-sky-500',
+        modalIconBg: 'bg-sky-500/15 text-sky-400 border-sky-500/30',
+        icon: Send,
+        actionLabel: () => 'Buka Tiket Permintaan',
+        actionPath: () => '/permintaan',
+        actionIcon: PackagePlus,
+        buttonBg: 'bg-sky-600 hover:bg-sky-700 shadow-sky-600/25',
+      };
+    case 'DEFECT':
+      return {
+        label: 'Laporan Defect',
+        title: 'Laporan Defect & Penyesuaian Stok',
+        badgeBg: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+        dotBg: 'bg-purple-500',
+        modalIconBg: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+        icon: PackageX,
+        actionLabel: () => 'Tinjau Laporan Defect',
+        actionPath: () => '/defect',
+        actionIcon: PackageX,
+        buttonBg: 'bg-purple-600 hover:bg-purple-700 shadow-purple-600/25',
+      };
+    default:
+      return {
+        label: tipe || 'Sistem',
+        title: 'Pemberitahuan Sistem',
+        badgeBg: 'bg-[#F9610D]/15 text-[#F9610D] border-[#F9610D]/30',
+        dotBg: 'bg-[#F9610D]',
+        modalIconBg: 'bg-[#F9610D]/15 text-[#F9610D] border-[#F9610D]/30',
+        icon: Bell,
+        actionLabel: null,
+        actionPath: null,
+        actionIcon: ArrowLeftRight,
+        buttonBg: 'bg-[#F9610D] hover:bg-[#d9530a] shadow-[#F9610D]/25',
+      };
+  }
+};
+
 const DashboardLayout = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
@@ -209,25 +279,30 @@ const DashboardLayout = () => {
         axiosClient.get('/notifications/unread-count'),
         axiosClient.get('/notifications?limit=10')
       ]);
-      const count = countRes.data?.count ?? countRes.data?.data ?? 0;
-      const list = Array.isArray(listRes.data?.data)
-        ? listRes.data.data
-        : Array.isArray(listRes.data?.data?.data)
-          ? listRes.data.data.data
-          : [];
+      const count =
+        countRes?.count ??
+        countRes?.data?.count ??
+        (typeof countRes?.data === 'number' ? countRes.data : 0);
+      const list = Array.isArray(listRes?.data)
+        ? listRes.data
+        : Array.isArray(listRes?.data?.data)
+          ? listRes.data.data
+          : Array.isArray(listRes)
+            ? listRes
+            : [];
       setUnreadCount(Number(count) || 0);
       setNotifications(list);
-    } catch {
-      console.error('Failed to fetch notifications');
+    } catch (e) {
+      console.error('Failed to fetch notifications', e);
     }
   };
 
   useEffect(() => {
     if (!isAuthenticated) return;
     fetchNotifs();
-    const interval = setInterval(fetchNotifs, 30000);
+    const interval = setInterval(fetchNotifs, 15000);
     return () => clearInterval(interval);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, location.pathname]);
 
   const handleNotificationClick = async (notif) => {
     setSelectedNotif(notif);
@@ -413,32 +488,42 @@ const DashboardLayout = () => {
                   <div className="max-h-80 overflow-y-auto">
                     {notifications.length > 0 ? (
                       <ul className="divide-y divide-[#241C18]">
-                        {notifications.map((n) => (
-                          <li
-                            key={n.id}
-                            onClick={() => handleNotificationClick(n)}
-                            className={`p-3.5 hover:bg-white/[0.04] transition-colors cursor-pointer flex items-start gap-3 ${
-                              !n.is_read ? 'bg-[#F9610D]/5' : ''
-                            }`}
-                          >
-                            <span className={`mt-1.5 w-2 h-2 shrink-0 rounded-full ${!n.is_read ? 'bg-[#F9610D]' : 'bg-transparent'}`} />
-                            <div className="flex-1 min-w-0">
-                              <p className={`text-xs sm:text-sm line-clamp-2 ${!n.is_read ? 'font-semibold text-white' : 'text-stone-300'}`}>
-                                {n.pesan}
-                              </p>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-[#F9610D] bg-[#F9610D]/10 px-1.5 py-0.5 rounded">
-                                  {n.tipe}
-                                </span>
-                                <span className="text-[11px] text-stone-500">
-                                  {new Date(n.created_at).toLocaleString('id-ID', {
-                                    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
-                                  })}
-                                </span>
+                        {notifications.map((n) => {
+                          const cfg = getNotifConfig(n.tipe);
+                          const IconComp = cfg.icon;
+                          return (
+                            <li
+                              key={n.id}
+                              id={`notif-item-${n.id}`}
+                              onClick={() => handleNotificationClick(n)}
+                              className={`p-3.5 hover:bg-white/[0.04] transition-colors cursor-pointer flex items-start gap-3 ${
+                                !n.is_read ? 'bg-white/[0.03]' : ''
+                              }`}
+                            >
+                              <div className={`mt-0.5 p-2 rounded-xl shrink-0 border ${cfg.modalIconBg}`}>
+                                <IconComp size={15} />
                               </div>
-                            </div>
-                          </li>
-                        ))}
+                              <div className="flex-1 min-w-0">
+                                <p className={`text-xs sm:text-sm line-clamp-2 ${!n.is_read ? 'font-semibold text-white' : 'text-stone-300'}`}>
+                                  {n.pesan}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                  <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${cfg.badgeBg}`}>
+                                    {cfg.label}
+                                  </span>
+                                  <span className="text-[11px] text-stone-500">
+                                    {new Date(n.created_at).toLocaleString('id-ID', {
+                                      day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                    })}
+                                  </span>
+                                  {!n.is_read && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#EC1F27] ml-auto shrink-0" />
+                                  )}
+                                </div>
+                              </div>
+                            </li>
+                          );
+                        })}
                       </ul>
                     ) : (
                       <div className="p-8 text-center">
@@ -474,73 +559,81 @@ const DashboardLayout = () => {
       </div>
 
       {/* Modal Detail Notifikasi (Berada di Paling Depan Layar / z-[9999]) */}
-      {selectedNotif && (
-        <div 
-          id="modal-notification-detail"
-          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
-          onClick={() => setSelectedNotif(null)}
-        >
+      {selectedNotif && (() => {
+        const cfg = getNotifConfig(selectedNotif.tipe);
+        const ModalIcon = cfg.icon;
+        const ActionIcon = cfg.actionIcon;
+        const actionPath = typeof cfg.actionPath === 'function' ? cfg.actionPath(user?.role) : cfg.actionPath;
+        const actionLabel = typeof cfg.actionLabel === 'function' ? cfg.actionLabel(user?.role) : cfg.actionLabel;
+
+        return (
           <div 
-            className="relative w-full max-w-md rounded-3xl border border-[#382E28] bg-[#1A1412] p-6 shadow-2xl overflow-hidden text-white"
-            onClick={e => e.stopPropagation()}
+            id="modal-notification-detail"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
+            onClick={() => setSelectedNotif(null)}
           >
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-2xl bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30">
-                  <Bell size={24} />
+            <div 
+              className="relative w-full max-w-md rounded-3xl border border-[#382E28] bg-[#1A1412] p-6 shadow-2xl overflow-hidden text-white"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-2xl border ${cfg.modalIconBg}`}>
+                    <ModalIcon size={24} />
+                  </div>
+                  <div>
+                    <span className={`text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${cfg.badgeBg}`}>
+                      {cfg.title}
+                    </span>
+                    <p className="text-xs text-stone-400 mt-1">
+                      {new Date(selectedNotif.created_at).toLocaleString('id-ID', {
+                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#F9610D]/20 text-[#F9610D] border border-[#F9610D]/40">
-                    {selectedNotif.tipe === 'PAR_STOCK' ? 'Peringatan Stok Kritis' : selectedNotif.tipe}
-                  </span>
-                  <p className="text-xs text-stone-400 mt-1">
-                    {new Date(selectedNotif.created_at).toLocaleString('id-ID', {
-                      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    })}
-                  </p>
-                </div>
-              </div>
-              <button 
-                id="btn-close-notif-modal"
-                onClick={() => setSelectedNotif(null)}
-                className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                aria-label="Tutup modal"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="my-5 p-4 rounded-2xl bg-[#140F0D] border border-[#2D241E]">
-              <p className="text-sm sm:text-base font-medium text-stone-100 leading-relaxed">
-                {selectedNotif.pesan}
-              </p>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 mt-6">
-              <button
-                id="btn-notif-modal-dismiss"
-                onClick={() => setSelectedNotif(null)}
-                className="px-4 py-2.5 rounded-xl text-sm font-semibold text-stone-300 hover:text-white hover:bg-white/5 border border-stone-700/80 transition-colors cursor-pointer"
-              >
-                Tutup
-              </button>
-              {selectedNotif.tipe === 'PAR_STOCK' && (
-                <button
-                  id="btn-notif-modal-action"
-                  onClick={() => {
-                    setSelectedNotif(null);
-                    navigate(user?.role === 'STAF_CABANG' ? '/permintaan' : '/mutasi');
-                  }}
-                  className="px-5 py-2.5 rounded-xl text-sm font-bold bg-[#F9610D] hover:bg-[#d9530a] text-white shadow-lg shadow-[#F9610D]/25 transition-all cursor-pointer flex items-center gap-2"
+                <button 
+                  id="btn-close-notif-modal"
+                  onClick={() => setSelectedNotif(null)}
+                  className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  aria-label="Tutup modal"
                 >
-                  <ArrowLeftRight size={16} />
-                  {user?.role === 'STAF_CABANG' ? 'Ajukan Permintaan' : 'Cek Stok Mutasi'}
+                  <X size={20} />
                 </button>
-              )}
+              </div>
+
+              <div className="my-5 p-4 rounded-2xl bg-[#140F0D] border border-[#2D241E]">
+                <p className="text-sm sm:text-base font-medium text-stone-100 leading-relaxed">
+                  {selectedNotif.pesan}
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 mt-6">
+                <button
+                  id="btn-notif-modal-dismiss"
+                  onClick={() => setSelectedNotif(null)}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-stone-300 hover:text-white hover:bg-white/5 border border-stone-700/80 transition-colors cursor-pointer"
+                >
+                  Tutup
+                </button>
+                {actionPath && (
+                  <button
+                    id="btn-notif-modal-action"
+                    onClick={() => {
+                      setSelectedNotif(null);
+                      navigate(actionPath);
+                    }}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-bold text-white shadow-lg transition-all cursor-pointer flex items-center gap-2 ${cfg.buttonBg}`}
+                  >
+                    <ActionIcon size={16} />
+                    {actionLabel}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

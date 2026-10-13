@@ -45,6 +45,17 @@ class RequestService {
          VALUES ($1, $2, $3)`,
         [ticket.id, product_id, qty_requested]
       );
+
+      // Notifikasi untuk Pusat bahwa ada tiket permintaan baru
+      const info = await client.query(
+        'SELECT o.nama as outlet_name, p.nama as product_name FROM outlets o, products p WHERE o.id = $1 AND p.id = $2',
+        [outlet_id, product_id]
+      );
+      const outletName = info.rows[0]?.outlet_name || 'Cabang';
+      const prodName = info.rows[0]?.product_name || 'Produk';
+      const pesan = `Tiket Permintaan Baru [${kode_tiket}]: ${outletName} meminta ${qty_requested} unit ${prodName}. Menunggu proses Pusat.`;
+      await NotificationService.notifyPusat({ product_id, tipe: 'TIKET', pesan }, client);
+
       await client.query('COMMIT');
       return ticket;
     } catch (e) {
@@ -127,6 +138,18 @@ class RequestService {
         [newStatus, id]
       );
 
+      // Notifikasi status tiket & pengiriman surat jalan
+      const outInfo = await client.query('SELECT nama FROM outlets WHERE id = $1', [tiket.outlet_id]);
+      const outletName = outInfo.rows[0]?.nama || 'Cabang';
+
+      if (newStatus === 'DIKIRIM') {
+        const pesan = `Surat Jalan Dikirim: Tiket [${tiket.kode_tiket}] sedang dalam pengiriman ke ${outletName}. Mohon staf verifikasi fisik & terima stok saat tiba.`;
+        await NotificationService.notifyOutlet({ outlet_id: tiket.outlet_id, product_id: null, tipe: 'TIKET', pesan }, client);
+      } else if (newStatus === 'SELESAI') {
+        const pesan = `Penerimaan Selesai: Tiket [${tiket.kode_tiket}] telah diterima & diverifikasi lengkap oleh ${outletName}. Stok cabang telah bertambah.`;
+        await NotificationService.notifyPusat({ product_id: null, tipe: 'TIKET', pesan }, client);
+      }
+
       await client.query('COMMIT');
       return resUpdate.rows[0];
     } catch (e) {
@@ -192,6 +215,12 @@ class RequestService {
         await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, outlet_id, item.product_id]);
         await NotificationService.checkParStock(outlet_id, item.product_id);
       }
+
+      // Notifikasi CITO darurat ke Pusat
+      const outInfo = await client.query('SELECT nama FROM outlets WHERE id = $1', [outlet_id]);
+      const outletName = outInfo.rows[0]?.nama || 'Cabang';
+      const pesan = `PENGAMBILAN DARURAT (CITO): [${kode_tiket}] telah dibuat & diselesaikan langsung oleh ${outletName}. Stok cabang telah termutasi.`;
+      await NotificationService.notifyPusat({ product_id: null, tipe: 'TIKET', pesan }, client);
 
       await client.query('COMMIT');
       return ticket;

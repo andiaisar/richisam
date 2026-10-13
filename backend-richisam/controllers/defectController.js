@@ -18,7 +18,9 @@ exports.upload = upload;
 const defectSchema = z.object({
   product_id: z.string().transform(v => parseInt(v)),
   qty: z.string().transform(v => parseInt(v)),
-  keterangan: z.string().optional()
+  keterangan: z.string().optional(),
+  deskripsi: z.string().optional(),
+  tipe: z.string().optional()
 });
 
 const updateSchema = z.object({
@@ -46,12 +48,13 @@ exports.reportDefect = async (req, res) => {
     if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
 
     const foto_url = req.file ? `/uploads/${req.file.filename}` : '';
+    const deskripsi = parsed.data.deskripsi || parsed.data.keterangan || '';
 
     const defect = await DefectService.reportDefect(
       outlet_id, 
       parsed.data.product_id, 
       parsed.data.qty, 
-      parsed.data.keterangan, 
+      deskripsi, 
       foto_url, 
       req.user.id
     );

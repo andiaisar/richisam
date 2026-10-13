@@ -18,9 +18,10 @@ const Assets = () => {
     if (user?.role !== 'STAF_CABANG') {
       try {
         const res = await axiosClient.get('/outlets');
-        setOutlets(res?.data?.data || res?.data || []);
-        if (res?.data?.length > 0) {
-          setSelectedOutlet(res.data.data[0].id.toString());
+        const list = res?.data?.data || res?.data || [];
+        setOutlets(list);
+        if (list.length > 0) {
+          setSelectedOutlet(list[0].id.toString());
         }
       } catch (e) {}
     } else {

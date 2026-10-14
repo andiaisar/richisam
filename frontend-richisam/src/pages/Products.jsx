@@ -219,7 +219,7 @@ const Products = () => {
                     <td className="px-6 py-4 font-medium text-ink">{p.kode}</td>
                     <td className="px-6 py-4 font-semibold text-ink">{p.nama}</td>
                     <td className="px-6 py-4 text-ink/80">
-                      <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">{p.kategori || '-'}</span>
+                      <span className="px-2.5 py-0.5 bg-stone-800 text-stone-200 border border-stone-700/60 rounded-full text-[11px] font-bold">{p.kategori || '-'}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">

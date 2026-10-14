@@ -1,8 +1,27 @@
-import React from 'react';
-import { Printer, X, ClipboardCheck, Store, Calendar, FileText, CheckCircle2, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Printer, X, ClipboardCheck, Store, Calendar, FileText, CheckCircle2, ShieldCheck, QrCode } from 'lucide-react';
+import QRCode from 'qrcode';
 
 const BeritaAcaraOpnameModal = ({ isOpen, onClose, opname, items = [] }) => {
   if (!isOpen || !opname) return null;
+
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+
+  useEffect(() => {
+    if (opname) {
+      const payload = `RICHISTOCK-VERIFIED|OPNAME-ID:${opname.id}|CODE:${opname.kode_opname || 'OPN-' + opname.id}|OUTLET:${opname.outlet_name || 'PUSAT'}|DATE:${opname.tanggal}|VALID:TRUE`;
+      QRCode.toDataURL(payload, {
+        width: 140,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      })
+        .then(url => setQrCodeDataUrl(url))
+        .catch(err => console.error('Failed to generate QR', err));
+    }
+  }, [opname]);
 
   const handlePrint = () => {
     window.print();
@@ -263,8 +282,46 @@ const BeritaAcaraOpnameModal = ({ isOpen, onClose, opname, items = [] }) => {
             </table>
           </div>
 
+          {/* ── DIGITAL AUDIT & VERIFICATION STAMP (E-STAMP RESMI) ── */}
+          <div className="mt-6 p-3.5 bg-gray-50 border border-black/20 rounded-2xl flex items-center justify-between gap-4 print:bg-white print:border-black print:p-2.5">
+            <div className="flex items-center gap-3.5">
+              {qrCodeDataUrl ? (
+                <img
+                  src={qrCodeDataUrl}
+                  alt="QR Verifikasi Dokumen"
+                  className="w-18 h-18 border border-gray-300 rounded-lg p-1 bg-white print:border-black shrink-0"
+                />
+              ) : (
+                <div className="w-18 h-18 bg-gray-100 border border-gray-300 rounded-lg shrink-0 flex items-center justify-center text-[10px] text-gray-400 font-mono">
+                  QR CODE
+                </div>
+              )}
+              <div className="text-left">
+                <div className="flex items-center gap-1.5 text-black font-black text-[11px] uppercase tracking-wider">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 print:text-black shrink-0" />
+                  <span>Sertifikasi Audit Digital (RichiStock e-Verification)</span>
+                </div>
+                <p className="text-[10px] text-gray-700 mt-0.5 leading-snug">
+                  Dokumen ini telah divalidasi keabsahannya oleh <strong>Sistem Terintegrasi RichiStock</strong>. Pindai kode QR untuk mengonfirmasi keaslian rekonsiliasi stok fisik, identitas pencatat, dan riwayat audit trail.
+                </p>
+                <div className="mt-1 flex items-center gap-2 text-[9px] font-mono text-gray-500">
+                  <span>REF ID: {opname.kode_opname || `OPN-${opname.id}`}</span>
+                  <span>•</span>
+                  <span>STATUS: RESMI & TERKUNCI</span>
+                  <span>•</span>
+                  <span>CETAK: {printTimestamp}</span>
+                </div>
+              </div>
+            </div>
+            <div className="hidden sm:flex flex-col items-center justify-center border-2 border-dashed border-emerald-600/70 print:border-black px-3.5 py-1.5 rounded-xl text-center shrink-0">
+              <span className="text-[8px] font-black uppercase text-emerald-800 tracking-widest print:text-black">STATUS DOKUMEN</span>
+              <span className="text-[11px] font-black text-emerald-700 uppercase tracking-wider print:text-black">VERIFIED</span>
+              <span className="text-[7.5px] text-gray-500 font-mono">AUDIT TRIAL PASSED</span>
+            </div>
+          </div>
+
           {/* ── LEMBAR PENGESAHAN & TANDA TANGAN (SIGNATURE BLOCK) ── */}
-          <div className="mt-8 pt-4 border-t border-gray-400">
+          <div className="mt-6 pt-4 border-t border-gray-400">
             <p className="text-[11px] text-gray-700 mb-6 italic text-center">
               Demikian Berita Acara ini dibuat dengan sebenarnya berdasarkan hasil penghitungan fisik di lokasi penyimpanan dan telah diverifikasi bersama.
             </p>

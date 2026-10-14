@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { PackageX, Search, Plus, Filter, RefreshCw, FileText, Image as ImageIcon, X, Upload } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -42,10 +43,28 @@ const Defect = () => {
     } catch (e) {}
   };
 
+  const location = useLocation();
+
   useEffect(() => {
     fetchDefects();
     fetchProducts();
   }, [filter]);
+
+  useEffect(() => {
+    if (location.state?.autoOpenDefect && location.state?.defectData) {
+      const { product_id, qty, tipe, keterangan } = location.state.defectData;
+      setFormData({
+        product_id: product_id ? String(product_id) : '',
+        qty: qty ? String(qty) : '',
+        tipe: tipe || 'RUSAK',
+        deskripsi: keterangan || ''
+      });
+      setFotoFile(null);
+      setIsModalOpen(true);
+      toast.success('Form afkir defect otomatis terisi dari batch kadaluarsa');
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const openAddModal = () => {
     setFormData({ product_id: '', qty: '', tipe: 'RETUR', deskripsi: '' });
@@ -144,6 +163,8 @@ const Defect = () => {
               <option value="ALL">Semua Status</option>
               <option value="BARU">Baru</option>
               <option value="DITINJAU">Ditinjau</option>
+              <option value="DISETUJUI">Disetujui</option>
+              <option value="DITOLAK">Ditolak</option>
               <option value="SELESAI">Selesai</option>
             </select>
           </div>
@@ -321,16 +342,19 @@ const Defect = () => {
 };
 
 const StatusBadge = ({ status }) => {
+  const norm = String(status || '').toUpperCase().trim();
   const styles = {
-    'BARU': 'bg-red-50 text-red-700 border-red-200',
-    'DITINJAU': 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    'SELESAI': 'bg-green-50 text-green-700 border-green-200',
+    BARU: 'bg-sky-500/20 text-sky-400 border-sky-500/40',
+    DITINJAU: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+    DISETUJUI: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40',
+    DITOLAK: 'bg-rose-500/20 text-rose-400 border-rose-500/40',
+    SELESAI: 'bg-teal-500/20 text-teal-300 border-teal-500/40',
   };
   
-  const className = styles[status] || 'bg-gray-50 text-gray-700 border-gray-200';
+  const className = styles[norm] || 'bg-stone-800 text-stone-200 border-stone-700';
   
   return (
-    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide border uppercase ${className}`}>
+    <span className={`px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider border uppercase inline-flex items-center justify-center shadow-sm ${className}`}>
       {status}
     </span>
   );

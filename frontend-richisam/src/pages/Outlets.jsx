@@ -101,16 +101,16 @@ const Outlets = () => {
                   <tr key={o.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{o.nama}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide border uppercase ${o.tipe === 'PUSAT' ? 'bg-orange-50 text-orange-700 border-orange-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase ${o.tipe === 'PUSAT' ? 'bg-[#F9610D]/20 text-[#F9610D] border-[#F9610D]/40' : 'bg-blue-500/20 text-blue-300 border-blue-500/40'}`}>
                         {o.tipe}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-ink/80 truncate max-w-xs">{o.alamat || '-'}</td>
                     <td className="px-6 py-4">
                       {o.is_active ? (
-                        <span className="text-green-600 font-medium flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"/>Buka</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"/>Buka</span>
                       ) : (
-                        <span className="text-red-600 font-medium flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"/>Tutup</span>
+                        <span className="text-rose-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"/>Tutup</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">

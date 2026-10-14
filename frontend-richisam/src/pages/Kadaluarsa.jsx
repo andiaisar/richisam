@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { 
   CalendarClock, AlertTriangle, AlertCircle, CheckCircle2, Plus, 
@@ -9,6 +10,7 @@ import toast from 'react-hot-toast';
 
 const Kadaluarsa = () => {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   
   const [batches, setBatches] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -125,6 +127,21 @@ const Kadaluarsa = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleAfkirToDefect = (batch) => {
+    navigate('/defect', {
+      state: {
+        autoOpenDefect: true,
+        defectData: {
+          product_id: batch.product_id,
+          qty: batch.qty,
+          tipe: 'RUSAK',
+          outlet_id: batch.outlet_id,
+          keterangan: `Afkir barang kadaluarsa Batch: ${batch.batch_no} (${batch.product_name}, ${batch.qty} ${batch.product_satuan || 'unit'}). Expired: ${batch.expired_date}`
+        }
+      }
+    });
   };
 
   const handleDelete = async (id) => {
@@ -420,13 +437,25 @@ const Kadaluarsa = () => {
                         {statusBadge}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleDelete(b.id)}
-                          className="p-1.5 text-stone-500 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all cursor-pointer"
-                          title="Hapus / Tandai Habis"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {days <= 3 && (
+                            <button
+                              onClick={() => handleAfkirToDefect(b)}
+                              className="px-2.5 py-1 text-[11px] font-bold bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 rounded-lg transition-all cursor-pointer flex items-center gap-1 shadow-sm whitespace-nowrap"
+                              title="Tarik fisik & buat laporan defect afkir"
+                            >
+                              <ShieldAlert className="w-3.5 h-3.5" />
+                              <span>Afkir</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDelete(b.id)}
+                            className="p-1.5 text-stone-500 hover:text-red-400 hover:bg-red-950/30 rounded-lg transition-all cursor-pointer"
+                            title="Hapus / Tandai Habis"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

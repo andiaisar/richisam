@@ -1,0 +1,23 @@
+{
+  "name": "RichiStock — Sistem Inventaris",
+  "short_name": "RichiStock",
+  "description": "Sistem inventaris multi-cabang terintegrasi untuk supply chain & central kitchen F&B Richisam.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#120E0C",
+  "theme_color": "#F9610D",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

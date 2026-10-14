@@ -240,9 +240,11 @@ html[data-theme="light"] [class~="text-[#FFCE00]"] {
 html[data-theme="light"] :is(.text-emerald-300, .text-emerald-400) { color: #047857; }
 html[data-theme="light"] :is(.text-red-200, .text-red-300, .text-red-400, .text-rose-400) { color: #C8102E; }
 html[data-theme="light"] :is(.text-amber-300, .text-amber-400) { color: #B45309; }
-html[data-theme="light"] :is(.text-blue-400, .text-indigo-400) { color: #1D4ED8; }
+html[data-theme="light"] :is(.text-blue-400, .text-indigo-300, .text-indigo-400) { color: #1D4ED8; }
 html[data-theme="light"] .text-purple-300 { color: #6D28D9; }
 html[data-theme="light"] :is(.text-orange-200, .text-orange-400) { color: #C2410C; }
+html[data-theme="light"] :is(.text-sky-300, .text-sky-400) { color: #0284C7; }
+html[data-theme="light"] :is(.text-teal-300, .text-teal-400) { color: #0F766E; }
 
 /* ── Permukaan aksen solid: teks harus tetap putih ── */
 html[data-theme="light"] :is(

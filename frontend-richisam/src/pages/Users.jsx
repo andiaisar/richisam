@@ -175,16 +175,16 @@ const Users = () => {
                     <td className="px-6 py-4 font-medium text-ink">{u.nama}</td>
                     <td className="px-6 py-4 text-ink/80">{u.username}</td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide border uppercase bg-gray-50 border-gray-200 text-gray-700">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-stone-800 text-stone-200 border-stone-700">
                         {u.role.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-ink/80">{u.outlet_name || '-'}</td>
                     <td className="px-6 py-4">
                       {u.is_active ? (
-                        <span className="text-green-600 font-medium flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"/>Aktif</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"/>Aktif</span>
                       ) : (
-                        <span className="text-red-600 font-medium flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block"/>Nonaktif</span>
+                        <span className="text-rose-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"/>Nonaktif</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">

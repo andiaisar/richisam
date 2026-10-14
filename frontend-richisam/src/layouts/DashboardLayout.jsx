@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Boxes, LayoutDashboard, ArrowLeftRight, PackagePlus, PackageX, Users, Store,
-  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert, Sun, Moon, CheckCheck
+  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert, Sun, Moon, CheckCheck, Volume2, VolumeX
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../store/useAuthStore';
@@ -260,6 +260,40 @@ const getNotifConfig = (tipe) => {
   }
 };
 
+const playNotificationSound = () => {
+  try {
+    const isMuted = localStorage.getItem('richistock_notif_muted') === 'true';
+    if (isMuted) return;
+
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+
+    // Elegant two-tone bell chime (D5 -> A5)
+    const playTone = (freq, startTime, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+      
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.12, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    };
+
+    const now = ctx.currentTime;
+    playTone(587.33, now, 0.35); // D5
+    playTone(880.00, now + 0.12, 0.45); // A5
+  } catch {
+    // Autoplay restriction before user gesture
+  }
+};
+
 const DashboardLayout = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
@@ -269,15 +303,30 @@ const DashboardLayout = () => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState([]);
+  const [notifCategoryFilter, setNotifCategoryFilter] = useState('ALL');
+  const [soundMuted, setSoundMuted] = useState(() => localStorage.getItem('richistock_notif_muted') === 'true');
   const [selectedNotif, setSelectedNotif] = useState(null);
   const notifRef = useRef(null);
+  const prevUnreadRef = useRef(null);
   const location = useLocation();
+
+  const toggleSound = () => {
+    const next = !soundMuted;
+    setSoundMuted(next);
+    localStorage.setItem('richistock_notif_muted', String(next));
+    if (!next) {
+      playNotificationSound();
+      toast.success('Suara notifikasi aktif');
+    } else {
+      toast('Suara notifikasi dibisukan');
+    }
+  };
 
   const fetchNotifs = async () => {
     try {
       const [countRes, listRes] = await Promise.all([
         axiosClient.get('/notifications/unread-count'),
-        axiosClient.get('/notifications?limit=10')
+        axiosClient.get('/notifications?limit=15')
       ]);
       const count =
         countRes?.count ??
@@ -290,7 +339,14 @@ const DashboardLayout = () => {
           : Array.isArray(listRes)
             ? listRes
             : [];
-      setUnreadCount(Number(count) || 0);
+      
+      const numCount = Number(count) || 0;
+      if (prevUnreadRef.current !== null && numCount > prevUnreadRef.current) {
+        playNotificationSound();
+      }
+      prevUnreadRef.current = numCount;
+
+      setUnreadCount(numCount);
       setNotifications(list);
     } catch (e) {
       console.error('Failed to fetch notifications', e);
@@ -474,21 +530,100 @@ const DashboardLayout = () => {
                         </span>
                       )}
                     </div>
-                    {unreadCount > 0 && (
-                      <button 
-                        id="btn-mark-all-read-header"
-                        onClick={handleMarkAllAsRead}
-                        className="text-xs font-semibold text-[#F9610D] hover:underline cursor-pointer flex items-center gap-1"
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={toggleSound}
+                        className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
+                          soundMuted 
+                            ? 'text-stone-500 border-stone-800 hover:text-stone-300' 
+                            : 'text-[#F9610D] border-[#F9610D]/30 bg-[#F9610D]/10'
+                        }`}
+                        title={soundMuted ? 'Aktifkan audio chime notifikasi' : 'Bisukan suara notifikasi'}
+                        aria-label="Toggle Sound"
                       >
-                        <CheckCheck size={14} />
-                        Tandai dibaca
+                        {soundMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                      </button>
+                      {unreadCount > 0 && (
+                        <button 
+                          id="btn-mark-all-read-header"
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs font-semibold text-[#F9610D] hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          <CheckCheck size={14} />
+                          Tandai dibaca
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Filter Chips Bar */}
+                  <div className="px-3 py-2 bg-[#120E0C] border-b border-[#2D241E] flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                    <button
+                      onClick={() => setNotifCategoryFilter('ALL')}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer ${
+                        notifCategoryFilter === 'ALL'
+                          ? 'bg-white/15 text-white border border-white/30'
+                          : 'text-stone-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      Semua ({notifications.length})
+                    </button>
+                    {notifications.some(n => n.tipe === 'KADALUARSA') && (
+                      <button
+                        onClick={() => setNotifCategoryFilter('KADALUARSA')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                          notifCategoryFilter === 'KADALUARSA'
+                            ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                            : 'text-rose-400/80 hover:text-rose-400 hover:bg-rose-500/10'
+                        }`}
+                      >
+                        Kadaluarsa ({notifications.filter(n => n.tipe === 'KADALUARSA').length})
+                      </button>
+                    )}
+                    {notifications.some(n => n.tipe === 'PAR_STOCK') && (
+                      <button
+                        onClick={() => setNotifCategoryFilter('PAR_STOCK')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                          notifCategoryFilter === 'PAR_STOCK'
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'text-amber-400/80 hover:text-amber-400 hover:bg-amber-500/10'
+                        }`}
+                      >
+                        Par Stock ({notifications.filter(n => n.tipe === 'PAR_STOCK').length})
+                      </button>
+                    )}
+                    {notifications.some(n => n.tipe === 'TIKET') && (
+                      <button
+                        onClick={() => setNotifCategoryFilter('TIKET')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                          notifCategoryFilter === 'TIKET'
+                            ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                            : 'text-sky-400/80 hover:text-sky-400 hover:bg-sky-500/10'
+                        }`}
+                      >
+                        Tiket ({notifications.filter(n => n.tipe === 'TIKET').length})
+                      </button>
+                    )}
+                    {notifications.some(n => n.tipe === 'DEFECT') && (
+                      <button
+                        onClick={() => setNotifCategoryFilter('DEFECT')}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all whitespace-nowrap cursor-pointer flex items-center gap-1 ${
+                          notifCategoryFilter === 'DEFECT'
+                            ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40'
+                            : 'text-purple-400/80 hover:text-purple-400 hover:bg-purple-500/10'
+                        }`}
+                      >
+                        Defect ({notifications.filter(n => n.tipe === 'DEFECT').length})
                       </button>
                     )}
                   </div>
+
                   <div className="max-h-80 overflow-y-auto">
                     {notifications.length > 0 ? (
                       <ul className="divide-y divide-[#241C18]">
-                        {notifications.map((n) => {
+                        {notifications
+                          .filter(n => notifCategoryFilter === 'ALL' || n.tipe === notifCategoryFilter)
+                          .map((n) => {
                           const cfg = getNotifConfig(n.tipe);
                           const IconComp = cfg.icon;
                           return (
@@ -608,7 +743,7 @@ const DashboardLayout = () => {
                 </p>
               </div>
 
-              <div className="flex items-center justify-end gap-3 mt-6">
+              <div className="flex items-center justify-end gap-2.5 mt-6 flex-wrap">
                 <button
                   id="btn-notif-modal-dismiss"
                   onClick={() => setSelectedNotif(null)}
@@ -616,6 +751,29 @@ const DashboardLayout = () => {
                 >
                   Tutup
                 </button>
+                {selectedNotif.tipe === 'KADALUARSA' && (
+                  <button
+                    id="btn-notif-modal-afkir"
+                    onClick={() => {
+                      const notif = selectedNotif;
+                      setSelectedNotif(null);
+                      navigate('/defect', {
+                        state: {
+                          autoOpenDefect: true,
+                          defectData: {
+                            product_id: notif.product_id,
+                            tipe: 'RUSAK',
+                            keterangan: notif.pesan
+                          }
+                        }
+                      });
+                    }}
+                    className="px-4 py-2.5 rounded-xl text-sm font-bold bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 transition-all cursor-pointer flex items-center gap-1.5"
+                  >
+                    <ShieldAlert size={16} />
+                    Afkir ke Defect
+                  </button>
+                )}
                 {actionPath && (
                   <button
                     id="btn-notif-modal-action"

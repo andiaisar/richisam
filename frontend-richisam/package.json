@@ -15,6 +15,7 @@
     "flowbite-react": "^0.12.17",
     "js-cookie": "^3.0.8",
     "lucide-react": "^1.40.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.89.0",

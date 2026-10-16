@@ -103,10 +103,24 @@ const MENUS = {
   ],
 };
 
+const getRoleDisplayName = (user) => {
+  if (!user) return '';
+  if (user.role === 'ADMIN_PUSAT') return 'Admin Pusat';
+  if (user.role === 'OWNER') return 'Owner';
+  if (user.role === 'ADMIN_GUDANG') return 'Staf Central Kitchen (CK)';
+  if (user.role === 'STAF_CABANG') {
+    if (user.outlet_id === 1 || user.outlet_name?.toLowerCase().includes('central kitchen') || user.outlet_name?.toLowerCase().includes('ck')) {
+      return 'Staf Central Kitchen (CK)';
+    }
+    return 'Staf Outlet';
+  }
+  return user.role || 'Pengguna';
+};
+
 const ROLE_LABEL = {
   ADMIN_PUSAT: 'Admin Pusat',
-  STAF_CABANG: 'Staf Cabang',
-  ADMIN_GUDANG: 'Admin Gudang',
+  STAF_CABANG: 'Staf Outlet',
+  ADMIN_GUDANG: 'Staf Central Kitchen (CK)',
   OWNER: 'Owner',
 };
 
@@ -175,7 +189,7 @@ const SidebarContent = ({ menus, user, onLogout, onNavigate, onOpenProfile }) =>
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs sm:text-sm font-bold text-white truncate">{user?.nama || user?.username || 'Pengguna'}</p>
-          <p className="text-[11px] text-stone-400 truncate font-medium">{ROLE_LABEL[user?.role] || user?.role}</p>
+          <p className="text-[11px] text-stone-400 truncate font-medium">{getRoleDisplayName(user)}</p>
         </div>
         <button
           id="btn-edit-profile"
@@ -910,7 +924,7 @@ const DashboardLayout = () => {
                 </div>
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-stone-400 font-medium">Peran / Role:</span>
-                  <span className="font-bold text-[#F9610D]">{ROLE_LABEL[user?.role] || user?.role}</span>
+                  <span className="font-bold text-[#F9610D]">{getRoleDisplayName(user)}</span>
                 </div>
               </div>
 

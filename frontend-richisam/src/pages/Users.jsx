@@ -31,7 +31,15 @@ const Users = () => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/users');
-      setUsers(res?.data?.data || res?.data || []);
+      const raw = res?.data?.data;
+      const list = Array.isArray(raw?.data)
+        ? raw.data
+        : Array.isArray(raw)
+        ? raw
+        : Array.isArray(res?.data)
+        ? res.data
+        : [];
+      setUsers(list);
     } catch (e) {
       toast.error('Gagal mengambil data user');
     } finally {
@@ -42,7 +50,8 @@ const Users = () => {
   const fetchOutlets = async () => {
     try {
       const res = await axiosClient.get('/outlets');
-      setOutlets(res?.data?.data || res?.data || []);
+      const list = res?.data?.data || res?.data || [];
+      setOutlets(Array.isArray(list) ? list : []);
     } catch (e) {}
   };
 
@@ -57,7 +66,14 @@ const Users = () => {
 
   const openAddModal = () => {
     setSelectedUser(null);
-    setFormData({ nama: '', username: '', password: '', role: 'STAF_CABANG', outlet_id: '', is_active: true });
+    setFormData({
+      nama: '',
+      username: '',
+      password: '',
+      role: 'STAF_CABANG',
+      outlet_id: outlets.length > 0 ? String(outlets[0].id) : '',
+      is_active: true
+    });
     setIsModalOpen(true);
   };
 
@@ -67,7 +83,7 @@ const Users = () => {
       nama: user.nama,
       username: user.username,
       role: user.role,
-      outlet_id: user.outlet_id || '',
+      outlet_id: user.outlet_id ? String(user.outlet_id) : '',
       is_active: user.is_active
     });
     setIsModalOpen(true);
@@ -91,17 +107,23 @@ const Users = () => {
     try {
       const payload = { ...formData };
       payload.outlet_id = payload.outlet_id ? parseInt(payload.outlet_id) : null;
-      if (payload.role !== 'STAF_CABANG') payload.outlet_id = null;
+      if (payload.role === 'OWNER') {
+        payload.outlet_id = null;
+      } else if (payload.role === 'STAF_CABANG' && !payload.outlet_id) {
+        toast.error('Pilih cabang / penempatan untuk staf outlet');
+        setSubmitting(false);
+        return;
+      }
 
       if (selectedUser) {
         await axiosClient.put(`/users/${selectedUser.id}`, payload);
         if (selectedUser.is_active !== payload.is_active) {
           await axiosClient.patch(`/users/${selectedUser.id}/status`, { is_active: payload.is_active });
         }
-        toast.success('User berhasil diperbarui');
+        toast.success('Data user berhasil diperbarui');
       } else {
         await axiosClient.post('/users', payload);
-        toast.success('User berhasil ditambahkan');
+        toast.success('User baru berhasil ditambahkan');
       }
       setIsModalOpen(false);
       fetchUsers();
@@ -145,12 +167,14 @@ const Users = () => {
     }
   };
 
-  const filteredUsers = users.filter(u => {
+  const userList = Array.isArray(users) ? users : [];
+  const filteredUsers = userList.filter(u => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return u.nama?.toLowerCase().includes(q) || 
            u.username?.toLowerCase().includes(q) ||
-           u.outlet_name?.toLowerCase().includes(q);
+           u.outlet_name?.toLowerCase().includes(q) ||
+           (u.role === 'OWNER' && 'semua unit pusat owner'.includes(q));
   });
 
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -166,15 +190,13 @@ const Users = () => {
           <p className="mt-1 text-sm text-muted">Kelola akun pengguna, peran, dan akses cabang.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={fetchUsers} className="p-2 rounded-lg border border-line bg-white hover:bg-cream text-ink transition-colors">
+          <button onClick={fetchUsers} className="p-2 rounded-lg border border-line bg-white hover:bg-cream text-ink transition-colors" title="Muat Ulang">
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
-          {user?.role !== 'OWNER' && (
-            <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm">
-              <Plus size={18} />
-              Tambah User
-            </button>
-          )}
+          <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer">
+            <Plus size={18} />
+            Tambah User
+          </button>
         </div>
       </div>
 
@@ -186,7 +208,7 @@ const Users = () => {
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama atau username..."
+              placeholder="Cari nama, username, atau cabang..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />
           </div>
@@ -199,7 +221,7 @@ const Users = () => {
                 <th className="px-6 py-4">Nama Lengkap</th>
                 <th className="px-6 py-4">Username</th>
                 <th className="px-6 py-4">Peran (Role)</th>
-                <th className="px-6 py-4">Cabang</th>
+                <th className="px-6 py-4">Penempatan Cabang</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
@@ -215,11 +237,64 @@ const Users = () => {
                     <td className="px-6 py-4 font-medium text-ink">{u.nama}</td>
                     <td className="px-6 py-4 text-ink/80 font-mono text-xs">{u.username}</td>
                     <td className="px-6 py-4">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-stone-800 text-stone-200 border-stone-700">
-                        {u.role.replace('_', ' ')}
-                      </span>
+                      {(() => {
+                        if (u.role === 'OWNER') {
+                          return (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-purple-950/40 text-purple-300 border-purple-500/40">
+                              OWNER
+                            </span>
+                          );
+                        }
+                        if (u.role === 'ADMIN_PUSAT') {
+                          return (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-amber-950/40 text-amber-300 border-amber-500/40">
+                              ADMIN PUSAT
+                            </span>
+                          );
+                        }
+                        const isCK = u.outlet_id === 1 || u.outlet_name?.toLowerCase().includes('central kitchen') || u.outlet_name?.toLowerCase().includes('ck');
+                        if (isCK) {
+                          return (
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-[#F9610D]/20 text-[#F9610D] border-[#F9610D]/40">
+                              STAF CENTRAL KITCHEN (CK)
+                            </span>
+                          );
+                        }
+                        return (
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-sky-950/40 text-sky-300 border-sky-500/40">
+                            STAF OUTLET
+                          </span>
+                        );
+                      })()}
                     </td>
-                    <td className="px-6 py-4 text-ink/80">{u.outlet_name || '-'}</td>
+                    <td className="px-6 py-4">
+                      {(() => {
+                        if (u.role === 'OWNER') {
+                          return (
+                            <span className="text-purple-400 font-medium text-xs flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 inline-block"/>
+                              Semua Unit / Pusat
+                            </span>
+                          );
+                        }
+                        if (u.outlet_name) {
+                          const isCK = u.outlet_id === 1 || u.outlet_name.toLowerCase().includes('central kitchen') || u.outlet_name.toLowerCase().includes('ck');
+                          return (
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-ink text-sm">{u.outlet_name}</span>
+                              {isCK && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F9610D]/10 text-[#F9610D] border border-[#F9610D]/30">
+                                  Gudang Pusat
+                                </span>
+                              )}
+                            </div>
+                          );
+                        }
+                        return (
+                          <span className="text-muted text-xs italic">Belum ditentukan</span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-6 py-4">
                       {u.is_active ? (
                         <span className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"/>Aktif</span>
@@ -279,8 +354,8 @@ const Users = () => {
         <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30">
-              <h2 className="font-bold text-ink text-lg">{selectedUser ? 'Edit User' : 'Tambah User Baru'}</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-ink"><X size={20} /></button>
+              <h2 className="font-bold text-ink text-lg">{selectedUser ? 'Edit User & Penempatan' : 'Tambah User Baru'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-ink cursor-pointer"><X size={20} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 space-y-4">
               <div>
@@ -296,29 +371,65 @@ const Users = () => {
                     </span>
                   )}
                 </div>
-                <input required type="text" value={formData.username} readOnly={!!selectedUser} onChange={e => setFormData({...formData, username: e.target.value})} className={`w-full px-4 py-2 border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange ${selectedUser ? 'bg-cream/50 text-muted cursor-not-allowed' : 'bg-white'}`} />
+                <input 
+                  required 
+                  type="text" 
+                  value={formData.username} 
+                  readOnly={!!selectedUser} 
+                  placeholder={selectedUser ? '' : 'Contoh: btp_rizal, pk3_wahyu, ald_fajar, ck_ahmad'}
+                  onChange={e => setFormData({...formData, username: e.target.value})} 
+                  className={`w-full px-4 py-2 border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange ${selectedUser ? 'bg-cream/50 text-muted cursor-not-allowed' : 'bg-white'}`} 
+                />
+                {!selectedUser && (
+                  <p className="text-[11px] text-muted mt-1">
+                    Saran Opsi B: Format <span className="font-mono text-richisam-orange">&lt;kode_outlet&gt;_&lt;nama&gt;</span> (misal: <span className="font-mono">btp_rizal</span>, <span className="font-mono">pk3_wahyu</span>, <span className="font-mono">ald_fajar</span>, <span className="font-mono">ck_ahmad</span>)
+                  </p>
+                )}
               </div>
               {!selectedUser && (
                 <div>
-                  <label className="block text-sm font-medium text-ink mb-1">Password</label>
+                  <label className="block text-sm font-medium text-ink mb-1">Password Awal</label>
                   <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" placeholder="Minimal 6 karakter" />
                 </div>
               )}
               <div>
                 <label className="block text-sm font-medium text-ink mb-1">Peran (Role)</label>
                 <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange">
-                  <option value="STAF_CABANG">Staf Cabang</option>
+                  <option value="STAF_CABANG">Staf Outlet / Staf Central Kitchen (CK)</option>
                   <option value="ADMIN_PUSAT">Admin Pusat</option>
                   <option value="OWNER">Owner</option>
                 </select>
               </div>
-              {formData.role === 'STAF_CABANG' && (
+              {formData.role !== 'OWNER' && (
                 <div>
-                  <label className="block text-sm font-medium text-ink mb-1">Pilih Cabang</label>
-                  <select required value={formData.outlet_id} onChange={e => setFormData({...formData, outlet_id: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange">
-                    <option value="">-- Pilih Cabang --</option>
-                    {outlets.map(o => <option key={o.id} value={o.id}>{o.nama}</option>)}
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-ink">
+                      Penempatan Cabang / Outlet {formData.role === 'STAF_CABANG' && <span className="text-rose-500">*</span>}
+                    </label>
+                    {selectedUser && (
+                      <span className="text-[11px] text-[#F9610D] font-medium">
+                        Bisa dipindah tugaskan
+                      </span>
+                    )}
+                  </div>
+                  <select 
+                    required={formData.role === 'STAF_CABANG'} 
+                    value={formData.outlet_id} 
+                    onChange={e => setFormData({...formData, outlet_id: e.target.value})} 
+                    className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange"
+                  >
+                    <option value="">-- Pilih Penempatan (Cabang / Central Kitchen) --</option>
+                    {outlets.map(o => (
+                      <option key={o.id} value={o.id}>
+                        {o.nama} {o.tipe === 'PUSAT' ? '(Pusat / CK)' : '(Cabang Outlet)'}
+                      </option>
+                    ))}
                   </select>
+                  <p className="text-[11px] text-muted mt-1">
+                    {formData.role === 'ADMIN_PUSAT'
+                      ? 'Admin Pusat umumnya ditugaskan di Central Kitchen (CK) atau kantor operasional.'
+                      : 'Pilih cabang tempat staf bertugas. Jika staf dipindahtugaskan ke cabang lain, cukup ubah pilihan cabang ini.'}
+                  </p>
                 </div>
               )}
               {selectedUser && (

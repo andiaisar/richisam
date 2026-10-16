@@ -39,9 +39,9 @@ const Outlets = () => {
         <div>
           <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
             <Store className="h-6 w-6 text-richisam-orange" />
-            Manajemen Cabang
+            Manajemen Outlet & Central Kitchen
           </h1>
-          <p className="mt-1 text-sm text-muted">Kelola data cabang dan gudang pusat.</p>
+          <p className="mt-1 text-sm text-muted">Kelola unit outlet cabang dan Central Kitchen (CK).</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -60,7 +60,7 @@ const Outlets = () => {
               className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm"
             >
               <Plus size={18} />
-              Tambah Cabang
+              Tambah Outlet
             </button>
           )}
         </div>
@@ -74,7 +74,7 @@ const Outlets = () => {
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama cabang..."
+              placeholder="Cari nama outlet..."
               className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all"
             />
           </div>
@@ -85,7 +85,7 @@ const Outlets = () => {
             <thead className="bg-cream/50 text-muted font-semibold border-b border-line">
               <tr>
                 <th className="px-6 py-4">Nama Outlet</th>
-                <th className="px-6 py-4">Tipe</th>
+                <th className="px-6 py-4">Tipe Unit</th>
                 <th className="px-6 py-4">Alamat</th>
                 <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
@@ -101,8 +101,8 @@ const Outlets = () => {
                   <tr key={o.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{o.nama}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase ${o.tipe === 'PUSAT' ? 'bg-[#F9610D]/20 text-[#F9610D] border-[#F9610D]/40' : 'bg-blue-500/20 text-blue-300 border-blue-500/40'}`}>
-                        {o.tipe}
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase ${o.tipe === 'PUSAT' ? 'bg-[#F9610D]/20 text-[#F9610D] border-[#F9610D]/40' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'}`}>
+                        {o.tipe === 'PUSAT' ? 'CENTRAL KITCHEN (CK)' : 'OUTLET'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-ink/80 truncate max-w-xs">{o.alamat || '-'}</td>

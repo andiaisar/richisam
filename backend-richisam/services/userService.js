@@ -1,24 +1,30 @@
 const pool = require('../config/db');
 
 class UserService {
-  static async getUsers(page = 1, limit = 10, role, outlet_id, search) {
+  static async getUsers(page = 1, limit = 1000, role, outlet_id, search) {
     const offset = (page - 1) * limit;
-    let query = `SELECT id, nama, username, role, outlet_id, is_active, created_at FROM users WHERE 1=1`;
+    let query = `
+      SELECT u.id, u.nama, u.username, u.role, u.outlet_id, u.is_active, u.created_at,
+             o.nama as outlet_name, o.tipe as outlet_tipe
+      FROM users u
+      LEFT JOIN outlets o ON u.outlet_id = o.id
+      WHERE 1=1
+    `;
     const params = [];
     let paramIndex = 1;
 
     if (role) {
-      query += ` AND role = $${paramIndex}`;
+      query += ` AND u.role = $${paramIndex}`;
       params.push(role);
       paramIndex++;
     }
     if (outlet_id) {
-      query += ` AND outlet_id = $${paramIndex}`;
+      query += ` AND u.outlet_id = $${paramIndex}`;
       params.push(outlet_id);
       paramIndex++;
     }
     if (search) {
-      query += ` AND (nama ILIKE $${paramIndex} OR username ILIKE $${paramIndex})`;
+      query += ` AND (u.nama ILIKE $${paramIndex} OR u.username ILIKE $${paramIndex} OR o.nama ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -28,7 +34,7 @@ class UserService {
     const countResult = await pool.query(countQuery, params);
     const total = parseInt(countResult.rows[0].count);
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` ORDER BY u.created_at ASC, u.id ASC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
@@ -50,7 +56,12 @@ class UserService {
   }
 
   static async getUserById(id) {
-    const result = await pool.query('SELECT id, nama, role, outlet_id, is_active FROM users WHERE id = $1', [id]);
+    const result = await pool.query(`
+      SELECT u.id, u.nama, u.username, u.role, u.outlet_id, u.is_active, o.nama as outlet_name
+      FROM users u
+      LEFT JOIN outlets o ON u.outlet_id = o.id
+      WHERE u.id = $1
+    `, [id]);
     return result.rows[0];
   }
 
@@ -58,20 +69,20 @@ class UserService {
     const { nama, username, password_hash, role, outlet_id } = data;
     const result = await pool.query(
       `INSERT INTO users (nama, username, password_hash, role, outlet_id) 
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, nama, username, role, outlet_id`,
+       VALUES ($1, $2, $3, $4, $5) RETURNING id`,
       [nama, username, password_hash, role, outlet_id || null]
     );
-    return result.rows[0];
+    return await UserService.getUserById(result.rows[0].id);
   }
 
   static async updateUser(id, data) {
     const { nama, role, outlet_id } = data;
-    const result = await pool.query(
+    await pool.query(
       `UPDATE users SET nama = $1, role = $2, outlet_id = $3, updated_at = CURRENT_TIMESTAMP 
-       WHERE id = $4 RETURNING id, nama, username, role, outlet_id`,
+       WHERE id = $4`,
       [nama, role, outlet_id || null, id]
     );
-    return result.rows[0];
+    return await UserService.getUserById(id);
   }
 
   static async updateStatus(id, is_active) {

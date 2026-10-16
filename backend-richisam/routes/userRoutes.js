@@ -7,10 +7,10 @@ const { authenticate, authorize } = require('../middlewares/authMiddleware');
 router.use(authenticate);
 
 router.get('/', authorize('ADMIN_PUSAT', 'OWNER'), userController.getUsers);
-router.post('/', authorize('ADMIN_PUSAT'), userController.createUser);
-router.put('/:id', authorize('ADMIN_PUSAT'), userController.updateUser);
-router.patch('/:id/status', authorize('ADMIN_PUSAT'), userController.updateStatus);
-router.patch('/:id/reset-password', authorize('ADMIN_PUSAT'), userController.resetPassword);
-router.delete('/:id', authorize('ADMIN_PUSAT'), userController.deleteUser);
+router.post('/', authorize('ADMIN_PUSAT', 'OWNER'), userController.createUser);
+router.put('/:id', authorize('ADMIN_PUSAT', 'OWNER'), userController.updateUser);
+router.patch('/:id/status', authorize('ADMIN_PUSAT', 'OWNER'), userController.updateStatus);
+router.patch('/:id/reset-password', authorize('ADMIN_PUSAT', 'OWNER'), userController.resetPassword);
+router.delete('/:id', authorize('ADMIN_PUSAT', 'OWNER'), userController.deleteUser);
 
 module.exports = router;

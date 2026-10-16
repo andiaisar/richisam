@@ -4,6 +4,7 @@ import { Send, AlertCircle, RefreshCw, Radar, XCircle, Trash2, Printer, History,
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import SuratJalanModal from '../components/SuratJalanModal';
+import Pagination from '../components/Pagination';
 
 const Transfer = () => {
   const { user } = useAuthStore();
@@ -12,6 +13,10 @@ const Transfer = () => {
   const [outlets, setOutlets] = useState([]);
   const [products, setProducts] = useState([]);
   const [transfers, setTransfers] = useState([]);
+
+  // Pagination for Riwayat Transfer
+  const [currentHistoryPage, setCurrentHistoryPage] = useState(1);
+  const pageSize = 15;
   
   const [fromOutlet, setFromOutlet] = useState('');
   const [toOutlet, setToOutlet] = useState('');
@@ -492,7 +497,7 @@ const Transfer = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#241B17]">
-                  {transfers.map((trf, idx) => (
+                  {transfers.slice((currentHistoryPage - 1) * pageSize, currentHistoryPage * pageSize).map((trf, idx) => (
                     <tr key={idx} className="hover:bg-[#1E1714] transition-colors">
                       <td className="px-6 py-4 font-mono font-bold text-[#FFCE00]">
                         {trf.kode_transfer}
@@ -540,6 +545,13 @@ const Transfer = () => {
               </div>
             )}
           </div>
+
+          <Pagination
+            currentPage={currentHistoryPage}
+            totalCount={transfers.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentHistoryPage}
+          />
         </div>
       )}
 

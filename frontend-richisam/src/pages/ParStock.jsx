@@ -3,12 +3,17 @@ import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { Gauge, Search, Plus, RefreshCw, FileText, X, Save } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
 
 const ParStock = () => {
   const { user } = useAuthStore();
   const [parStocks, setParStocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
   
   const [outlets, setOutlets] = useState([]);
   const [products, setProducts] = useState([]);
@@ -108,12 +113,18 @@ const ParStock = () => {
     }
   };
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const filteredParStocks = parStocks.filter(ps => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return ps.product_name?.toLowerCase().includes(q) || 
            ps.outlet_name?.toLowerCase().includes(q);
   });
+
+  const paginatedParStocks = filteredParStocks.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -171,7 +182,7 @@ const ParStock = () => {
                   <td colSpan={4} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
               ) : filteredParStocks.length > 0 ? (
-                filteredParStocks.map((ps) => (
+                paginatedParStocks.map((ps) => (
                   <tr key={ps.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{ps.outlet_name}</td>
                     <td className="px-6 py-4 text-ink">{ps.product_name}</td>
@@ -187,6 +198,13 @@ const ParStock = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalCount={filteredParStocks.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
       
       {/* Modal Form Par Stock */}

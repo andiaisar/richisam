@@ -488,6 +488,7 @@ const Kadaluarsa = () => {
           totalCount={filteredBatches.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
+          variant="dark"
         />
       </div>
 

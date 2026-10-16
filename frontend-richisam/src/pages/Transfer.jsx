@@ -551,6 +551,7 @@ const Transfer = () => {
             totalCount={transfers.length}
             pageSize={pageSize}
             onPageChange={setCurrentHistoryPage}
+            variant="dark"
           />
         </div>
       )}

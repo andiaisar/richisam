@@ -759,6 +759,7 @@ const Opname = () => {
           totalCount={filteredOpnames.length}
           pageSize={pageSize}
           onPageChange={setCurrentPage}
+          variant="dark"
         />
       </div>
 

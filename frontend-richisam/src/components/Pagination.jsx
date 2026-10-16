@@ -3,25 +3,28 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const Pagination = ({
   currentPage = 1,
-  totalItems = 0,
+  totalItems,
+  totalCount,
   pageSize = 15,
   onPageChange,
+  variant = 'light', // 'light' | 'dark'
   className = '',
 }) => {
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  // Support both totalCount and totalItems seamlessly
+  const total = Number(totalCount !== undefined ? totalCount : (totalItems !== undefined ? totalItems : 0));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  // Jika tidak ada data atau hanya 1 halaman, tetap tampilkan info ringkas
-  const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
-  const toItem = Math.min(totalItems, currentPage * pageSize);
+  const fromItem = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const toItem = Math.min(total, currentPage * pageSize);
 
   const handlePrev = () => {
-    if (currentPage > 1) {
+    if (currentPage > 1 && onPageChange) {
       onPageChange(currentPage - 1);
     }
   };
 
   const handleNext = () => {
-    if (currentPage < totalPages) {
+    if (currentPage < totalPages && onPageChange) {
       onPageChange(currentPage + 1);
     }
   };
@@ -43,15 +46,33 @@ const Pagination = ({
     return pages;
   };
 
-  if (totalItems <= 0) return null;
+  if (total <= 0) return null;
+
+  const isDark = variant === 'dark';
 
   return (
-    <div className={`px-4 sm:px-6 py-3.5 border-t border-[#241C18] bg-[#140F0D]/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${className}`}>
+    <div
+      className={`px-4 sm:px-6 py-3.5 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs ${
+        isDark
+          ? 'border-[#2D241E] bg-[#140F0D]/80 text-stone-400'
+          : 'border-line bg-cream/30 text-muted'
+      } ${className}`}
+    >
       {/* Keterangan Data */}
-      <div className="text-stone-400 font-medium">
-        Menampilkan <span className="font-bold text-white">{fromItem}</span> –{' '}
-        <span className="font-bold text-white">{toItem}</span> dari{' '}
-        <span className="font-bold text-[#FFCE00]">{totalItems}</span> data
+      <div className="font-medium select-none">
+        Menampilkan{' '}
+        <span className={`font-bold ${isDark ? 'text-white' : 'text-ink'}`}>
+          {fromItem}
+        </span>{' '}
+        –{' '}
+        <span className={`font-bold ${isDark ? 'text-white' : 'text-ink'}`}>
+          {toItem}
+        </span>{' '}
+        dari{' '}
+        <span className={`font-bold ${isDark ? 'text-[#FFCE00]' : 'text-richisam-orange font-extrabold'}`}>
+          {total}
+        </span>{' '}
+        data
       </div>
 
       {/* Kontrol Navigasi Halaman */}
@@ -61,20 +82,27 @@ const Pagination = ({
           <button
             type="button"
             onClick={handlePrev}
-            disabled={currentPage === 1}
+            disabled={currentPage <= 1}
             aria-label="Halaman sebelumnya"
-            className="px-2.5 py-1.5 rounded-lg border border-[#2D241E] bg-[#1C1714] text-stone-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer flex items-center gap-1 font-semibold"
+            className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+              isDark
+                ? 'border-[#2D241E] bg-[#1C1714] text-stone-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none'
+                : 'border-line bg-white text-ink hover:bg-cream disabled:opacity-30 disabled:pointer-events-none shadow-xs'
+            }`}
           >
             <ChevronLeft size={15} />
             <span className="hidden sm:inline">Sebelumnya</span>
           </button>
 
-          {/* Nomor-Nomor Halaman */}
+          {/* Nomor Halaman */}
           <div className="flex items-center gap-1">
             {getPageNumbers().map((page, idx) => {
               if (page === '...') {
                 return (
-                  <span key={`ellipsis-${idx}`} className="px-2 text-stone-500 font-bold select-none">
+                  <span
+                    key={`ellipsis-${idx}`}
+                    className={`px-2 font-bold select-none ${isDark ? 'text-stone-500' : 'text-muted'}`}
+                  >
                     ...
                   </span>
                 );
@@ -84,11 +112,15 @@ const Pagination = ({
                 <button
                   key={`page-${page}`}
                   type="button"
-                  onClick={() => onPageChange(page)}
+                  onClick={() => onPageChange && onPageChange(page)}
                   className={`min-w-[2rem] h-8 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[#F9610D] text-white shadow-md shadow-[#F9610D]/30 border border-[#F9610D]'
-                      : 'border border-[#2D241E] bg-[#1C1714] text-stone-400 hover:text-white hover:bg-white/[0.06]'
+                      ? isDark
+                        ? 'bg-[#F9610D] text-white shadow-md shadow-[#F9610D]/30 border border-[#F9610D]'
+                        : 'bg-richisam-orange text-white shadow-sm border border-richisam-orange'
+                      : isDark
+                      ? 'border border-[#2D241E] bg-[#1C1714] text-stone-400 hover:text-white hover:bg-white/[0.06]'
+                      : 'border border-line bg-white text-ink hover:bg-cream'
                   }`}
                 >
                   {page}
@@ -101,9 +133,13 @@ const Pagination = ({
           <button
             type="button"
             onClick={handleNext}
-            disabled={currentPage === totalPages}
+            disabled={currentPage >= totalPages}
             aria-label="Halaman selanjutnya"
-            className="px-2.5 py-1.5 rounded-lg border border-[#2D241E] bg-[#1C1714] text-stone-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer flex items-center gap-1 font-semibold"
+            className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+              isDark
+                ? 'border-[#2D241E] bg-[#1C1714] text-stone-300 hover:text-white hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none'
+                : 'border-line bg-white text-ink hover:bg-cream disabled:opacity-30 disabled:pointer-events-none shadow-xs'
+            }`}
           >
             <span className="hidden sm:inline">Selanjutnya</span>
             <ChevronRight size={15} />

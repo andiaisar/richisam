@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
 import { Package, Search, Plus, RefreshCw, FileText, AlertTriangle, Edit2, X, Check, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
 
 const Products = () => {
   const { user } = useAuthStore();
@@ -10,6 +11,10 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
   
   // Modal state for Edit/Add
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,6 +41,10 @@ const Products = () => {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter]);
 
   const filteredProducts = products.filter(p => {
     let match = true;
@@ -212,8 +221,10 @@ const Products = () => {
                   <td colSpan={7} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
               ) : filteredProducts.length > 0 ? (
-                // sort by urutan before mapping
-                filteredProducts.sort((a,b) => a.urutan - b.urutan).map((p) => (
+                [...filteredProducts]
+                  .sort((a,b) => (a.urutan || 0) - (b.urutan || 0))
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((p) => (
                   <tr key={p.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 text-muted">{p.urutan}</td>
                     <td className="px-6 py-4 font-medium text-ink">{p.kode}</td>
@@ -239,7 +250,7 @@ const Products = () => {
                     </td>
                     <td className="px-6 py-4 text-ink font-medium">{formatRupiah(p.harga)}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => openModal(p)} className="p-1.5 text-muted hover:text-richisam-orange hover:bg-orange-50 rounded-md transition-colors">
+                      <button onClick={() => openModal(p)} className="p-1.5 text-muted hover:text-richisam-orange hover:bg-orange-50 rounded-md transition-colors cursor-pointer" title="Edit Produk">
                         <Edit2 size={16} />
                       </button>
                     </td>
@@ -253,6 +264,14 @@ const Products = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination 15 Data Per Halaman */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredProducts.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Modal Edit/Add */}

@@ -26,6 +26,10 @@ const useAuthStore = create((set) => ({
     set({ user: null, isAuthenticated: false });
   },
 
+  updateUser: (updatedData) => {
+    set((state) => ({ user: state.user ? { ...state.user, ...updatedData } : null }));
+  },
+
   checkAuth: async () => {
     const token = Cookies.get('token');
     if (!token) {

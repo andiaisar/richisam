@@ -1,8 +1,9 @@
 import useAuthStore from '../store/useAuthStore';
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { Users as UsersIcon, Search, Plus, RefreshCw, FileText, X, Key } from 'lucide-react';
+import { Users as UsersIcon, Search, Plus, RefreshCw, FileText, X, Key, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
 
 const Users = () => {
   const { user } = useAuthStore();
@@ -11,11 +12,19 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [userToDelete, setUserToDelete] = useState(null);
+
   const [formData, setFormData] = useState({ nama: '', username: '', password: '', role: 'STAF_CABANG', outlet_id: '', is_active: true });
   const [resetData, setResetData] = useState({ password: '' });
+  const [showResetPass, setShowResetPass] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchUsers = async () => {
@@ -42,6 +51,10 @@ const Users = () => {
     fetchOutlets();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   const openAddModal = () => {
     setSelectedUser(null);
     setFormData({ nama: '', username: '', password: '', role: 'STAF_CABANG', outlet_id: '', is_active: true });
@@ -63,7 +76,13 @@ const Users = () => {
   const openResetModal = (user) => {
     setSelectedUser(user);
     setResetData({ password: '' });
+    setShowResetPass(false);
     setIsResetModalOpen(true);
+  };
+
+  const openDeleteModal = (user) => {
+    setUserToDelete(user);
+    setIsDeleteModalOpen(true);
   };
 
   const handleSubmit = async (e) => {
@@ -95,13 +114,32 @@ const Users = () => {
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
+    if (!resetData.password || resetData.password.length < 6) {
+      return toast.error('Password minimal 6 karakter');
+    }
     setSubmitting(true);
     try {
       await axiosClient.patch(`/users/${selectedUser.id}/reset-password`, resetData);
-      toast.success('Password berhasil direset');
+      toast.success('Password pengguna berhasil diubah');
       setIsResetModalOpen(false);
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Gagal mereset password');
+      toast.error(e.response?.data?.message || 'Gagal mengubah password');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    setSubmitting(true);
+    try {
+      const res = await axiosClient.delete(`/users/${userToDelete.id}`);
+      toast.success(res?.data?.message || 'Pengguna berhasil dihapus');
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal menghapus pengguna');
     } finally {
       setSubmitting(false);
     }
@@ -114,6 +152,8 @@ const Users = () => {
            u.username?.toLowerCase().includes(q) ||
            u.outlet_name?.toLowerCase().includes(q);
   });
+
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -169,11 +209,11 @@ const Users = () => {
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
-              ) : filteredUsers.length > 0 ? (
-                filteredUsers.map((u) => (
+              ) : paginatedUsers.length > 0 ? (
+                paginatedUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{u.nama}</td>
-                    <td className="px-6 py-4 text-ink/80">{u.username}</td>
+                    <td className="px-6 py-4 text-ink/80 font-mono text-xs">{u.username}</td>
                     <td className="px-6 py-4">
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-stone-800 text-stone-200 border-stone-700">
                         {u.role.replace('_', ' ')}
@@ -188,8 +228,32 @@ const Users = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => openResetModal(u)} className="text-richisam-merah-muda hover:text-red-700 font-medium text-sm transition-colors mr-4" title="Reset Password"><Key size={16} className="inline mr-1" />Reset</button>
-                      <button onClick={() => openEditModal(u)} className="text-richisam-orange hover:text-richisam-merah-muda font-medium text-sm transition-colors">Edit</button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button 
+                          onClick={() => openResetModal(u)} 
+                          className="text-[#FFCE00] hover:text-[#e5b800] font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer" 
+                          title="Ubah Password Pengguna"
+                        >
+                          <Key size={14} />
+                          <span>Ubah Password</span>
+                        </button>
+                        <button 
+                          onClick={() => openEditModal(u)} 
+                          className="text-[#F9610D] hover:text-[#d9530a] font-bold text-xs transition-colors cursor-pointer"
+                        >
+                          Edit
+                        </button>
+                        {u.id !== user?.id && (
+                          <button 
+                            onClick={() => openDeleteModal(u)} 
+                            className="text-rose-400 hover:text-rose-300 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Hapus Pengguna"
+                          >
+                            <Trash2 size={14} />
+                            <span>Hapus</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -201,10 +265,18 @@ const Users = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Komponen Pagination 15 Data Per Halaman */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredUsers.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30">
               <h2 className="font-bold text-ink text-lg">{selectedUser ? 'Edit User' : 'Tambah User Baru'}</h2>
@@ -216,13 +288,20 @@ const Users = () => {
                 <input required type="text" value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-ink mb-1">Username</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-ink">Username</label>
+                  {selectedUser && (
+                    <span className="text-[10px] text-stone-400 bg-stone-800/80 px-1.5 py-0.5 rounded border border-stone-700">
+                      Terkunci (Audit Trail)
+                    </span>
+                  )}
+                </div>
                 <input required type="text" value={formData.username} readOnly={!!selectedUser} onChange={e => setFormData({...formData, username: e.target.value})} className={`w-full px-4 py-2 border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange ${selectedUser ? 'bg-cream/50 text-muted cursor-not-allowed' : 'bg-white'}`} />
               </div>
               {!selectedUser && (
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1">Password</label>
-                  <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" />
+                  <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" placeholder="Minimal 6 karakter" />
                 </div>
               )}
               <div>
@@ -244,13 +323,13 @@ const Users = () => {
               )}
               {selectedUser && (
                 <div className="flex items-center gap-2 mt-2">
-                  <input type="checkbox" id="isActive" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} className="rounded text-richisam-orange focus:ring-richisam-orange" />
-                  <label htmlFor="isActive" className="text-sm font-medium text-ink">Akun Aktif</label>
+                  <input type="checkbox" id="isActive" checked={formData.is_active} onChange={e => setFormData({...formData, is_active: e.target.checked})} className="rounded text-richisam-orange focus:ring-richisam-orange cursor-pointer" />
+                  <label htmlFor="isActive" className="text-sm font-medium text-ink cursor-pointer select-none">Akun Aktif</label>
                 </div>
               )}
               <div className="pt-4 border-t border-line flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-ink">Batal</button>
-                <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium bg-richisam-orange text-white rounded-lg hover:bg-[#d9530a] disabled:opacity-50">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-ink cursor-pointer">Batal</button>
+                <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium bg-richisam-orange text-white rounded-lg hover:bg-[#d9530a] disabled:opacity-50 cursor-pointer">
                   {submitting ? 'Menyimpan...' : 'Simpan'}
                 </button>
               </div>
@@ -259,26 +338,87 @@ const Users = () => {
         </div>
       )}
 
+      {/* Modal Ubah Password Pengguna */}
       {isResetModalOpen && (
-        <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
             <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30">
-              <h2 className="font-bold text-ink text-lg">Reset Password</h2>
-              <button onClick={() => setIsResetModalOpen(false)} className="text-muted hover:text-ink"><X size={20} /></button>
+              <h2 className="font-bold text-ink text-lg flex items-center gap-2">
+                <Key className="text-[#FFCE00]" size={20} />
+                Ubah Password User
+              </h2>
+              <button onClick={() => setIsResetModalOpen(false)} className="text-muted hover:text-ink cursor-pointer"><X size={20} /></button>
             </div>
             <form onSubmit={handleResetPassword} className="p-5 space-y-4">
-              <p className="text-sm text-muted mb-2">Reset password untuk <strong>{selectedUser?.nama}</strong>.</p>
+              <p className="text-sm text-muted">
+                Atur ulang password untuk akun <strong>{selectedUser?.nama}</strong> (<span className="font-mono text-xs text-ink">{selectedUser?.username}</span>).
+              </p>
               <div>
                 <label className="block text-sm font-medium text-ink mb-1">Password Baru</label>
-                <input required type="text" value={resetData.password} onChange={e => setResetData({password: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" placeholder="Minimal 6 karakter" />
+                <div className="relative">
+                  <input 
+                    required 
+                    type={showResetPass ? 'text' : 'password'} 
+                    value={resetData.password} 
+                    onChange={e => setResetData({password: e.target.value})} 
+                    className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange pr-10" 
+                    placeholder="Minimal 6 karakter" 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPass(!showResetPass)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
+                  >
+                    {showResetPass ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
               <div className="pt-4 border-t border-line flex justify-end gap-3">
-                <button type="button" onClick={() => setIsResetModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-ink">Batal</button>
-                <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium bg-richisam-merah-muda text-white rounded-lg hover:bg-red-700 disabled:opacity-50">
-                  {submitting ? 'Memproses...' : 'Reset Password'}
+                <button type="button" onClick={() => setIsResetModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-ink cursor-pointer">Batal</button>
+                <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-bold bg-richisam-orange text-white rounded-lg hover:bg-[#d9530a] disabled:opacity-50 cursor-pointer">
+                  {submitting ? 'Memproses...' : 'Simpan Password'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus User */}
+      {isDeleteModalOpen && userToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-[#1A1412] border border-[#382E28] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-white animate-scale-up">
+            <div className="p-5 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto mb-3">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-base font-extrabold text-white">Konfirmasi Hapus Pengguna</h3>
+              <p className="text-xs text-stone-400 mt-2 leading-relaxed">
+                Apakah Anda yakin ingin menghapus akun <strong className="text-white font-bold">{userToDelete.nama}</strong> (<span className="font-mono text-stone-300">@{userToDelete.username}</span>)?
+              </p>
+              <p className="text-[11px] text-stone-500 mt-2 bg-[#140F0D] p-2.5 rounded-xl border border-[#2D241E]">
+                * Jika pengguna ini memiliki riwayat mutasi/transaksi di database, akun akan otomatis dinonaktifkan demi menjaga integritas data audit.
+              </p>
+            </div>
+            <div className="p-4 border-t border-[#2D241E] flex items-center justify-end gap-3 bg-[#16110F]">
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setIsDeleteModalOpen(false)}
+                className="px-4 py-2 text-xs font-bold text-stone-400 hover:text-white transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={handleDeleteUser}
+                className="px-4 py-2 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white rounded-xl shadow-lg shadow-rose-600/30 transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+              >
+                <Trash2 size={14} />
+                {submitting ? 'Menghapus...' : 'Ya, Hapus'}
+              </button>
+            </div>
           </div>
         </div>
       )}

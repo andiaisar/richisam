@@ -4,6 +4,7 @@ import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X, AlertTriangl
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import SuratJalanModal from '../components/SuratJalanModal';
+import Pagination from '../components/Pagination';
 
 const Permintaan = () => {
   const { user } = useAuthStore();
@@ -12,6 +13,10 @@ const Permintaan = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -65,6 +70,10 @@ const Permintaan = () => {
       fetchOutlets();
     }
   }, [filter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery]);
 
   const openEmergencyModal = () => {
     setEmergencyData({ outlet_id: '', product_id: '', qty: '', password: '' });
@@ -233,7 +242,9 @@ const Permintaan = () => {
                   <td colSpan={8} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
               ) : filteredTickets.length > 0 ? (
-                filteredTickets.map((t) => (
+                filteredTickets
+                  .slice((currentPage - 1) * pageSize, currentPage * pageSize)
+                  .map((t) => (
                   <tr key={t.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{t.kode_tiket}</td>
                     <td className="px-6 py-4 text-ink/80">{t.product_name}</td>
@@ -286,6 +297,14 @@ const Permintaan = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination 15 Data Per Halaman */}
+        <Pagination
+          currentPage={currentPage}
+          totalItems={filteredTickets.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Modal Emergency Request (CITO) */}

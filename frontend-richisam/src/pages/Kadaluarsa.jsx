@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
 
 const Kadaluarsa = () => {
   const { user } = useAuthStore();
@@ -21,6 +22,10 @@ const Kadaluarsa = () => {
   const [selectedOutlet, setSelectedOutlet] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -164,6 +169,10 @@ const Kadaluarsa = () => {
     total_safe: 0
   };
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedOutlet, statusFilter, searchQuery]);
+
   const filteredBatches = batches.filter(b => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -171,6 +180,8 @@ const Kadaluarsa = () => {
            b.batch_no?.toLowerCase().includes(q) ||
            b.product_kode?.toLowerCase().includes(q);
   });
+
+  const paginatedBatches = filteredBatches.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 text-white animate-fade-in">
@@ -365,7 +376,7 @@ const Kadaluarsa = () => {
                   </td>
                 </tr>
               ) : filteredBatches.length > 0 ? (
-                filteredBatches.map((b) => {
+                paginatedBatches.map((b) => {
                   const days = parseInt(b.days_remaining);
                   let statusBadge = null;
                   let countdownText = '';
@@ -471,6 +482,13 @@ const Kadaluarsa = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalCount={filteredBatches.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Modal Tambah Batch */}

@@ -4,6 +4,7 @@ import axiosClient from '../api/axiosClient';
 import { PackageX, Search, Plus, Filter, RefreshCw, FileText, Image as ImageIcon, X, Upload } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
 
 const Defect = () => {
   const { user } = useAuthStore();
@@ -12,6 +13,10 @@ const Defect = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -120,6 +125,10 @@ const Defect = () => {
     }
   };
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, searchQuery]);
+
   const filteredDefects = defects.filter(d => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
@@ -127,6 +136,8 @@ const Defect = () => {
            d.deskripsi?.toLowerCase().includes(q) ||
            d.outlet_name?.toLowerCase().includes(q);
   });
+
+  const paginatedDefects = filteredDefects.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -190,7 +201,7 @@ const Defect = () => {
                   <td colSpan={8} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
               ) : filteredDefects.length > 0 ? (
-                filteredDefects.map((d) => (
+                paginatedDefects.map((d) => (
                   <tr key={d.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4">
                       {d.foto_url ? (
@@ -228,6 +239,13 @@ const Defect = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalCount={filteredDefects.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Modal Add Defect */}

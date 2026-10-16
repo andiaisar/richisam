@@ -3,6 +3,7 @@ import axiosClient from '../api/axiosClient';
 import { Package, Search, RefreshCw, FileText, Wrench } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
+import Pagination from '../components/Pagination';
 
 const Assets = () => {
   const { user } = useAuthStore();
@@ -13,6 +14,10 @@ const Assets = () => {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
 
   const fetchOutlets = async () => {
     if (user?.role !== 'STAF_CABANG') {
@@ -54,11 +59,17 @@ const Assets = () => {
     }
   }, [selectedOutlet]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedOutlet]);
+
   const filteredAssets = assets.filter(a => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return a.nama?.toLowerCase().includes(q) || a.kode?.toLowerCase().includes(q);
   });
+
+  const paginatedAssets = filteredAssets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -126,7 +137,7 @@ const Assets = () => {
                   <td colSpan={6} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
               ) : filteredAssets.length > 0 ? (
-                filteredAssets.map((a) => {
+                paginatedAssets.map((a) => {
                   const qtyBaik = a.qty_baik || 0;
                   const qtyRusak = a.qty_rusak || 0;
                   const total = qtyBaik + qtyRusak;
@@ -150,6 +161,13 @@ const Assets = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalCount={filteredAssets.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
     </div>
   );

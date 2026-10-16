@@ -82,25 +82,28 @@ const updateProfile = async (req, res) => {
 
     let newPasswordHash = user.password_hash;
     
-    if (new_password) {
+    if (new_password && new_password.trim() !== '') {
+      if (new_password.trim().length < 6) {
+        return res.status(400).json({ success: false, message: 'Password baru minimal 6 karakter' });
+      }
       if (!old_password) {
         return res.status(400).json({ success: false, message: 'Password lama wajib diisi untuk mengubah password' });
       }
       const validPassword = await bcrypt.compare(old_password, user.password_hash);
       if (!validPassword) {
-        return res.status(401).json({ success: false, message: 'Password lama salah' });
+        return res.status(401).json({ success: false, message: 'Password lama tidak sesuai' });
       }
-      newPasswordHash = await bcrypt.hash(new_password, 10);
+      newPasswordHash = await bcrypt.hash(new_password.trim(), 10);
     }
 
-    const newNama = nama || user.nama;
+    const newNama = (nama && nama.trim() !== '') ? nama.trim() : user.nama;
 
     const updateRes = await pool.query(
       `UPDATE users SET nama = $1, password_hash = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING id, nama, username, role, outlet_id`,
       [newNama, newPasswordHash, userId]
     );
 
-    res.json({ success: true, message: 'Profil berhasil diperbarui', data: updateRes.rows[0] });
+    res.json({ success: true, message: 'Profil dan password berhasil diperbarui', data: updateRes.rows[0] });
 
   } catch (err) {
     console.error(err);

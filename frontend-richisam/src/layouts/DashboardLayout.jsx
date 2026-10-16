@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Boxes, LayoutDashboard, ArrowLeftRight, PackagePlus, PackageX, Users, Store,
-  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert, Sun, Moon, CheckCheck, Volume2, VolumeX
+  Package, Gauge, ClipboardList, FileBarChart, Bell, LogOut, Menu, X, ChevronRight, ClipboardCheck, Wrench, Send, LineChart, CalendarClock, Lock, ShieldAlert, Sun, Moon, CheckCheck, Volume2, VolumeX,
+  Key, Eye, EyeOff, UserCheck, Shield
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../store/useAuthStore';
@@ -109,7 +110,7 @@ const ROLE_LABEL = {
   OWNER: 'Owner',
 };
 
-const SidebarContent = ({ menus, user, onLogout, onNavigate }) => (
+const SidebarContent = ({ menus, user, onLogout, onNavigate, onOpenProfile }) => (
   <div className="flex flex-col h-full bg-[#16110F] text-white">
     {/* Brand Header */}
     <div className="h-20 flex items-center gap-3 px-6 shrink-0 border-b border-[#241C18]">
@@ -176,6 +177,15 @@ const SidebarContent = ({ menus, user, onLogout, onNavigate }) => (
           <p className="text-xs sm:text-sm font-bold text-white truncate">{user?.nama || user?.username || 'Pengguna'}</p>
           <p className="text-[11px] text-stone-400 truncate font-medium">{ROLE_LABEL[user?.role] || user?.role}</p>
         </div>
+        <button
+          id="btn-edit-profile"
+          onClick={onOpenProfile}
+          title="Ubah Profil & Password"
+          aria-label="Ubah Profil & Password"
+          className="p-2 rounded-xl text-stone-400 hover:text-[#FFCE00] hover:bg-white/[0.06] transition-colors cursor-pointer"
+        >
+          <Key size={17} />
+        </button>
         <button
           id="btn-logout"
           onClick={onLogout}
@@ -295,7 +305,7 @@ const playNotificationSound = () => {
 };
 
 const DashboardLayout = () => {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, updateUser } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const isLight = theme === 'light';
@@ -309,6 +319,65 @@ const DashboardLayout = () => {
   const notifRef = useRef(null);
   const prevUnreadRef = useRef(null);
   const location = useLocation();
+
+  // State untuk Modal Pengaturan Akun & Password Pribadi
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    nama: '',
+    old_password: '',
+    new_password: '',
+    confirm_password: '',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
+
+  const handleOpenProfile = () => {
+    setProfileForm({
+      nama: user?.nama || '',
+      old_password: '',
+      new_password: '',
+      confirm_password: '',
+    });
+    setShowPassword(false);
+    setProfileModalOpen(true);
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (!profileForm.nama.trim()) {
+      return toast.error('Nama lengkap tidak boleh kosong');
+    }
+    if (profileForm.new_password) {
+      if (profileForm.new_password.length < 6) {
+        return toast.error('Password baru minimal 6 karakter');
+      }
+      if (!profileForm.old_password) {
+        return toast.error('Password lama wajib diisi');
+      }
+      if (profileForm.new_password !== profileForm.confirm_password) {
+        return toast.error('Konfirmasi password baru tidak cocok');
+      }
+    }
+
+    setProfileSubmitting(true);
+    try {
+      const payload = {
+        nama: profileForm.nama.trim(),
+      };
+      if (profileForm.new_password) {
+        payload.old_password = profileForm.old_password;
+        payload.new_password = profileForm.new_password;
+      }
+      const res = await axiosClient.put('/auth/profile', payload);
+      updateUser({ nama: profileForm.nama.trim() });
+      toast.success(res?.data?.message || 'Profil berhasil diperbarui');
+      setProfileModalOpen(false);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal memperbarui profil');
+    } finally {
+      setProfileSubmitting(false);
+    }
+  };
 
   const toggleSound = () => {
     const next = !soundMuted;
@@ -416,7 +485,7 @@ const DashboardLayout = () => {
     <div className="h-screen flex bg-[#120E0C] text-white overflow-hidden font-sans">
       {/* Sidebar desktop */}
       <aside className="hidden lg:block w-64 shrink-0 border-r border-[#241C18]">
-        <SidebarContent menus={menus} user={user} onLogout={logout} />
+        <SidebarContent menus={menus} user={user} onLogout={logout} onOpenProfile={handleOpenProfile} />
       </aside>
 
       {/* Sidebar mobile (drawer) */}
@@ -438,7 +507,7 @@ const DashboardLayout = () => {
         >
           <X size={18} />
         </button>
-        <SidebarContent menus={menus} user={user} onLogout={logout} onNavigate={() => setMobileOpen(false)} />
+        <SidebarContent menus={menus} user={user} onLogout={logout} onNavigate={() => setMobileOpen(false)} onOpenProfile={handleOpenProfile} />
       </aside>
 
       {/* Main Layout Area */}
@@ -792,6 +861,163 @@ const DashboardLayout = () => {
           </div>
         );
       })()}
+
+      {/* Modal Pengaturan Profil & Ganti Password Pribadi */}
+      {profileModalOpen && (
+        <div 
+          id="modal-profile-settings"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in"
+          onClick={() => !profileSubmitting && setProfileModalOpen(false)}
+        >
+          <div 
+            className="relative w-full max-w-md rounded-3xl border border-[#382E28] bg-[#1A1412] p-6 shadow-2xl overflow-hidden text-white animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 pb-4 border-b border-[#2D241E]">
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-2xl bg-[#FFCE00]/15 text-[#FFCE00] border border-[#FFCE00]/30">
+                  <Key size={22} />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white">Profil & Ganti Password</h3>
+                  <p className="text-xs text-stone-400 mt-0.5">Kelola identitas dan keamanan akun login Anda</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setProfileModalOpen(false)}
+                disabled={profileSubmitting}
+                className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleUpdateProfile} className="space-y-4 pt-4">
+              {/* Info Akun (Read-only) */}
+              <div className="p-3.5 rounded-2xl bg-[#140F0D] border border-[#2D241E] space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-stone-400 font-medium">Username:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-white bg-white/10 px-2 py-0.5 rounded-md">
+                      {user?.username}
+                    </span>
+                    <span className="text-[10px] text-stone-400 bg-stone-800/80 px-1.5 py-0.5 rounded border border-stone-700" title="Username dikunci untuk integritas audit trail">
+                      Terkunci
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-stone-400 font-medium">Peran / Role:</span>
+                  <span className="font-bold text-[#F9610D]">{ROLE_LABEL[user?.role] || user?.role}</span>
+                </div>
+              </div>
+
+              {/* Edit Nama Lengkap */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-300 mb-1.5">
+                  Nama Lengkap <span className="text-rose-400">*</span>
+                </label>
+                <input
+                  required
+                  type="text"
+                  value={profileForm.nama}
+                  onChange={(e) => setProfileForm({ ...profileForm, nama: e.target.value })}
+                  placeholder="Masukkan nama lengkap Anda"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#120E0C] border border-[#2D241E] text-white text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] transition-colors"
+                />
+              </div>
+
+              {/* Bagian Ganti Password */}
+              <div className="pt-2 border-t border-[#2D241E]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-stone-300">
+                    Ganti Password Pribadi
+                  </span>
+                  <span className="text-[10px] text-stone-400 italic">
+                    (Opsional)
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-stone-400 mb-1">
+                      Password Lama {profileForm.new_password ? <span className="text-rose-400">*</span> : ''}
+                    </label>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={profileForm.old_password}
+                      onChange={(e) => setProfileForm({ ...profileForm, old_password: e.target.value })}
+                      placeholder="Masukkan password saat ini"
+                      className="w-full px-3.5 py-2 rounded-xl bg-[#120E0C] border border-[#2D241E] text-white text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-stone-400 mb-1">
+                      Password Baru (Min. 6 Karakter)
+                    </label>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={profileForm.new_password}
+                      onChange={(e) => setProfileForm({ ...profileForm, new_password: e.target.value })}
+                      placeholder="Kosongkan jika tidak ingin ganti"
+                      className="w-full px-3.5 py-2 rounded-xl bg-[#120E0C] border border-[#2D241E] text-white text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-stone-400 mb-1">
+                      Konfirmasi Password Baru
+                    </label>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={profileForm.confirm_password}
+                      onChange={(e) => setProfileForm({ ...profileForm, confirm_password: e.target.value })}
+                      placeholder="Ketik ulang password baru"
+                      className="w-full px-3.5 py-2 rounded-xl bg-[#120E0C] border border-[#2D241E] text-white text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] transition-colors"
+                    />
+                  </div>
+
+                  {/* Toggle Show Password */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="checkbox"
+                      id="toggle-show-pass"
+                      checked={showPassword}
+                      onChange={(e) => setShowPassword(e.target.checked)}
+                      className="rounded bg-[#120E0C] border-[#2D241E] text-[#F9610D] focus:ring-[#F9610D] cursor-pointer"
+                    />
+                    <label htmlFor="toggle-show-pass" className="text-xs text-stone-400 cursor-pointer select-none">
+                      Lihat karakter password
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-4 border-t border-[#2D241E] flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  disabled={profileSubmitting}
+                  onClick={() => setProfileModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-stone-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={profileSubmitting}
+                  className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#F9610D] hover:bg-[#d9530a] text-white shadow-lg shadow-[#F9610D]/25 transition-all disabled:opacity-50 cursor-pointer flex items-center gap-2"
+                >
+                  {profileSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

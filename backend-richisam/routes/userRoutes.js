@@ -11,5 +11,6 @@ router.post('/', authorize('ADMIN_PUSAT'), userController.createUser);
 router.put('/:id', authorize('ADMIN_PUSAT'), userController.updateUser);
 router.patch('/:id/status', authorize('ADMIN_PUSAT'), userController.updateStatus);
 router.patch('/:id/reset-password', authorize('ADMIN_PUSAT'), userController.resetPassword);
+router.delete('/:id', authorize('ADMIN_PUSAT'), userController.deleteUser);
 
 module.exports = router;

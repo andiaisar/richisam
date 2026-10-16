@@ -8,6 +8,7 @@ import {
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import BeritaAcaraOpnameModal from '../components/BeritaAcaraOpnameModal';
+import Pagination from '../components/Pagination';
 
 const Opname = () => {
   const { user } = useAuthStore();
@@ -18,6 +19,11 @@ const Opname = () => {
   
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'detail'
   const [selectedOpname, setSelectedOpname] = useState(null);
+
+  // Pagination & Search in List Mode
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 15;
+  const [searchListQuery, setSearchListQuery] = useState('');
   
   // Create state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -66,6 +72,20 @@ const Opname = () => {
     fetchOpnames();
     fetchOutlets();
   }, [user]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchListQuery]);
+
+  const filteredOpnames = opnames.filter(op => {
+    if (!searchListQuery) return true;
+    const q = searchListQuery.toLowerCase();
+    return op.kode?.toLowerCase().includes(q) ||
+           op.outlet_name?.toLowerCase().includes(q) ||
+           op.creator_name?.toLowerCase().includes(q);
+  });
+
+  const paginatedOpnames = filteredOpnames.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -644,6 +664,20 @@ const Opname = () => {
         </div>
       </div>
 
+      {/* Search Toolbar */}
+      <div className="bg-[#1A1412] p-4 rounded-3xl border border-[#2D241E] flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <div className="relative w-full sm:w-80">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+          <input
+            type="text"
+            value={searchListQuery}
+            onChange={(e) => setSearchListQuery(e.target.value)}
+            placeholder="Cari kode dokumen, outlet, petugas..."
+            className="w-full pl-10 pr-4 py-2.5 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-xs placeholder:text-stone-500 focus:outline-none focus:border-[#F9610D]"
+          />
+        </div>
+      </div>
+
       {/* Main Table */}
       <div className="bg-[#1A1412] rounded-3xl shadow-xl border border-[#2D241E] overflow-hidden">
         <div className="overflow-x-auto min-h-[300px]">
@@ -666,8 +700,8 @@ const Opname = () => {
                     Memuat data opname...
                   </td>
                 </tr>
-              ) : opnames.length > 0 ? (
-                opnames.map((op) => (
+              ) : filteredOpnames.length > 0 ? (
+                paginatedOpnames.map((op) => (
                   <tr 
                     key={op.id} 
                     className="hover:bg-[#1E1714] transition-colors group cursor-pointer" 
@@ -719,6 +753,13 @@ const Opname = () => {
             </tbody>
           </table>
         </div>
+
+        <Pagination
+          currentPage={currentPage}
+          totalCount={filteredOpnames.length}
+          pageSize={pageSize}
+          onPageChange={setCurrentPage}
+        />
       </div>
 
       {/* Modal Mulai Opname Baru */}

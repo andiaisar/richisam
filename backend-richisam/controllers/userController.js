@@ -131,3 +131,38 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ success: false, message: 'Gagal me-reset password' });
   }
 };
+
+exports.deleteUser = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+
+    // Admin tidak boleh menghapus akunnya sendiri
+    if (req.user.id === id) {
+      return res.status(403).json({ success: false, message: 'Anda tidak dapat menghapus akun Anda sendiri' });
+    }
+
+    const targetUser = await UserService.getUserById(id);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan' });
+    }
+
+    try {
+      await UserService.deleteUser(id);
+      return res.json({ success: true, message: `Pengguna ${targetUser.nama} berhasil dihapus` });
+    } catch (dbErr) {
+      // Jika ada foreign key constraint (misal ada riwayat mutasi/transaksi), otomatis nonaktifkan
+      if (dbErr.code === '23503') {
+        await UserService.updateStatus(id, false);
+        return res.json({ 
+          success: true, 
+          message: `Pengguna ${targetUser.nama} memiliki riwayat transaksi dalam sistem sehingga tidak dapat dihapus fisik. Akun telah dinonaktifkan.` 
+        });
+      }
+      throw dbErr;
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: 'Gagal menghapus pengguna' });
+  }
+};
+

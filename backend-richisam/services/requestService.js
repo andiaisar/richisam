@@ -75,67 +75,126 @@ class RequestService {
       if (tiketRes.rows.length === 0) throw new Error('Tiket tidak ditemukan');
       const tiket = tiketRes.rows[0];
 
-      // Staf Cabang hanya bisa mengubah ke SELESAI jika status sebelumnya DIKIRIM
+      const isCK = req_user.role === 'ADMIN_GUDANG' || (req_user.role === 'STAF_CABANG' && req_user.outlet_id === 1);
+      const isPusatOrOwner = req_user.role === 'ADMIN_PUSAT' || req_user.role === 'OWNER';
+
+      // 1. Memproses atau Mengirim Tiket (DIPROSES atau DIKIRIM)
+      // Hanya boleh dilakukan oleh Staf Central Kitchen (CK), Admin Pusat, atau Owner
+      if (newStatus === 'DIPROSES' || newStatus === 'DIKIRIM') {
+        if (!isCK && !isPusatOrOwner) {
+          throw new Error('Hanya Staf Central Kitchen (CK), Admin Pusat, atau Owner yang berhak memproses dan mengirim tiket');
+        }
+
+        // Potong stok Central Kitchen (outlet_id = 1) saat status diubah menjadi DIKIRIM
+        if (newStatus === 'DIKIRIM' && tiket.status !== 'DIKIRIM' && tiket.status !== 'SELESAI') {
+          const CK_OUTLET_ID = 1;
+          const itemsRes = await client.query('SELECT * FROM restock_ticket_items WHERE ticket_id = $1', [id]);
+          const items = itemsRes.rows;
+          const hour = new Date().getHours();
+          let shift = 'MIDNIGHT';
+          if (hour >= 6 && hour < 14) shift = 'PAGI';
+          else if (hour >= 14 && hour < 22) shift = 'SORE';
+          const tanggal = new Date().toISOString().split('T')[0];
+
+          for (const item of items) {
+            const qty_awal = item.qty_dikirim || qty_approved || item.qty_diminta;
+            const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
+            const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
+            const qty = qty_awal * konversi;
+
+            const prevMut = await client.query(
+              'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
+              [CK_OUTLET_ID, item.product_id]
+            );
+            let saw = 0;
+            if (prevMut.rows.length > 0) {
+              saw = prevMut.rows[0].sak;
+            } else {
+              const stock = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [CK_OUTLET_ID, item.product_id]);
+              saw = stock.rows.length > 0 ? stock.rows[0].qty_current : 0;
+            }
+            const sak = Math.max(0, saw - qty);
+
+            await client.query(
+              `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
+               VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, 'TIKET', $9)`,
+              [item.product_id, CK_OUTLET_ID, tanggal, shift, saw, qty, sak, req_user.id, tiket.id]
+            );
+            await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, CK_OUTLET_ID, item.product_id]);
+            await NotificationService.checkParStock(CK_OUTLET_ID, item.product_id);
+          }
+        }
+      }
+
+      // 2. Mengonfirmasi Penerimaan Tiket di Cabang (SELESAI)
+      // Hanya boleh dilakukan oleh Staf Cabang Pemohon (yang menerima fisik di outlet), Admin Pusat, atau Owner
       if (newStatus === 'SELESAI') {
-         if (req_user.role === 'STAF_CABANG' && tiket.outlet_id !== req_user.outlet_id) {
-           throw new Error('Anda tidak memiliki akses ke tiket ini');
-         }
-         if (tiket.status !== 'DIKIRIM') throw new Error('Tiket belum dikirim');
+        if (req_user.role === 'STAF_CABANG' && !isCK && tiket.outlet_id !== req_user.outlet_id) {
+          throw new Error('Anda tidak memiliki akses untuk menerima tiket cabang lain');
+        }
+        if (tiket.status !== 'DIKIRIM') throw new Error('Tiket belum dikirim oleh Central Kitchen');
 
-         const itemsRes = await client.query('SELECT * FROM restock_ticket_items WHERE ticket_id = $1', [id]);
-         const items = itemsRes.rows;
+        const itemsRes = await client.query('SELECT * FROM restock_ticket_items WHERE ticket_id = $1', [id]);
+        const items = itemsRes.rows;
 
-         const hour = new Date().getHours();
-         let shift = 'MIDNIGHT';
-         if (hour >= 6 && hour < 14) shift = 'PAGI';
-         else if (hour >= 14 && hour < 22) shift = 'SORE';
-         const tanggal = new Date().toISOString().split('T')[0];
+        const hour = new Date().getHours();
+        let shift = 'MIDNIGHT';
+        if (hour >= 6 && hour < 14) shift = 'PAGI';
+        else if (hour >= 14 && hour < 22) shift = 'SORE';
+        const tanggal = new Date().toISOString().split('T')[0];
 
-         for (const item of items) {
-           const qty_awal = item.qty_dikirim || item.qty_diminta;
-           
-           // Ambil konversi produk
-           const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
-           const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
-           const qty = qty_awal * konversi;
-           
-           const prevMut = await client.query(
-            'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
-            [tiket.outlet_id, item.product_id]
-           );
-           
-           let saw = 0;
-           if (prevMut.rows.length > 0) {
-             saw = prevMut.rows[0].sak;
-           } else {
-             const stock = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [tiket.outlet_id, item.product_id]);
-             saw = stock.rows.length > 0 ? stock.rows[0].qty_current : 0;
-           }
+        for (const item of items) {
+          const qty_awal = item.qty_dikirim || item.qty_diminta;
+          
+          // Ambil konversi produk
+          const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
+          const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
+          const qty = qty_awal * konversi;
+          
+          const prevMut = await client.query(
+           'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
+           [tiket.outlet_id, item.product_id]
+          );
+          
+          let saw = 0;
+          if (prevMut.rows.length > 0) {
+            saw = prevMut.rows[0].sak;
+          } else {
+            const stock = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [tiket.outlet_id, item.product_id]);
+            saw = stock.rows.length > 0 ? stock.rows[0].qty_current : 0;
+          }
 
-           const sak = saw + qty;
+          const sak = saw + qty;
 
-           await client.query(
-             `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
-              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'TIKET', $10)`,
-             [item.product_id, tiket.outlet_id, tanggal, shift, saw, qty, 0, sak, req_user.id, tiket.id]
-           );
+          await client.query(
+            `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'TIKET', $10)`,
+            [item.product_id, tiket.outlet_id, tanggal, shift, saw, qty, 0, sak, req_user.id, tiket.id]
+          );
 
-           await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, tiket.outlet_id, item.product_id]);
-           await NotificationService.checkParStock(tiket.outlet_id, item.product_id);
-         }
+          await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, tiket.outlet_id, item.product_id]);
+          await NotificationService.checkParStock(tiket.outlet_id, item.product_id);
+        }
       }
 
       if (qty_approved !== undefined) {
-         // Fallback if frontend sends qty_approved for a single item ticket
-         const itemsRes = await client.query('SELECT id FROM restock_ticket_items WHERE ticket_id = $1 LIMIT 1', [id]);
-         if (itemsRes.rows.length > 0) {
-           await client.query('UPDATE restock_ticket_items SET qty_dikirim = $1 WHERE id = $2', [qty_approved, itemsRes.rows[0].id]);
-         }
+        // Fallback if frontend sends qty_approved for a single item ticket
+        const itemsRes = await client.query('SELECT id FROM restock_ticket_items WHERE ticket_id = $1 LIMIT 1', [id]);
+        if (itemsRes.rows.length > 0) {
+          await client.query('UPDATE restock_ticket_items SET qty_dikirim = $1 WHERE id = $2', [qty_approved, itemsRes.rows[0].id]);
+        }
       }
 
       const resUpdate = await client.query(
-        'UPDATE restock_tickets SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
-        [newStatus, id]
+        `UPDATE restock_tickets 
+         SET status = $1::ticket_status_enum, 
+             processed_by = CASE WHEN $1::text IN ('DIPROSES', 'DIKIRIM') AND processed_by IS NULL THEN $3 ELSE processed_by END,
+             processed_at = CASE WHEN $1::text IN ('DIPROSES', 'DIKIRIM') AND processed_at IS NULL THEN CURRENT_TIMESTAMP ELSE processed_at END,
+             received_by = CASE WHEN $1::text = 'SELESAI' THEN $3 ELSE received_by END,
+             received_at = CASE WHEN $1::text = 'SELESAI' AND received_at IS NULL THEN CURRENT_TIMESTAMP ELSE received_at END,
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $2 RETURNING *`,
+        [newStatus, id, req_user.id]
       );
 
       // Notifikasi status tiket & pengiriman surat jalan

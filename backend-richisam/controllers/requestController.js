@@ -14,7 +14,11 @@ const updateSchema = z.object({
 exports.getRequests = async (req, res) => {
   try {
     const { page, limit, status } = req.query;
-    const outlet_id = req.query.outlet_id || (req.body && req.body.outlet_id); // from enforceOutletScope
+    const isBranchStaff = req.user && req.user.role === 'STAF_CABANG' && req.user.outlet_id !== 1;
+    
+    // Staf gerai cabang hanya melihat tiket miliknya sendiri.
+    // Staf CK (outlet_id 1), Admin Pusat, dan Owner dapat memantau seluruh tiket masuk dari cabang.
+    const outlet_id = isBranchStaff ? req.user.outlet_id : (req.query.outlet_id || null);
     
     const result = await RequestService.getRequests(page, limit, outlet_id, status);
     res.json({ success: true, message: 'Daftar tiket permintaan', data: result });
@@ -25,7 +29,11 @@ exports.getRequests = async (req, res) => {
 
 exports.createRequest = async (req, res) => {
   try {
-    const outlet_id = req.body.outlet_id;
+    const isCK = req.user && (req.user.role === 'ADMIN_GUDANG' || (req.user.role === 'STAF_CABANG' && req.user.outlet_id === 1));
+    if (isCK) {
+      return res.status(403).json({ success: false, message: 'Staf Central Kitchen bertindak sebagai penyedia/pengirim bahan, bukan pemohon tiket.' });
+    }
+    const outlet_id = req.user?.outlet_id || req.body.outlet_id;
     if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
 
     const parsed = requestSchema.safeParse(req.body);
@@ -81,11 +89,7 @@ exports.updateStatus = async (req, res) => {
 
     const { status, qty_approved } = parsed.data;
 
-    // RBAC logic here or in service
-    if (status === 'DIPROSES' || status === 'DIKIRIM') {
-      if (req.user.role === 'STAF_CABANG') return res.status(403).json({ success: false, message: 'Staf tidak bisa mengubah status ke DIPROSES/DIKIRIM' });
-    }
-
+    // Delegasikan validasi RBAC lengkap ke RequestService (isCK, isPusatOrOwner, isBranchStaff)
     const tiket = await RequestService.updateStatus(id, status, qty_approved, req.user);
     res.json({ success: true, message: `Status diubah ke ${status}`, data: tiket });
   } catch (e) {

@@ -1,6 +1,10 @@
-# Entity Relationship Diagram (ERD) - RichiStock
+# Entity Relationship Diagram (ERD) - RichiStock (Versi Lengkap & Terintegrasi)
 
-Berikut adalah diagram relasi entitas untuk database proyek RichiStock setelah penyesuaian skema Master Data & Inventaris (Prompt I1).
+Dokumen ini memuat skema relasi entitas lengkap untuk sistem manajemen inventaris **RichiStock** (Central Kitchen & 3 Outlet Cabang: Alauddin, PK3, BTP), mencakup modul Operasional, Transfer Antar Cabang, Kadaluarsa (FEFO), Tutup Shift, Opname, dan Audit Trail.
+
+---
+
+## 1. Diagram ERD (Mermaid Notation)
 
 ```mermaid
 erDiagram
@@ -17,7 +21,7 @@ erDiagram
     USERS {
         int id PK
         varchar nama
-        varchar username
+        varchar username UK
         varchar password_hash
         enum role "OWNER|ADMIN_PUSAT|STAF_CABANG"
         int outlet_id FK
@@ -28,25 +32,17 @@ erDiagram
 
     PRODUCTS {
         int id PK
-        varchar kode
+        varchar kode UK
         varchar nama
-        int urutan
-        numeric harga
         varchar satuan
         varchar kategori
+        numeric harga
+        int urutan
         boolean satuan_perlu_konfirmasi
+        varchar satuan_besar
+        int konversi
+        int shelf_life_days
         boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    OPENING_BALANCES {
-        int id PK
-        int product_id FK
-        int outlet_id FK
-        int qty
-        date tanggal
-        int created_by FK
         timestamp created_at
         timestamp updated_at
     }
@@ -65,6 +61,17 @@ erDiagram
         int product_id FK
         int outlet_id FK
         int qty_current
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    OPENING_BALANCES {
+        int id PK
+        int product_id FK
+        int outlet_id FK
+        int qty
+        date tanggal
+        int created_by FK
         timestamp created_at
         timestamp updated_at
     }
@@ -90,7 +97,7 @@ erDiagram
 
     RESTOCK_TICKETS {
         int id PK
-        varchar kode_tiket
+        varchar kode_tiket UK
         int outlet_id FK
         int requested_by FK
         enum status "DIAJUKAN|DIPROSES|SELESAI"
@@ -113,6 +120,32 @@ erDiagram
         int qty_diterima
     }
 
+    BRANCH_TRANSFERS {
+        int id PK
+        varchar kode_transfer UK
+        int from_outlet_id FK
+        int to_outlet_id FK
+        int product_id FK
+        int qty
+        text catatan
+        int created_by FK
+        timestamp created_at
+    }
+
+    PRODUCT_BATCHES {
+        int id PK
+        int product_id FK
+        int outlet_id FK
+        varchar batch_no
+        int qty
+        date tanggal_masuk
+        date expired_date
+        text catatan
+        int created_by FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
     DEFECT_REPORTS {
         int id PK
         int outlet_id FK
@@ -120,50 +153,36 @@ erDiagram
         int qty
         text deskripsi
         varchar foto_url
-        enum status "BARU|DITINJAU|SELESAI"
+        enum status "BARU|DITINJAU|SELESAI|DISETUJUI|DITOLAK|PENDING"
         int reported_by FK
         timestamp created_at
         timestamp updated_at
     }
 
-    NOTIFICATIONS {
+    SHIFT_CLOSINGS {
         int id PK
         int outlet_id FK
-        int product_id FK
-        text pesan
-        enum tipe "PAR_STOCK|TIKET|DEFECT"
-        boolean is_read
-        timestamp created_at
-    }
-
-    ASSETS {
-        int id PK
-        varchar kode
-        varchar nama
-        varchar kategori
-        int urutan
-        boolean is_active
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    ASSET_STOCKS {
-        int id PK
-        int asset_id FK
-        int outlet_id FK
-        int qty_baik
-        int qty_rusak
-        text keterangan
-        timestamp created_at
-        timestamp updated_at
+        varchar shift_name
+        date shift_date
+        varchar status
+        int total_items_in
+        int total_items_out
+        int total_defect_cases
+        text notes
+        int closed_by_id FK
+        varchar closed_by_name
+        int unlocked_by_id FK
+        timestamptz unlocked_at
+        timestamptz created_at
+        timestamptz updated_at
     }
 
     STOCK_OPNAMES {
         int id PK
-        varchar kode
+        varchar kode UK
         int outlet_id FK
         date tanggal
-        enum status "DRAFT|FINAL"
+        enum status "DRAFT|FINAL|APPROVED"
         text catatan
         int created_by FK
         int finalized_by FK
@@ -185,6 +204,28 @@ erDiagram
         timestamp updated_at
     }
 
+    ASSETS {
+        int id PK
+        varchar kode UK
+        varchar nama
+        varchar kategori
+        int urutan
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    ASSET_STOCKS {
+        int id PK
+        int asset_id FK
+        int outlet_id FK
+        int qty_baik
+        int qty_rusak
+        text keterangan
+        timestamp created_at
+        timestamp updated_at
+    }
+
     ASSET_OPNAME_ITEMS {
         int id PK
         int opname_id FK
@@ -197,38 +238,91 @@ erDiagram
         timestamp updated_at
     }
 
-    %% Relationships
-    OUTLETS ||--o{ USERS : "memiliki staf"
+    NOTIFICATIONS {
+        int id PK
+        int outlet_id FK
+        int product_id FK
+        text pesan
+        enum tipe "PAR_STOCK|TIKET|DEFECT"
+        boolean is_read
+        timestamp created_at
+    }
+
+    AUDIT_LOGS {
+        int id PK
+        int user_id FK
+        varchar user_name
+        varchar role
+        int outlet_id FK
+        varchar outlet_name
+        varchar module
+        varchar action
+        text description
+        jsonb details
+        varchar ip_address
+        timestamptz created_at
+    }
+
+    %% =======================
+    %% RELASI OUTLETS (CABANG)
+    %% =======================
+    OUTLETS ||--o{ USERS : "memiliki pegawai"
+    OUTLETS ||--o{ STOCKS : "menyimpan stok aktif"
     OUTLETS ||--o{ PAR_STOCKS : "memiliki limit minimum"
-    OUTLETS ||--o{ STOCKS : "memiliki inventaris"
     OUTLETS ||--o{ OPENING_BALANCES : "memiliki saldo awal"
-    OUTLETS ||--o{ STOCK_MUTATIONS : "mencatat mutasi"
-    OUTLETS ||--o{ RESTOCK_TICKETS : "mengajukan"
-    OUTLETS ||--o{ DEFECT_REPORTS : "melaporkan defect"
-    OUTLETS ||--o{ NOTIFICATIONS : "menerima notif"
-    OUTLETS ||--o{ ASSET_STOCKS : "memiliki aset"
-    OUTLETS ||--o{ STOCK_OPNAMES : "melakukan opname"
+    OUTLETS ||--o{ STOCK_MUTATIONS : "mencatat mutasi harian"
+    OUTLETS ||--o{ RESTOCK_TICKETS : "mengajukan tiket order"
+    OUTLETS ||--o{ BRANCH_TRANSFERS : "sebagai cabang asal (from)"
+    OUTLETS ||--o{ BRANCH_TRANSFERS : "sebagai cabang tujuan (to)"
+    OUTLETS ||--o{ PRODUCT_BATCHES : "menyimpan batch kadaluarsa"
+    OUTLETS ||--o{ DEFECT_REPORTS : "mencatat barang cacat"
+    OUTLETS ||--o{ SHIFT_CLOSINGS : "menjalankan tutup shift"
+    OUTLETS ||--o{ STOCK_OPNAMES : "melaksanakan audit opname"
+    OUTLETS ||--o{ ASSET_STOCKS : "memiliki aset peralatan"
+    OUTLETS ||--o{ NOTIFICATIONS : "menerima peringatan"
+    OUTLETS ||--o{ AUDIT_LOGS : "lokasi aktivitas audit"
 
-    PRODUCTS ||--o{ PAR_STOCKS : "batas minimum di"
-    PRODUCTS ||--o{ STOCKS : "posisi stok di"
-    PRODUCTS ||--o{ OPENING_BALANCES : "saldo awal di"
-    PRODUCTS ||--o{ STOCK_MUTATIONS : "dimutasi pada"
-    PRODUCTS ||--o{ RESTOCK_TICKET_ITEMS : "diminta pada"
-    PRODUCTS ||--o{ DEFECT_REPORTS : "dilaporkan cacat"
-    PRODUCTS ||--o{ NOTIFICATIONS : "terkait dengan"
+    %% =======================
+    %% RELASI PRODUCTS (BARANG)
+    %% =======================
+    PRODUCTS ||--o{ STOCKS : "saldo stok di outlet"
+    PRODUCTS ||--o{ PAR_STOCKS : "batas minimum di outlet"
+    PRODUCTS ||--o{ OPENING_BALANCES : "saldo awal di outlet"
+    PRODUCTS ||--o{ STOCK_MUTATIONS : "dicatat pada mutasi"
+    PRODUCTS ||--o{ RESTOCK_TICKET_ITEMS : "dipesan dalam tiket"
+    PRODUCTS ||--o{ BRANCH_TRANSFERS : "ditransfer antar cabang"
+    PRODUCTS ||--o{ PRODUCT_BATCHES : "dilacak nomor batch-nya"
+    PRODUCTS ||--o{ DEFECT_REPORTS : "dilaporkan rusak/defect"
     PRODUCTS ||--o{ STOCK_OPNAME_ITEMS : "dihitung pada opname"
+    PRODUCTS ||--o{ NOTIFICATIONS : "subjek notifikasi stok"
 
-    ASSETS ||--o{ ASSET_STOCKS : "stok unit di outlet"
-    ASSETS ||--o{ ASSET_OPNAME_ITEMS : "dihitung pada opname"
-
-    USERS ||--o{ STOCK_MUTATIONS : "menginput"
-    USERS ||--o{ RESTOCK_TICKETS : "mengajukan/memproses/menerima"
-    USERS ||--o{ DEFECT_REPORTS : "melaporkan"
-    USERS ||--o{ STOCK_OPNAMES : "membuat/memfinalisasi"
+    %% =======================
+    %% RELASI USERS (PENGGUNA)
+    %% =======================
+    USERS ||--o{ STOCK_MUTATIONS : "menginput mutasi"
+    USERS ||--o{ RESTOCK_TICKETS : "membuat order (requested_by)"
+    USERS ||--o{ RESTOCK_TICKETS : "memproses kiriman (processed_by)"
+    USERS ||--o{ RESTOCK_TICKETS : "menerima kiriman (received_by)"
+    USERS ||--o{ BRANCH_TRANSFERS : "membuat transfer cabang"
+    USERS ||--o{ PRODUCT_BATCHES : "mendaftarkan batch masuk"
+    USERS ||--o{ DEFECT_REPORTS : "melaporkan defect"
+    USERS ||--o{ SHIFT_CLOSINGS : "menutup shift (closed_by)"
+    USERS ||--o{ STOCK_OPNAMES : "membuat draft opname"
+    USERS ||--o{ STOCK_OPNAMES : "memfinalisasi opname"
     USERS ||--o{ OPENING_BALANCES : "menginput saldo awal"
+    USERS ||--o{ AUDIT_LOGS : "pelaku aktivitas sistem"
 
-    RESTOCK_TICKETS ||--|{ RESTOCK_TICKET_ITEMS : "terdiri dari"
-    RESTOCK_TICKETS ||--o{ STOCK_MUTATIONS : "dikonversi menjadi"
+    %% =======================
+    %% RELASI ASSETS (ALAT)
+    %% =======================
+    ASSETS ||--o{ ASSET_STOCKS : "unit aset di tiap cabang"
+    ASSETS ||--o{ ASSET_OPNAME_ITEMS : "item fisik yang di-opname"
+
+    %% =======================
+    %% RELASI TRANSAKSI HEADER & DETAIL
+    %% =======================
+    RESTOCK_TICKETS ||--|{ RESTOCK_TICKET_ITEMS : "memiliki rincian item"
+    RESTOCK_TICKETS ||--o{ STOCK_MUTATIONS : "dikonversi menjadi mutasi masuk"
 
     STOCK_OPNAMES ||--o{ STOCK_OPNAME_ITEMS : "rincian bahan opname"
     STOCK_OPNAMES ||--o{ ASSET_OPNAME_ITEMS : "rincian aset opname"

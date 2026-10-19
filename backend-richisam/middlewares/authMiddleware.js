@@ -28,10 +28,15 @@ const authorize = (...roles) => (req, res, next) => {
 const enforceOutletScope = (req, res, next) => {
   if (req.user && req.user.role === 'STAF_CABANG') {
     const outlet_id = req.user.outlet_id;
-    // Force override body
-    if (req.body) req.body.outlet_id = outlet_id;
-    // Force override query
-    if (req.query) req.query.outlet_id = outlet_id;
+    const isCK = outlet_id === 1;
+    const isRequestRoute = (req.baseUrl && req.baseUrl.includes('requests')) || (req.originalUrl && req.originalUrl.includes('/api/requests'));
+    
+    // Central Kitchen (outlet_id === 1) adalah penyedia/pusat yang melayani permintaan dari seluruh cabang.
+    // Jangan batasi query/body rute requests untuk Staf CK agar dapat melihat & memproses semua tiket masuk.
+    if (!isCK || !isRequestRoute) {
+      if (req.body) req.body.outlet_id = outlet_id;
+      if (req.query) req.query.outlet_id = outlet_id;
+    }
   }
   next();
 };

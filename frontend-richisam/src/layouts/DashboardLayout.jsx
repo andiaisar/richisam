@@ -15,13 +15,13 @@ const MENUS = {
   STAF_CABANG: [
     { section: 'Utama', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
     {
-      section: 'Operasional',
+      section: 'Operasional Outlet',
       items: [
+        { to: '/permintaan', label: 'Permintaan Barang', icon: PackagePlus },
         { to: '/mutasi', label: 'Mutasi Stok', icon: ArrowLeftRight },
         { to: '/transfer', label: 'Transfer Cabang', icon: Send },
         { to: '/kadaluarsa', label: 'Masa Kadaluarsa', icon: CalendarClock },
         { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
-        { to: '/permintaan', label: 'Permintaan Barang', icon: PackagePlus },
         { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Laporan Defect', icon: PackageX },
         { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
@@ -87,17 +87,16 @@ const MENUS = {
   ADMIN_GUDANG: [
     { section: 'Utama', items: [{ to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true }] },
     {
-      section: 'Operasional',
+      section: 'Operasional Central Kitchen',
       items: [
-        { to: '/permintaan', label: 'Tiket Permintaan', icon: ClipboardList },
-        { to: '/mutasi', label: 'Mutasi Stok', icon: ArrowLeftRight },
+        { to: '/permintaan', label: 'Tiket Permintaan Cabang', icon: ClipboardList },
+        { to: '/mutasi', label: 'Mutasi Stok CK', icon: ArrowLeftRight },
         { to: '/kadaluarsa', label: 'Masa Kadaluarsa', icon: CalendarClock },
-        { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
+        { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
+        { to: '/opname', label: 'Stok Opname CK', icon: ClipboardCheck },
         { to: '/defect', label: 'Defect & Retur', icon: PackageX },
-        { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
-        { to: '/laporan', label: 'Laporan', icon: FileBarChart },
-        { to: '/analytics', label: 'Analitik & Prediksi', icon: LineChart },
-        { to: '/audit-trail', label: 'Log Aktivitas (Audit)', icon: ShieldAlert },
+        { to: '/shift-closing', label: 'Tutup Shift CK', icon: Lock },
+        { to: '/laporan', label: 'Laporan Stok CK', icon: FileBarChart },
       ],
     },
   ],
@@ -485,7 +484,14 @@ const DashboardLayout = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const menus = MENUS[user?.role] || MENUS.STAF_CABANG;
+  const isCK = user?.role === 'ADMIN_GUDANG' || (user?.role === 'STAF_CABANG' && (user?.outlet_id === 1 || user?.outlet_name?.toLowerCase().includes('central kitchen') || user?.outlet_name?.toLowerCase().includes('ck')));
+  const menus = user?.role === 'OWNER' 
+    ? MENUS.OWNER 
+    : user?.role === 'ADMIN_PUSAT' 
+    ? MENUS.ADMIN_PUSAT 
+    : isCK 
+    ? MENUS.ADMIN_GUDANG 
+    : MENUS.STAF_CABANG;
   const allItems = menus.flatMap((g) => g.items);
   const current =
     allItems.find((i) => (i.end ? location.pathname === i.to : location.pathname.startsWith(i.to) && i.to !== '/')) ||

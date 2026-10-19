@@ -41,6 +41,10 @@ const Opname = () => {
   const [applyAdjustment, setApplyAdjustment] = useState(false);
   const [searchTableQuery, setSearchTableQuery] = useState('');
 
+  const canFinalize = user?.role === 'ADMIN_PUSAT' || user?.role === 'OWNER';
+  const isCK = user?.role === 'ADMIN_GUDANG' || (user?.role === 'STAF_CABANG' && (user?.outlet_id === 1 || user?.outlet_name?.toLowerCase().includes('central kitchen') || user?.outlet_name?.toLowerCase().includes('ck')));
+  const isOutletStaff = user?.role === 'STAF_CABANG' && !isCK;
+
   const fetchOpnames = async () => {
     try {
       setLoading(true);
@@ -164,7 +168,11 @@ const Opname = () => {
         }))
       };
       await axiosClient.put(`/opnames/${selectedOpname.id}/items`, payload);
-      toast.success('Draf perubahan dan alasan selisih berhasil disimpan!');
+      toast.success(
+        canFinalize 
+          ? 'Draf perubahan dan alasan selisih berhasil disimpan!' 
+          : 'Draf hitungan fisik berhasil disimpan! Menunggu validasi & finalisasi Admin Pusat / Owner.'
+      );
     } catch (e) {
       toast.error(e.response?.data?.message || 'Gagal menyimpan item');
     } finally {
@@ -173,6 +181,9 @@ const Opname = () => {
   };
 
   const handleFinalize = async () => {
+    if (!canFinalize) {
+      return toast.error('Hanya Admin Pusat dan Owner yang memiliki wewenang untuk memfinalisasi opname.');
+    }
     const missingReason = items.some(i => i.selisih !== 0 && (!i.alasan || i.alasan.trim() === ''));
     if (missingReason) {
       return toast.error('Harap isi alasan untuk semua bahan baku yang memiliki selisih fisik.');
@@ -298,17 +309,45 @@ const Opname = () => {
                   <RefreshCw size={15} className={savingItems ? 'animate-spin' : ''} />
                   <span>Simpan Draf</span>
                 </button>
-                <button 
-                  onClick={() => setShowFinalizeModal(true)} 
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#F9610D] to-[#E25304] hover:from-[#FA6E20] hover:to-[#EB5B09] text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-[#F9610D]/20 cursor-pointer"
-                >
-                  <CheckCircle size={15} />
-                  <span>Finalisasi Opname</span>
-                </button>
+                {canFinalize ? (
+                  <button 
+                    onClick={() => setShowFinalizeModal(true)} 
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#F9610D] to-[#E25304] hover:from-[#FA6E20] hover:to-[#EB5B09] text-white rounded-xl text-xs font-bold transition-all shadow-lg shadow-[#F9610D]/20 cursor-pointer"
+                  >
+                    <CheckCircle size={15} />
+                    <span>Finalisasi Opname</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl text-xs font-semibold">
+                    <ShieldAlert size={15} />
+                    <span>Menunggu Approval Admin Pusat / Owner</span>
+                  </div>
+                )}
               </>
             )}
           </div>
         </div>
+
+        {/* ── BANNER OTORITAS ROLE ── */}
+        {!isFinal && !canFinalize && (
+          <div className="bg-amber-950/25 border border-amber-500/30 rounded-2xl p-4 text-xs text-amber-200 flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-amber-300 block mb-0.5">Mode Penginputan Fisik Lapangan ({isCK ? 'Staf Central Kitchen' : 'Staf Outlet'})</span>
+              Tugas Anda adalah menghitung stok fisik di lapangan dan mencatat alasan selisih jika ada selisih. Setelah selesai mengisi hitungan, klik <strong>"Simpan Draf"</strong>. Finalisasi dokumen dan penyesuaian stok sistem (Stock Adjustment) akan dievaluasi dan disahkan oleh <strong>Admin Pusat</strong> atau <strong>Owner</strong>.
+            </div>
+          </div>
+        )}
+
+        {!isFinal && canFinalize && (
+          <div className="bg-blue-950/25 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-200 flex items-start gap-3">
+            <Sparkles className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold text-blue-300 block mb-0.5">Otoritas Validasi & Finalisasi (Admin Pusat / Owner)</span>
+              Anda memiliki wewenang untuk memeriksa hasil hitungan fisik lapangan dan alasan selisih yang dicatat staf. Klik <strong>"Finalisasi Opname"</strong> untuk mengunci dokumen secara permanen dan menerapkan penyesuaian stok sistem (Stock Adjustment).
+            </div>
+          </div>
+        )}
 
         {/* ── KALKULATOR KERUGIAN (FOOD WASTE & SHRINKAGE ANALYTICS CARD) ── */}
         <div className="bg-[#1A1412] rounded-3xl border border-[#2D241E] p-6 shadow-xl relative overflow-hidden">

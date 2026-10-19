@@ -40,8 +40,9 @@ const Permintaan = () => {
   const fetchTickets = async () => {
     try {
       setLoading(true);
-      const res = await axiosClient.get(`/requests${filter !== 'ALL' ? `?status=${filter}` : ''}`);
-      setTickets(res?.data?.data || res?.data || []);
+      const res = await axiosClient.get(`/requests?limit=100${filter !== 'ALL' ? `&status=${filter}` : ''}`);
+      const raw = res?.data?.data?.data || res?.data?.data || res?.data || [];
+      setTickets(Array.isArray(raw) ? raw : []);
     } catch (e) {
       toast.error('Gagal mengambil data permintaan');
     } finally {
@@ -139,6 +140,21 @@ const Permintaan = () => {
     }
   };
 
+  const handleConfirmReceipt = async (e) => {
+    if (e) e.preventDefault();
+    setSubmitting(true);
+    try {
+      await axiosClient.put(`/requests/${selectedTicket.id}`, { status: 'SELESAI' });
+      toast.success('Konfirmasi berhasil! Barang telah diterima dan masuk ke stok cabang.');
+      setIsDetailModalOpen(false);
+      fetchTickets();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal memproses konfirmasi terima barang');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleUpdateStatus = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -153,7 +169,11 @@ const Permintaan = () => {
          }
       }
       await axiosClient.put(`/requests/${selectedTicket.id}`, payload);
-      toast.success('Status tiket berhasil diperbarui');
+      toast.success(
+        updateData.status === 'DIKIRIM' 
+          ? 'Barang berhasil dikirim & stok Central Kitchen telah dipotong!' 
+          : 'Status tiket berhasil diperbarui'
+      );
       setIsDetailModalOpen(false);
       fetchTickets();
     } catch (e) {
@@ -171,6 +191,9 @@ const Permintaan = () => {
            t.outlet_name?.toLowerCase().includes(q);
   });
 
+  const isCK = user?.role === 'ADMIN_GUDANG' || (user?.role === 'STAF_CABANG' && (user?.outlet_id === 1 || user?.outlet_name?.toLowerCase().includes('central kitchen') || user?.outlet_name?.toLowerCase().includes('ck')));
+  const isOutletStaff = user?.role === 'STAF_CABANG' && !isCK;
+
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
       {/* Header */}
@@ -178,24 +201,30 @@ const Permintaan = () => {
         <div>
           <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
             <PackagePlus className="h-6 w-6 text-richisam-orange" />
-            Permintaan Barang
+            {isCK ? 'Tiket Permintaan Cabang' : isOutletStaff ? 'Permintaan Barang' : 'Manajemen Tiket Permintaan'}
           </h1>
-          <p className="mt-1 text-sm text-muted">Kelola tiket permintaan stok dari cabang ke pusat.</p>
+          <p className="mt-1 text-sm text-muted">
+            {isCK 
+              ? 'Kelola, siapkan, dan kirim pesanan bahan baku dari cabang-cabang outlet.' 
+              : isOutletStaff 
+              ? 'Ajukan dan pantau pesanan stok bahan dari Central Kitchen (CK).' 
+              : 'Pantau dan kelola pengadaan bahan baku antar Central Kitchen dan seluruh cabang.'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={fetchTickets} className="p-2 rounded-lg border border-line bg-white hover:bg-cream text-ink transition-colors" title="Muat Ulang">
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
-          {user?.role === 'ADMIN_PUSAT' && (
-            <button onClick={openEmergencyModal} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm">
+          {(user?.role === 'ADMIN_PUSAT' || isCK) && (
+            <button onClick={openEmergencyModal} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer">
               <AlertTriangle size={18} />
               Pengambilan Cito (Darurat)
             </button>
           )}
-          {user?.role === 'STAF_CABANG' && (
-            <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm">
+          {isOutletStaff && (
+            <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer">
               <Plus size={18} />
-              Buat Tiket
+              Buat Tiket Permintaan
             </button>
           )}
         </div>
@@ -228,7 +257,7 @@ const Permintaan = () => {
               <tr>
                 <th className="px-6 py-4">Kode Tiket</th>
                 <th className="px-6 py-4">Produk</th>
-                {user?.role !== 'STAF_CABANG' && <th className="px-6 py-4">Cabang</th>}
+                {!isOutletStaff && <th className="px-6 py-4">Cabang Pemohon</th>}
                 <th className="px-6 py-4 text-center">Diminta</th>
                 <th className="px-6 py-4 text-center">Disetujui</th>
                 <th className="px-6 py-4">Status</th>
@@ -239,7 +268,7 @@ const Permintaan = () => {
             <tbody className="divide-y divide-line">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-muted">Memuat data...</td>
+                  <td colSpan={!isOutletStaff ? 8 : 7} className="px-6 py-12 text-center text-muted">Memuat data...</td>
                 </tr>
               ) : filteredTickets.length > 0 ? (
                 filteredTickets
@@ -248,7 +277,7 @@ const Permintaan = () => {
                   <tr key={t.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{t.kode_tiket}</td>
                     <td className="px-6 py-4 text-ink/80">{t.product_name}</td>
-                    {user?.role !== 'STAF_CABANG' && <td className="px-6 py-4 text-ink/80">{t.outlet_name}</td>}
+                    {!isOutletStaff && <td className="px-6 py-4 text-ink/80">{t.outlet_name}</td>}
                     <td className="px-6 py-4 text-center font-semibold text-ink">{t.qty_requested}</td>
                     <td className="px-6 py-4 text-center text-ink/80">{t.qty_approved || '-'}</td>
                     <td className="px-6 py-4">
@@ -256,8 +285,21 @@ const Permintaan = () => {
                     </td>
                     <td className="px-6 py-4 text-muted">{new Date(t.created_at).toLocaleDateString('id-ID')}</td>
                     <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-                      <button onClick={() => openDetailModal(t)} className="text-richisam-orange hover:text-richisam-merah-muda font-medium text-sm transition-colors cursor-pointer">
-                        {(user?.role === 'STAF_CABANG' && t.status === 'DIKIRIM') || (user?.role !== 'STAF_CABANG' && t.status !== 'SELESAI') ? 'Proses' : 'Detail'}
+                      <button 
+                        onClick={() => openDetailModal(t)} 
+                        className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                          isOutletStaff && t.status === 'DIKIRIM'
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                            : !isOutletStaff && t.status === 'DIAJUKAN'
+                            ? 'bg-richisam-orange hover:bg-[#d9530a] text-white shadow-sm'
+                            : !isOutletStaff && t.status === 'DIPROSES'
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                            : 'text-richisam-orange hover:text-richisam-merah-muda'
+                        }`}
+                      >
+                        {isOutletStaff 
+                          ? (t.status === 'DIKIRIM' ? 'Terima Barang' : 'Detail') 
+                          : (t.status === 'DIAJUKAN' ? 'Proses Tiket' : t.status === 'DIPROSES' ? 'Kirim Barang' : 'Detail')}
                       </button>
                       {(t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
                         <button 
@@ -291,7 +333,7 @@ const Permintaan = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="px-6 py-16 text-center text-muted"><FileText size={24} className="mx-auto mb-2 opacity-50"/>Tidak ada tiket permintaan.</td>
+                  <td colSpan={!isOutletStaff ? 8 : 7} className="px-6 py-16 text-center text-muted"><FileText size={24} className="mx-auto mb-2 opacity-50"/>Tidak ada tiket permintaan.</td>
                 </tr>
               )}
             </tbody>
@@ -406,39 +448,69 @@ const Permintaan = () => {
               </div>
 
               {/* Tampilkan form update jika user berhak mengupdate status */}
-              {user?.role === 'STAF_CABANG' ? (
+              {isOutletStaff ? (
                 selectedTicket.status === 'DIKIRIM' ? (
-                  <form onSubmit={handleUpdateStatus} className="space-y-4">
-                    <p className="text-sm font-medium text-ink">Terima Barang & Selesaikan Tiket?</p>
-                    <input type="hidden" value="SELESAI" />
-                    <button type="submit" disabled={submitting} className="w-full px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
-                      {submitting ? 'Memproses...' : 'Tandai Selesai (Barang Diterima)'}
+                  <form onSubmit={handleConfirmReceipt} className="space-y-4 pt-3 border-t border-line">
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
+                      <strong>Konfirmasi Penerimaan:</strong> Barang telah dikirim dari Central Kitchen (Qty: {selectedTicket.qty_approved || selectedTicket.qty_requested}). Klik tombol di bawah untuk memasukkan bahan ke stok cabang Anda.
+                    </div>
+                    <button type="submit" disabled={submitting} className="w-full px-4 py-2.5 text-sm font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
+                      <Check size={16} />
+                      {submitting ? 'Memproses Penerimaan...' : 'Konfirmasi Terima Barang (Selesai)'}
                     </button>
                   </form>
+                ) : selectedTicket.status === 'SELESAI' ? (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 text-center font-medium">
+                    ✓ Barang telah diterima dan stok cabang sudah bertambah.
+                  </div>
                 ) : (
-                  <p className="text-sm text-muted text-center mt-4">Menunggu proses dari pusat.</p>
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 text-center">
+                    ⏳ Tiket sedang dipersiapkan oleh Central Kitchen ({selectedTicket.status}). Mohon tunggu pengiriman barang.
+                  </div>
                 )
               ) : (
                 selectedTicket.status !== 'SELESAI' ? (
-                  <form onSubmit={handleUpdateStatus} className="space-y-4 mt-2">
-                    <div className="border-t border-line pt-4">
-                      <label className="block text-sm font-medium text-ink mb-1">Ubah Status</label>
-                      <select required value={updateData.status} onChange={e => setUpdateData({...updateData, status: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange mb-3">
-                        <option value="DIPROSES">DIPROSES</option>
-                        <option value="DIKIRIM">DIKIRIM</option>
+                  <form onSubmit={handleUpdateStatus} className="space-y-4 mt-2 border-t border-line pt-4">
+                    <div>
+                      <label className="block text-xs font-bold text-ink mb-1.5">Tindakan / Status Tiket</label>
+                      <select 
+                        required 
+                        value={updateData.status} 
+                        onChange={e => setUpdateData({...updateData, status: e.target.value})} 
+                        className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange mb-3 font-medium"
+                      >
+                        <option value="DIPROSES">DIPROSES (Sedang Disiapkan di Gudang CK)</option>
+                        <option value="DIKIRIM">DIKIRIM (Kirim ke Cabang & Kurangi Stok CK)</option>
                       </select>
 
-                      <label className="block text-sm font-medium text-ink mb-1">Jumlah Disetujui</label>
-                      <input required type="number" min="0" value={updateData.qty_approved} onChange={e => setUpdateData({...updateData, qty_approved: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" />
+                      <label className="block text-xs font-bold text-ink mb-1.5">Jumlah Disetujui (Approved Qty)</label>
+                      <input 
+                        required 
+                        type="number" 
+                        min="1" 
+                        value={updateData.qty_approved} 
+                        onChange={e => setUpdateData({...updateData, qty_approved: e.target.value})} 
+                        className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange font-mono font-bold" 
+                      />
+                      
+                      {updateData.status === 'DIKIRIM' && (
+                        <p className="mt-2 text-xs text-stone-500 bg-stone-100 p-2.5 rounded-lg border border-stone-200">
+                          ℹ️ Saat status diubah ke <strong>DIKIRIM</strong>, stok bahan di <strong>Central Kitchen (CK)</strong> akan otomatis dipotong sesuai jumlah disetujui.
+                        </p>
+                      )}
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
-                      <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium bg-richisam-orange text-white rounded-lg hover:bg-[#d9530a] disabled:opacity-50">
-                        {submitting ? 'Menyimpan...' : 'Simpan Update'}
+                      <button 
+                        type="submit" 
+                        disabled={submitting} 
+                        className="w-full px-4 py-2.5 text-sm font-bold bg-richisam-orange text-white rounded-xl hover:bg-[#d9530a] transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {submitting ? 'Menyimpan...' : updateData.status === 'DIKIRIM' ? 'Konfirmasi & Kirim Barang' : 'Simpan Status Diproses'}
                       </button>
                     </div>
                   </form>
                 ) : (
-                  <p className="text-sm text-green-600 text-center font-medium mt-4">Tiket ini telah diselesaikan.</p>
+                  <p className="text-sm text-green-600 text-center font-medium mt-4">Tiket ini telah diselesaikan (barang sudah diterima cabang).</p>
                 )
               )}
 

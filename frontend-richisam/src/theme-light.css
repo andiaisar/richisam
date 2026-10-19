@@ -214,37 +214,53 @@ html[data-theme="light"] [class*="from-amber-950"] {
 }
 
 /* ── Teks ── */
-html[data-theme="light"] .text-white {
+html[data-theme="light"] :is(.text-white, .text-stone-50, .text-stone-100, .text-gray-50, .text-gray-100, .text-zinc-50, .text-zinc-100, .text-slate-50, .text-slate-100, .text-neutral-50, .text-neutral-100) {
   color: var(--lt-text);
 }
-html[data-theme="light"] :is([class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
+html[data-theme="light"] :is([class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"], [class~="text-stone-100/80"]) {
   color: var(--lt-text-3);
 }
 html[data-theme="light"] :is([class~="hover:text-white"], [class~="group-hover:text-white"]):hover {
   color: var(--lt-text);
 }
-html[data-theme="light"] :is(.text-stone-200, .text-stone-300) {
+html[data-theme="light"] :is(.text-stone-200, .text-stone-300, .text-gray-200, .text-gray-300, .text-zinc-200, .text-zinc-300, .text-slate-200, .text-slate-300) {
   color: var(--lt-text-2);
 }
-html[data-theme="light"] .text-stone-400 {
+html[data-theme="light"] :is(.text-stone-400, .text-gray-400, .text-zinc-400, .text-slate-400) {
   color: var(--lt-text-3);
 }
-html[data-theme="light"] :is(.text-stone-500, .text-stone-600) {
+html[data-theme="light"] :is(.text-stone-500, .text-stone-600, .text-gray-500, .text-gray-600) {
   color: var(--lt-text-4);
 }
-html[data-theme="light"] [class~="text-[#FFCE00]"] {
+html[data-theme="light"] :is([class~="text-[#FFCE00]"], [class*="text-[#FFCE00]"], [class~="text-[#e5b800]"]) {
   color: var(--lt-gold);
 }
 
 /* Warna status: versi lebih pekat agar kontras di latar terang */
-html[data-theme="light"] :is(.text-emerald-300, .text-emerald-400) { color: #047857; }
-html[data-theme="light"] :is(.text-red-200, .text-red-300, .text-red-400, .text-rose-400) { color: #C8102E; }
-html[data-theme="light"] :is(.text-amber-300, .text-amber-400) { color: #B45309; }
-html[data-theme="light"] :is(.text-blue-400, .text-indigo-300, .text-indigo-400) { color: #1D4ED8; }
-html[data-theme="light"] .text-purple-300 { color: #6D28D9; }
-html[data-theme="light"] :is(.text-orange-200, .text-orange-400) { color: #C2410C; }
-html[data-theme="light"] :is(.text-sky-300, .text-sky-400) { color: #0284C7; }
-html[data-theme="light"] :is(.text-teal-300, .text-teal-400) { color: #0F766E; }
+html[data-theme="light"] :is(.text-emerald-100, .text-emerald-200, .text-emerald-300, .text-emerald-400, .text-green-200, .text-green-300, .text-green-400) { 
+  color: #047857 !important; 
+}
+html[data-theme="light"] :is(.text-red-100, .text-red-200, .text-red-300, .text-red-400, .text-rose-100, .text-rose-200, .text-rose-300, .text-rose-400) { 
+  color: #C8102E !important; 
+}
+html[data-theme="light"] :is(.text-amber-100, .text-amber-200, .text-amber-300, .text-amber-400, .text-yellow-200, .text-yellow-300, .text-yellow-400, [class~="text-[#FFD782]"]) { 
+  color: #B45309 !important; 
+}
+html[data-theme="light"] :is(.text-blue-100, .text-blue-200, .text-blue-300, .text-blue-400, .text-indigo-100, .text-indigo-200, .text-indigo-300, .text-indigo-400) { 
+  color: #1D4ED8 !important; 
+}
+html[data-theme="light"] :is(.text-purple-100, .text-purple-200, .text-purple-300, .text-purple-400, .text-violet-200, .text-violet-300) { 
+  color: #6D28D9 !important; 
+}
+html[data-theme="light"] :is(.text-orange-100, .text-orange-200, .text-orange-300, .text-orange-400) { 
+  color: #C2410C !important; 
+}
+html[data-theme="light"] :is(.text-sky-100, .text-sky-200, .text-sky-300, .text-sky-400, .text-cyan-200, .text-cyan-300) { 
+  color: #0284C7 !important; 
+}
+html[data-theme="light"] :is(.text-teal-100, .text-teal-200, .text-teal-300, .text-teal-400) { 
+  color: #0F766E !important; 
+}
 
 /* ── Permukaan aksen solid: teks harus tetap putih ── */
 html[data-theme="light"] :is(
@@ -257,14 +273,30 @@ html[data-theme="light"] :is(
   [class*="from-[#BA4F18]"],
   [class*="from-[#FA6E20]"],
   [class*="from-[#FFCE00]"],
-  [class~="bg-emerald-500"],
-  [class~="bg-emerald-600"],
-  [class~="bg-red-500"],
-  [class~="bg-red-600"],
-  [class~="bg-green-600"],
-  [class~="bg-blue-600"],
+  [class*="bg-emerald-500"],
+  [class*="bg-emerald-600"],
+  [class*="bg-emerald-700"],
+  [class*="bg-red-500"],
+  [class*="bg-red-600"],
+  [class*="bg-red-700"],
+  [class*="bg-rose-500"],
+  [class*="bg-rose-600"],
+  [class*="bg-rose-700"],
+  [class*="bg-green-600"],
+  [class*="bg-green-700"],
+  [class*="bg-blue-500"],
+  [class*="bg-blue-600"],
+  [class*="bg-blue-700"],
+  [class*="bg-indigo-600"],
+  [class*="bg-amber-600"],
+  [class*="bg-sky-600"],
+  [class*="bg-purple-600"],
   [class~="bg-black"]
-) :is(.text-white, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]),
+) :is(.text-white, .text-stone-50, .text-stone-100, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"], span, p, h1, h2, h3, h4, svg) {
+  color: #FFFFFF !important;
+  fill: currentColor;
+}
+
 html[data-theme="light"] :is(
   [class~="bg-[#F9610D]"],
   [class~="bg-richisam-orange"],
@@ -275,24 +307,27 @@ html[data-theme="light"] :is(
   [class*="from-[#BA4F18]"],
   [class*="from-[#FA6E20]"],
   [class*="from-[#FFCE00]"],
-  [class~="bg-emerald-500"],
-  [class~="bg-emerald-600"],
-  [class~="bg-red-500"],
-  [class~="bg-red-600"],
-  [class~="bg-green-600"],
-  [class~="bg-blue-600"],
+  [class*="bg-emerald-500"],
+  [class*="bg-emerald-600"],
+  [class*="bg-emerald-700"],
+  [class*="bg-red-500"],
+  [class*="bg-red-600"],
+  [class*="bg-red-700"],
+  [class*="bg-rose-500"],
+  [class*="bg-rose-600"],
+  [class*="bg-rose-700"],
+  [class*="bg-green-600"],
+  [class*="bg-green-700"],
+  [class*="bg-blue-500"],
+  [class*="bg-blue-600"],
+  [class*="bg-blue-700"],
+  [class*="bg-indigo-600"],
+  [class*="bg-amber-600"],
+  [class*="bg-sky-600"],
+  [class*="bg-purple-600"],
   [class~="bg-black"]
-):is(.text-white, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
-  color: #FFFFFF;
-}
-
-html[data-theme="light"] :is(
-  [class~="bg-[#F9610D]"],
-  [class~="bg-richisam-orange"],
-  [class*="from-[#F9610D]"],
-  [class*="from-[#BA4F18]"]
-) :is(p, h1, h2, h3, h4) {
-  color: inherit;
+):is(.text-white, .text-stone-50, .text-stone-100, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
+  color: #FFFFFF !important;
 }
 
 /* Tint gelap transparan di luar kartu aksen → panel terang tipis */
@@ -308,11 +343,17 @@ html[data-theme="light"] [class*="bg-black/"]:not(.fixed):not(:is(
 html[data-theme="light"] :is([class*="bg-orange-950"], [class*="bg-amber-950"]) {
   background-color: rgba(249, 97, 13, 0.12) !important;
 }
-html[data-theme="light"] [class*="bg-red-950"] {
+html[data-theme="light"] :is([class*="bg-red-950"], [class*="bg-rose-950"]) {
   background-color: rgba(236, 31, 39, 0.12) !important;
 }
 html[data-theme="light"] [class*="bg-emerald-950"] {
   background-color: rgba(16, 185, 129, 0.12) !important;
+}
+html[data-theme="light"] :is([class*="bg-blue-950"], [class*="bg-sky-950"], [class*="bg-indigo-950"]) {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+}
+html[data-theme="light"] [class*="bg-purple-950"] {
+  background-color: rgba(168, 85, 247, 0.12) !important;
 }
 
 /* ── Tabel ── */

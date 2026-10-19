@@ -208,14 +208,31 @@ table tr:hover td {
 }
 
 @media print {
+  /* Hilangkan filter blur dan paksa warna cetak presisi */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
   /* Isolasi print: hanya tampilkan area cetak resmi (.printable-area) */
   body * {
     visibility: hidden;
   }
 
+  .print\:hidden,
+  [class*="print:hidden"],
+  aside,
+  header,
+  nav,
+  button:not(.printable-area *) {
+    display: none !important;
+  }
+
   .printable-area,
   .printable-area * {
-    visibility: visible;
+    visibility: visible !important;
   }
 
   .printable-area {
@@ -227,7 +244,11 @@ table tr:hover td {
     margin: 0 !important;
     padding: 0 !important;
     background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
     color: #000000 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
   html, body, #root, main {
@@ -243,6 +264,6 @@ table tr:hover td {
 
   @page {
     size: A4 portrait;
-    margin: 10mm 12mm 12mm 12mm;
+    margin: 8mm 10mm 10mm 10mm;
   }
 }

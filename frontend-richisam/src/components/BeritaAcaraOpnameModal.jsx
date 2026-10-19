@@ -24,6 +24,7 @@ const BeritaAcaraOpnameModal = ({ isOpen, onClose, opname, items = [] }) => {
   }, [opname]);
 
   const handlePrint = () => {
+    window.scrollTo(0, 0);
     window.print();
   };
 
@@ -63,8 +64,8 @@ const BeritaAcaraOpnameModal = ({ isOpen, onClose, opname, items = [] }) => {
   });
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 print:p-0 print:bg-white print:fixed print:inset-0">
-      <div className="relative w-full max-w-5xl bg-[#1A1412] border border-[#2D241E] rounded-3xl shadow-2xl overflow-hidden print:border-none print:shadow-none print:rounded-none print:bg-white print:w-full print:max-w-none print:m-0">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 print:static print:block print:p-0 print:m-0 print:bg-white print:overflow-visible">
+      <div className="relative w-full max-w-5xl bg-[#1A1412] border border-[#2D241E] rounded-3xl shadow-2xl overflow-hidden print:static print:block print:w-full print:max-w-none print:m-0 print:p-0 print:border-none print:shadow-none print:rounded-none print:bg-white print:overflow-visible">
         
         {/* Top Control Bar (Hidden when printed) */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#140F0D] border-b border-[#2D241E] print:hidden">

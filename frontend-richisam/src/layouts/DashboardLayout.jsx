@@ -826,8 +826,8 @@ const DashboardLayout = () => {
                 </button>
               </div>
 
-              <div className="my-5 p-4 rounded-2xl bg-[#140F0D] border border-[#2D241E]">
-                <p className="text-sm sm:text-base font-medium text-stone-100 leading-relaxed">
+              <div className="my-5 p-4 rounded-2xl bg-[#140F0D] border border-[#2D241E] [html[data-theme='light']_&]:bg-[#F9F5F0] [html[data-theme='light']_&]:border-[#E8DED3]">
+                <p className="text-sm sm:text-base font-medium text-stone-100 [html[data-theme='light']_&]:text-[#140F0D] leading-relaxed">
                   {selectedNotif.pesan}
                 </p>
               </div>
@@ -836,7 +836,7 @@ const DashboardLayout = () => {
                 <button
                   id="btn-notif-modal-dismiss"
                   onClick={() => setSelectedNotif(null)}
-                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-stone-300 hover:text-white hover:bg-white/5 border border-stone-700/80 transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-stone-300 hover:text-white hover:bg-white/5 border border-stone-700/80 [html[data-theme='light']_&]:text-[#241B16] [html[data-theme='light']_&]:border-[#D4C5B5] [html[data-theme='light']_&]:hover:bg-black/5 transition-colors cursor-pointer"
                 >
                   Tutup
                 </button>
@@ -857,7 +857,7 @@ const DashboardLayout = () => {
                         }
                       });
                     }}
-                    className="px-4 py-2.5 rounded-xl text-sm font-bold bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 transition-all cursor-pointer flex items-center gap-1.5"
+                    className="px-4 py-2.5 rounded-xl text-sm font-bold bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 [html[data-theme='light']_&]:bg-rose-100 [html[data-theme='light']_&]:text-rose-800 [html[data-theme='light']_&]:border-rose-300 transition-all cursor-pointer flex items-center gap-1.5"
                   >
                     <ShieldAlert size={16} />
                     Afkir ke Defect

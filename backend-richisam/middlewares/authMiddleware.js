@@ -28,7 +28,7 @@ const authorize = (...roles) => (req, res, next) => {
 const enforceOutletScope = (req, res, next) => {
   if (req.user && req.user.role === 'STAF_CABANG') {
     const outlet_id = req.user.outlet_id;
-    const isCK = outlet_id === 1;
+    const isCK = Number(outlet_id) === 1;
     const isRequestRoute = (req.baseUrl && req.baseUrl.includes('requests')) || (req.originalUrl && req.originalUrl.includes('/api/requests'));
     
     // Central Kitchen (outlet_id === 1) adalah penyedia/pusat yang melayani permintaan dari seluruh cabang.

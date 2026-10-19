@@ -191,7 +191,7 @@ const Permintaan = () => {
            t.outlet_name?.toLowerCase().includes(q);
   });
 
-  const isCK = user?.role === 'ADMIN_GUDANG' || (user?.role === 'STAF_CABANG' && (user?.outlet_id === 1 || user?.outlet_name?.toLowerCase().includes('central kitchen') || user?.outlet_name?.toLowerCase().includes('ck')));
+  const isCK = user?.role === 'ADMIN_GUDANG' || (user?.role === 'STAF_CABANG' && (Number(user?.outlet_id) === 1 || user?.outlet_name?.toLowerCase().includes('central kitchen') || user?.outlet_name?.toLowerCase().includes('ck')));
   const isOutletStaff = user?.role === 'STAF_CABANG' && !isCK;
 
   return (

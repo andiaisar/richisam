@@ -8,7 +8,7 @@ const requestSchema = z.object({
 
 const updateSchema = z.object({
   status: z.enum(['DIPROSES', 'DIKIRIM', 'SELESAI']),
-  qty_approved: z.number().min(0).optional()
+  qty_approved: z.coerce.number().min(0).optional()
 });
 
 exports.getRequests = async (req, res) => {
@@ -85,7 +85,10 @@ exports.updateStatus = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const parsed = updateSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+    if (!parsed.success) {
+      console.error('[updateStatus validation error]', req.body, parsed.error.format());
+      return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+    }
 
     const { status, qty_approved } = parsed.data;
 
@@ -93,6 +96,7 @@ exports.updateStatus = async (req, res) => {
     const tiket = await RequestService.updateStatus(id, status, qty_approved, req.user);
     res.json({ success: true, message: `Status diubah ke ${status}`, data: tiket });
   } catch (e) {
+    console.error(`[updateStatus ERROR] ID: ${req.params.id}, User: ${req.user?.username} (${req.user?.role}, outlet: ${req.user?.outlet_id}), Body:`, req.body, 'Error:', e.message);
     res.status(400).json({ success: false, message: e.message });
   }
 };

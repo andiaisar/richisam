@@ -75,7 +75,7 @@ class RequestService {
       if (tiketRes.rows.length === 0) throw new Error('Tiket tidak ditemukan');
       const tiket = tiketRes.rows[0];
 
-      const isCK = req_user.role === 'ADMIN_GUDANG' || (req_user.role === 'STAF_CABANG' && req_user.outlet_id === 1);
+      const isCK = req_user.role === 'ADMIN_GUDANG' || (req_user.role === 'STAF_CABANG' && Number(req_user.outlet_id) === 1);
       const isPusatOrOwner = req_user.role === 'ADMIN_PUSAT' || req_user.role === 'OWNER';
 
       // 1. Memproses atau Mengirim Tiket (DIPROSES atau DIKIRIM)
@@ -117,7 +117,12 @@ class RequestService {
 
             await client.query(
               `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
-               VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, 'TIKET', $9)`,
+               VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, 'TIKET', $9)
+               ON CONFLICT (product_id, outlet_id, tanggal, shift)
+               DO UPDATE SET 
+                 keluar = stock_mutations.keluar + EXCLUDED.keluar,
+                 sak = EXCLUDED.sak,
+                 ticket_id = EXCLUDED.ticket_id`,
               [item.product_id, CK_OUTLET_ID, tanggal, shift, saw, qty, sak, req_user.id, tiket.id]
             );
             await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, CK_OUTLET_ID, item.product_id]);
@@ -129,7 +134,7 @@ class RequestService {
       // 2. Mengonfirmasi Penerimaan Tiket di Cabang (SELESAI)
       // Hanya boleh dilakukan oleh Staf Cabang Pemohon (yang menerima fisik di outlet), Admin Pusat, atau Owner
       if (newStatus === 'SELESAI') {
-        if (req_user.role === 'STAF_CABANG' && !isCK && tiket.outlet_id !== req_user.outlet_id) {
+        if (req_user.role === 'STAF_CABANG' && !isCK && Number(tiket.outlet_id) !== Number(req_user.outlet_id)) {
           throw new Error('Anda tidak memiliki akses untuk menerima tiket cabang lain');
         }
         if (tiket.status !== 'DIKIRIM') throw new Error('Tiket belum dikirim oleh Central Kitchen');
@@ -168,7 +173,12 @@ class RequestService {
 
           await client.query(
             `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'TIKET', $10)`,
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'TIKET', $10)
+             ON CONFLICT (product_id, outlet_id, tanggal, shift)
+             DO UPDATE SET 
+               masuk = stock_mutations.masuk + EXCLUDED.masuk,
+               sak = EXCLUDED.sak,
+               ticket_id = EXCLUDED.ticket_id`,
             [item.product_id, tiket.outlet_id, tanggal, shift, saw, qty, 0, sak, req_user.id, tiket.id]
           );
 
@@ -267,7 +277,12 @@ class RequestService {
 
         await client.query(
           `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'TIKET', $10)`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'TIKET', $10)
+           ON CONFLICT (product_id, outlet_id, tanggal, shift)
+           DO UPDATE SET 
+             masuk = stock_mutations.masuk + EXCLUDED.masuk,
+             sak = EXCLUDED.sak,
+             ticket_id = EXCLUDED.ticket_id`,
           [item.product_id, outlet_id, tanggal, shift, saw, qtyToOutlet, 0, sak, req_user.id, ticket.id]
         );
 

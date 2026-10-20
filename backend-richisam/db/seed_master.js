@@ -67,11 +67,12 @@ async function runSeedMaster() {
         .toUpperCase();
 
       const harga = parseFloat(row.harga || 0);
-      const kategori = row.kategori_usulan ? row.kategori_usulan.trim() : 'Lainnya';
+      const kategori = (row.kategori || row.kategori_usulan || 'Lainnya').trim();
       
-      // Aturan satuan: harga < 100 -> gram, lainnya -> pcs, konfirmasi = true
-      const satuan = harga < 100 ? 'gram' : 'pcs';
-      const satuanPerluKonfirmasi = true;
+      const satuan = row.satuan ? row.satuan.trim() : (harga < 100 ? 'gram' : 'pcs');
+      const satuanBesar = row.satuan_besar ? row.satuan_besar.trim() : satuan;
+      const konversi = parseInt(row.konversi || 1, 10);
+      const satuanPerluKonfirmasi = false;
 
       if (harga === 0) {
         zeroPriceProducts.push({ kode, nama: cleanName });
@@ -81,19 +82,21 @@ async function runSeedMaster() {
       }
 
       const res = await client.query(
-        `INSERT INTO products (kode, nama, harga, kategori, urutan, satuan, satuan_perlu_konfirmasi, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, true)
+        `INSERT INTO products (kode, nama, harga, kategori, urutan, satuan, satuan_besar, konversi, satuan_perlu_konfirmasi, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true)
          ON CONFLICT (kode) DO UPDATE SET
            nama = EXCLUDED.nama,
            harga = EXCLUDED.harga,
            kategori = EXCLUDED.kategori,
            urutan = EXCLUDED.urutan,
            satuan = EXCLUDED.satuan,
+           satuan_besar = EXCLUDED.satuan_besar,
+           konversi = EXCLUDED.konversi,
            satuan_perlu_konfirmasi = EXCLUDED.satuan_perlu_konfirmasi,
            is_active = true,
            updated_at = CURRENT_TIMESTAMP
          RETURNING id, (xmax = 0) AS is_inserted`,
-        [kode, cleanName, harga, kategori, urutan, satuan, satuanPerluKonfirmasi]
+        [kode, cleanName, harga, kategori, urutan, satuan, satuanBesar, konversi, satuanPerluKonfirmasi]
       );
 
       if (res.rows[0].is_inserted) {

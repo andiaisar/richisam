@@ -159,11 +159,7 @@ const Products = () => {
           </button>
           {user?.role !== 'OWNER' && (
             <button 
-              onClick={() => {
-                setEditingProduct(null);
-                setFormData({ sku: '', nama: '', kategori: 'Bahan Baku', satuan: 'pcs', satuan_besar: 'pcs', konversi: 1 });
-                setIsModalOpen(true);
-              }}
+              onClick={() => openModal(null)}
               className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm"
             >
               <Plus size={18} />

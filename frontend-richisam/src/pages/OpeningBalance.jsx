@@ -24,22 +24,30 @@ const OpeningBalance = () => {
     fetchOutlets();
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProductsAndBalances = async (outletId) => {
     try {
       setLoading(true);
-      const res = await axiosClient.get('/products?limit=1000');
-      const prodList = res?.data?.data || res?.data || [];
-      // Sort by urutan
+      const [prodRes, balRes] = await Promise.all([
+        axiosClient.get('/products?limit=1000'),
+        axiosClient.get(`/opening-balances?outlet_id=${outletId}`)
+      ]);
+      const prodList = prodRes?.data?.data || prodRes?.data || [];
       prodList.sort((a,b) => (a.urutan || 0) - (b.urutan || 0));
       setProducts(prodList);
       
+      const savedBalances = balRes?.data?.data || [];
+      const balMap = {};
+      savedBalances.forEach(b => {
+        balMap[b.product_id] = b.qty;
+      });
+
       const initialItems = {};
       prodList.forEach(p => {
-        initialItems[p.id] = 0;
+        initialItems[p.id] = balMap[p.id] !== undefined ? balMap[p.id] : 0;
       });
       setItems(initialItems);
     } catch (e) {
-      toast.error('Gagal mengambil data produk');
+      toast.error('Gagal mengambil data produk & stok awal');
     } finally {
       setLoading(false);
     }
@@ -47,9 +55,10 @@ const OpeningBalance = () => {
 
   useEffect(() => {
     if (selectedOutlet) {
-      fetchProducts();
+      fetchProductsAndBalances(selectedOutlet);
     } else {
       setProducts([]);
+      setItems({});
     }
   }, [selectedOutlet]);
 
@@ -73,8 +82,8 @@ const OpeningBalance = () => {
         tanggal,
         items: itemsToSave
       });
-      toast.success('Stok awal berhasil disimpan');
-      // Optionally reset
+      toast.success('Stok awal berhasil disimpan & disinkronkan');
+      fetchProductsAndBalances(selectedOutlet);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Gagal menyimpan stok awal');
     }
@@ -99,9 +108,11 @@ const OpeningBalance = () => {
       </div>
 
       <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden p-5 space-y-4">
-        <div className="flex items-center gap-2 mb-2">
-          <AlertCircle size={18} className="text-yellow-600" />
-          <span className="text-sm text-yellow-800 font-medium">Stok awal hanya bisa diinput satu kali per produk-outlet.</span>
+        <div className="flex items-center gap-2 mb-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
+          <AlertCircle size={18} className="text-amber-500 shrink-0" />
+          <span className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 font-medium">
+            Stok Awal (Opening Balance) adalah saldo mula-mula saat cabang dibuka. Nilai yang disimpan di sini otomatis menjadi acuan awal perhitungan mutasi harian cabang.
+          </span>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

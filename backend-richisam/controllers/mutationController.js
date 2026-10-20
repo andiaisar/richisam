@@ -90,6 +90,24 @@ exports.getDailySummary = async (req, res) => {
   }
 };
 
+exports.getOpeningBalances = async (req, res) => {
+  try {
+    const { outlet_id } = req.query;
+    if (!outlet_id) {
+      return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
+    }
+    const result = await pool.query(
+      `SELECT ob.product_id, ob.qty, ob.tanggal 
+       FROM opening_balances ob 
+       WHERE ob.outlet_id = $1`,
+      [parseInt(outlet_id)]
+    );
+    res.json({ success: true, data: result.rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 exports.createOpeningBalances = async (req, res) => {
   // Body: { outlet_id, items: [{ product_id, qty }] }
   const client = await pool.connect();
@@ -101,16 +119,31 @@ exports.createOpeningBalances = async (req, res) => {
     
     await client.query('BEGIN');
     for (let item of items) {
-      // Hanya insert jika belum ada
-      const exist = await client.query('SELECT id FROM opening_balances WHERE outlet_id = $1 AND product_id = $2', [outlet_id, item.product_id]);
-      if (exist.rows.length === 0) {
-        await client.query('INSERT INTO opening_balances (outlet_id, product_id, qty, tanggal, created_by) VALUES ($1, $2, $3, CURRENT_DATE, $4)', [outlet_id, item.product_id, item.qty, req.user.id]);
-        
-        // Update stocks jika belum ada
-        const stExist = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [outlet_id, item.product_id]);
-        if (stExist.rows.length === 0) {
-          await client.query('INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP)', [outlet_id, item.product_id, item.qty]);
-        }
+      const qtyNum = parseInt(item.qty) || 0;
+      
+      // Simpan atau perbarui nilai stok awal (UPSERT)
+      await client.query(
+        `INSERT INTO opening_balances (outlet_id, product_id, qty, tanggal, created_by) 
+         VALUES ($1, $2, $3, CURRENT_DATE, $4)
+         ON CONFLICT (product_id, outlet_id) 
+         DO UPDATE SET qty = EXCLUDED.qty, tanggal = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP`,
+        [outlet_id, item.product_id, qtyNum, req.user.id]
+      );
+      
+      // Cek apakah produk ini sudah memiliki riwayat mutasi shift
+      const mutExist = await client.query(
+        'SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 LIMIT 1',
+        [outlet_id, item.product_id]
+      );
+      // Jika belum ada mutasi shift harian, sinkronkan juga tabel stocks (qty_current)
+      if (mutExist.rows.length === 0) {
+        await client.query(
+          `INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at) 
+           VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+           ON CONFLICT (product_id, outlet_id) 
+           DO UPDATE SET qty_current = EXCLUDED.qty_current, updated_at = CURRENT_TIMESTAMP`,
+          [outlet_id, item.product_id, qtyNum]
+        );
       }
     }
     await client.query('COMMIT');

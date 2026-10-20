@@ -5,7 +5,8 @@ const { authenticate, authorize } = require('../middlewares/authMiddleware');
 
 router.use(authenticate);
 
-// Hanya ADMIN_PUSAT yang boleh input opening balances
+// Mengambil dan menginput opening balances
+router.get('/', authorize('ADMIN_PUSAT', 'OWNER', 'STAF_CABANG', 'ADMIN_GUDANG'), mutationController.getOpeningBalances);
 router.post('/', authorize('ADMIN_PUSAT', 'OWNER'), mutationController.createOpeningBalances);
 
 module.exports = router;

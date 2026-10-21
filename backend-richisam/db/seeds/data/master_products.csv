@@ -1,70 +1,70 @@
 urutan,nama,harga,kategori,satuan,satuan_besar,konversi
-1,AYAM MARINASI 1 EKOR,34123.00,Protein & Frozen,ekor,ekor,1
-2,AYAM MARINASI POTONG,5390.00,Protein & Frozen,potong,pack,10
-3,BERAS,25000.00,Bahan Pokok & Sayur,kg,karung,25
-4,TEH,5800.00,Bahan Pokok & Sayur,pack,dus,24
-5,GULA,18000.00,Bahan Pokok & Sayur,kg,karung,50
-6,WIFI,300.00,INFENTARIS,unit,unit,1
-6,GAS,20000.00,Operasional,tabung,tabung,1
-7,KEJU SLICE,992.00,Bahan Pokok & Sayur,slice,pack,20
-8,KENTANG,3091.00,Bahan Pokok & Sayur,pack,dus,10
-9,LOMBOK BIJI,35000.00,Bahan Pokok & Sayur,kg,kg,1
-10,BAWANG PUTIH,36000.00,Bahan Pokok & Sayur,kg,kg,1
-11,MINYAK,17000.00,Bahan Pokok & Sayur,liter,jerigen,18
-12,GALON,6000.00,Minuman,galon,galon,1
-13,PLASTIK SAMPAH,13000.00,Kebersihan,pack,dus,20
-14,ROTI BURGER,2000.00,Bahan Pokok & Sayur,pcs,pack,10
-15,SAMBAL MATAH,28.00,Saus & Bumbu,gram,kg,1000
-16,SAMBAL RICA,45.00,Saus & Bumbu,gram,kg,1000
-17,SAMBAL RICHIS,27.00,Saus & Bumbu,gram,kg,1000
-18,SAMBAL BAWANG,32.00,Saus & Bumbu,gram,kg,1000
-19,SAUCE RICHISAM,28.56,Saus & Bumbu,gram,kg,1000
-20,SAUCE KEJU,54.00,Saus & Bumbu,gram,kg,1000
-21,SAUCE ORIGINAL,18.00,Saus & Bumbu,gram,kg,1000
-22,SAUCE BBQ,4316.00,Saus & Bumbu,botol,dus,12
-23,TEPUNG KRISPY,60410.00,Bahan Pokok & Sayur,pack,sak,5
-24,SABUN CUCI PIRING,12000.00,Kebersihan,pouch,dus,12
-25,FROZEN AYAM UNGKEP ISI 4,35263.00,Protein & Frozen,pack,pack,1
-26,FROZEN AYAM UNGKEP ISI 8,40949.00,Protein & Frozen,pack,pack,1
-27,CUP SAMBAL T.A,90.00,Saus & Bumbu,pcs,slop,50
-28,CUP SAMBAL DINE IN,186.00,Saus & Bumbu,pcs,slop,50
-29,KERTAS KENTANG,370.00,Bahan Pokok & Sayur,lembar,pack,100
-30,KERTAS NASI PUTIH,75.00,Kemasan & Packaging,lembar,pack,100
-31,MENTEGA,5500.00,Bahan Pokok & Sayur,pack,dus,12
-32,PELAPIS NASI COKLAT,72.00,Kemasan & Packaging,lembar,pack,100
-33,PLASTIK TANGAN,5417.00,Kemasan & Packaging,pack,dus,10
-34,SAUCE TOMAT SACHET,5020.00,Saus & Bumbu,pack,dus,10
-35,SAUCE SAMBAL SACHET,5140.00,Saus & Bumbu,pack,dus,10
-36,SELOTIP,8000.00,Operasional,roll,slop,6
-37,INDOMIE GORENG,2950.00,Protein & Frozen,bungkus,dus,40
-38,BUMBU KENTANG,4000.00,Bahan Pokok & Sayur,pack,dus,10
-39,BAYAM GORENG,112.60,Protein & Frozen,porsi,porsi,1
-40,AIR MINERAL,1458.00,Minuman,botol,dus,24
-41,LOYALTI CARD,500.00,Operasional,lembar,pack,100
-42,KERTAS THERMAL,4700.00,Operasional,roll,dus,50
-43,TISSU MEJA,2791.00,Kebersihan,pack,dus,24
-44,TISSU HAND TOWEL,7400.00,Kebersihan,pack,dus,20
-45,SABUN LANTAI,12000.00,Kebersihan,pouch,dus,12
-46,GARPU SENDOK PLASTIK,400.00,Kemasan & Packaging,pcs,pack,50
-47,GELAS TAKE AWAY,700.00,Kemasan & Packaging,pcs,slop,50
-48,GELAS TA LARGE,700.00,Kemasan & Packaging,pcs,slop,50
-49,KECAP,22000.00,Saus & Bumbu,pouch,dus,12
-50,KEMASAN ALA CARTE,800.00,Kemasan & Packaging,pcs,pack,100
-51,KEMASAN BESAR,700.00,Kemasan & Packaging,pcs,pack,100
-52,MANGGO SYRUP,11400.00,Minuman,botol,dus,6
-53,ORANGE SYRUP,11400.00,Minuman,botol,dus,6
-54,SIRUP LEMON,21800.00,Minuman,botol,dus,6
-55,PIPET NO STERIL,13000.00,Kemasan & Packaging,pack,dus,20
-56,PIPET STERIL,25000.00,Kemasan & Packaging,pack,dus,20
-57,PLASTIK BESAR 28,11385.00,Kemasan & Packaging,pack,bal,10
-58,PLASTIK BESAR 35,15840.00,Kemasan & Packaging,pack,bal,10
-59,PLASTIK SEDANG 24,8778.00,Kemasan & Packaging,pack,bal,10
-60,PLASTIK KECIL15,4719.00,Kemasan & Packaging,pack,bal,10
-61,PLASTIK CUP SEAL,94050.00,Kemasan & Packaging,roll,dus,6
-62,BUAH LEMON,9285.00,Bahan Pokok & Sayur,kg,kg,1
-63,SPRITE,11300.00,Minuman,botol,dus,12
-64,SABUN CUCI TANGAN,15000.00,Kebersihan,botol,dus,12
-65,BIJI SELASIH,3630.00,Bahan Pokok & Sayur,pack,dus,10
-66,NUTRISARI ANGGUR,1300.00,Minuman,sachet,renceng,10
-67,SAUCE PILLOW,12000.00,Saus & Bumbu,pouch,dus,10
-68,KEMASAN HOOK,2300.00,Kemasan & Packaging,pcs,pack,100
+1,AYAM MARINASI 1 EKOR,34123,Protein & Frozen,ekor,ekor,1
+2,AYAM MARINASI POTONG,5390,Protein & Frozen,potong,pack,10
+3,BERAS,25000,Bahan Pokok & Sayur,kg,karung,25
+4,TEH,5800,Bahan Pokok & Sayur,pack,dus,24
+5,GULA,18000,Bahan Pokok & Sayur,kg,karung,50
+6,WIFI,300,INFENTARIS,unit,unit,1
+6,GAS,20000,Operasional,tabung,tabung,1
+7,KEJU SLICE,900,Bahan Pokok & Sayur,slice,pack,20
+8,KENTANG,3091,Bahan Pokok & Sayur,pack,dus,10
+9,LOMBOK BIJI,35000,Bahan Pokok & Sayur,kg,kg,1
+10,BAWANG PUTIH,36000,Bahan Pokok & Sayur,kg,kg,1
+11,MINYAK,17000,Bahan Pokok & Sayur,liter,jerigen,18
+12,GALON,6000,Minuman,galon,galon,1
+13,PLASTIK SAMPAH,13000,Kebersihan,pack,dus,20
+14,ROTI BURGER,2000,Bahan Pokok & Sayur,pcs,pack,10
+15,SAMBAL MATAH,28,Saus & Bumbu,gram,kg,1000
+16,SAMBAL RICA,45,Saus & Bumbu,gram,kg,1000
+17,SAMBAL RICHIS,27,Saus & Bumbu,gram,kg,1000
+18,SAMBAL BAWANG,32,Saus & Bumbu,gram,kg,1000
+19,SAUCE RICHISAM,29,Saus & Bumbu,gram,kg,1000
+20,SAUCE KEJU,54,Saus & Bumbu,gram,kg,1000
+21,SAUCE ORIGINAL,18,Saus & Bumbu,gram,kg,1000
+22,SAUCE BBQ,4316,Saus & Bumbu,botol,dus,12
+23,TEPUNG KRISPY,60410,Bahan Pokok & Sayur,pack,sak,5
+24,SABUN CUCI PIRING,12000,Kebersihan,pouch,dus,12
+25,FROZEN AYAM UNGKEP ISI 4,35263,Protein & Frozen,pack,pack,1
+26,FROZEN AYAM UNGKEP ISI 8,40949,Protein & Frozen,pack,pack,1
+27,CUP SAMBAL T.A,90,Saus & Bumbu,pcs,slop,50
+28,CUP SAMBAL DINE IN,186,Saus & Bumbu,pcs,slop,50
+29,KERTAS KENTANG,370,Bahan Pokok & Sayur,lembar,pack,100
+30,KERTAS NASI PUTIH,75,Kemasan & Packaging,lembar,pack,100
+31,MENTEGA,5500,Bahan Pokok & Sayur,pack,dus,12
+32,PELAPIS NASI COKLAT,72,Kemasan & Packaging,lembar,pack,100
+33,PLASTIK TANGAN,5417,Kemasan & Packaging,pack,dus,10
+34,SAUCE TOMAT SACHET,5020,Saus & Bumbu,pack,dus,10
+35,SAUCE SAMBAL SACHET,5140,Saus & Bumbu,pack,dus,10
+36,SELOTIP,8000,Operasional,roll,slop,6
+37,INDOMIE GORENG,2950,Protein & Frozen,bungkus,dus,40
+38,BUMBU KENTANG,4000,Bahan Pokok & Sayur,pack,dus,10
+39,BAYAM GORENG,113,Protein & Frozen,porsi,porsi,1
+40,AIR MINERAL,1458,Minuman,botol,dus,24
+41,LOYALTI CARD,500,Operasional,lembar,pack,100
+42,KERTAS THERMAL,4700,Operasional,roll,dus,50
+43,TISSU MEJA,2791,Kebersihan,pack,dus,24
+44,TISSU HAND TOWEL,7400,Kebersihan,pack,dus,20
+45,SABUN LANTAI,12000,Kebersihan,pouch,dus,12
+46,GARPU SENDOK PLASTIK,400,Kemasan & Packaging,pcs,pack,50
+47,GELAS TAKE AWAY,700,Kemasan & Packaging,pcs,slop,50
+48,GELAS TA LARGE,700,Kemasan & Packaging,pcs,slop,50
+49,KECAP,22000,Saus & Bumbu,pouch,dus,12
+50,KEMASAN ALA CARTE,800,Kemasan & Packaging,pcs,pack,100
+51,KEMASAN BESAR,700,Kemasan & Packaging,pcs,pack,100
+52,MANGGO SYRUP,11400,Minuman,botol,dus,6
+53,ORANGE SYRUP,11400,Minuman,botol,dus,6
+54,SIRUP LEMON,21800,Minuman,botol,dus,6
+55,PIPET NO STERIL,13000,Kemasan & Packaging,pack,dus,20
+56,PIPET STERIL,25000,Kemasan & Packaging,pack,dus,20
+57,PLASTIK BESAR 28,11385,Kemasan & Packaging,pack,bal,10
+58,PLASTIK BESAR 35,15840,Kemasan & Packaging,pack,bal,10
+59,PLASTIK SEDANG 24,8778,Kemasan & Packaging,pack,bal,10
+60,PLASTIK KECIL15,4719,Kemasan & Packaging,pack,bal,10
+61,PLASTIK CUP SEAL,94050,Kemasan & Packaging,roll,dus,6
+62,BUAH LEMON,9285,Bahan Pokok & Sayur,kg,kg,1
+63,SPRITE,11300,Minuman,botol,dus,12
+64,SABUN CUCI TANGAN,15000,Kebersihan,botol,dus,12
+65,BIJI SELASIH,3630,Bahan Pokok & Sayur,pack,dus,10
+66,NUTRISARI ANGGUR,1300,Minuman,sachet,renceng,10
+67,SAUCE PILLOW,12000,Saus & Bumbu,pouch,dus,10
+68,KEMASAN HOOK,2300,Kemasan & Packaging,pcs,pack,100

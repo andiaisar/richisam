@@ -66,7 +66,7 @@ async function runSeedMaster() {
         .replace(/pelastik/gi, 'PLASTIK')
         .toUpperCase();
 
-      const harga = parseFloat(row.harga || 0);
+      const harga = Math.round(parseFloat(row.harga || 0));
       const kategori = (row.kategori || row.kategori_usulan || 'Lainnya').trim();
       
       const satuan = row.satuan ? row.satuan.trim() : (harga < 100 ? 'gram' : 'pcs');

@@ -25,12 +25,25 @@ class ProductService {
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
-    return { data: result.rows, meta: { total, page: parseInt(page), limit: parseInt(limit) } };
+    const formattedData = result.rows.map(r => ({
+      ...r,
+      harga: Math.round(Number(r.harga || 0)),
+      urutan: parseInt(r.urutan || 0, 10),
+      konversi: parseInt(r.konversi || 1, 10)
+    }));
+    return { data: formattedData, meta: { total, page: parseInt(page), limit: parseInt(limit) } };
   }
 
   static async getProductById(id) {
     const result = await pool.query('SELECT * FROM products WHERE id = $1 AND is_active = true', [id]);
-    return result.rows[0];
+    if (!result.rows[0]) return null;
+    const r = result.rows[0];
+    return {
+      ...r,
+      harga: Math.round(Number(r.harga || 0)),
+      urutan: parseInt(r.urutan || 0, 10),
+      konversi: parseInt(r.konversi || 1, 10)
+    };
   }
 
   static async createProduct(data) {
@@ -54,7 +67,12 @@ class ProductService {
       }
 
       await client.query('COMMIT');
-      return newProduct;
+      return {
+        ...newProduct,
+        harga: Math.round(Number(newProduct.harga || 0)),
+        urutan: parseInt(newProduct.urutan || 0, 10),
+        konversi: parseInt(newProduct.konversi || 1, 10)
+      };
     } catch (e) {
       await client.query('ROLLBACK');
       throw e;
@@ -80,14 +98,20 @@ class ProductService {
         data.satuan || existing.satuan, 
         data.kategori !== undefined ? data.kategori : existing.kategori,
         data.urutan !== undefined ? data.urutan : existing.urutan,
-        data.harga !== undefined ? data.harga : existing.harga,
+        data.harga !== undefined ? Math.round(data.harga) : existing.harga,
         data.satuan_perlu_konfirmasi !== undefined ? data.satuan_perlu_konfirmasi : existing.satuan_perlu_konfirmasi,
         data.satuan_besar || existing.satuan_besar,
         data.konversi !== undefined ? data.konversi : existing.konversi,
         id
       ]
     );
-    return res.rows[0];
+    const updated = res.rows[0];
+    return {
+      ...updated,
+      harga: Math.round(Number(updated.harga || 0)),
+      urutan: parseInt(updated.urutan || 0, 10),
+      konversi: parseInt(updated.konversi || 1, 10)
+    };
   }
 
   static async softDeleteProduct(id) {

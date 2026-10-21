@@ -71,9 +71,9 @@ const Products = () => {
         kategori: product.kategori || '',
         satuan: product.satuan || '',
         satuan_besar: product.satuan_besar || product.satuan || '',
-        konversi: product.konversi || 1,
-        urutan: product.urutan || 0,
-        harga: product.harga || 0,
+        konversi: product.konversi ? parseInt(product.konversi, 10) : 1,
+        urutan: product.urutan !== undefined && product.urutan !== null ? parseInt(product.urutan, 10) : 0,
+        harga: product.harga !== undefined && product.harga !== null ? Math.round(parseFloat(product.harga)) : 0,
         satuan_perlu_konfirmasi: product.satuan_perlu_konfirmasi || false
       });
     } else {
@@ -282,40 +282,82 @@ const Products = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Kode</label>
-                  <input type="text" required value={formData.kode} onChange={e => setFormData({...formData, kode: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input type="text" required placeholder="Misal: PRD-001" value={formData.kode} onChange={e => setFormData({...formData, kode: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all font-mono font-medium"/>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Urutan</label>
-                  <input type="number" required value={formData.urutan} onChange={e => setFormData({...formData, urutan: parseInt(e.target.value) || 0})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input 
+                    type="number" 
+                    min="0"
+                    step="1"
+                    required 
+                    placeholder="0"
+                    value={formData.urutan === 0 ? '' : formData.urutan} 
+                    onChange={e => setFormData({...formData, urutan: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0})} 
+                    className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-ink">Nama Produk</label>
-                <input type="text" required value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                <input type="text" required placeholder="Nama bahan atau barang" value={formData.nama} onChange={e => setFormData({...formData, nama: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Kategori</label>
-                  <input type="text" value={formData.kategori} onChange={e => setFormData({...formData, kategori: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input 
+                    type="text" 
+                    list="kategori-options"
+                    placeholder="Pilih atau ketik kategori" 
+                    value={formData.kategori} 
+                    onChange={e => setFormData({...formData, kategori: e.target.value})} 
+                    className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"
+                  />
+                  <datalist id="kategori-options">
+                    {uniqueCategories.map(cat => <option key={cat} value={cat} />)}
+                  </datalist>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Satuan Kecil (Dipakai Cabang)</label>
-                  <input type="text" placeholder="Misal: Gram" required value={formData.satuan} onChange={e => setFormData({...formData, satuan: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input type="text" placeholder="Misal: pcs, pack, gram, botol, galon" required value={formData.satuan} onChange={e => setFormData({...formData, satuan: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Satuan Besar (Gudang)</label>
-                  <input type="text" placeholder="Misal: Karung" required value={formData.satuan_besar} onChange={e => setFormData({...formData, satuan_besar: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input type="text" placeholder="Misal: dus, bal, karung, slop, roll" required value={formData.satuan_besar} onChange={e => setFormData({...formData, satuan_besar: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Rasio (1 {formData.satuan_besar || 'Besar'} = X {formData.satuan || 'Kecil'})</label>
-                  <input type="number" required min="1" value={formData.konversi} onChange={e => setFormData({...formData, konversi: parseInt(e.target.value) || 1})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input 
+                    type="number" 
+                    required 
+                    min="1" 
+                    step="1"
+                    value={formData.konversi} 
+                    onChange={e => setFormData({...formData, konversi: Math.max(1, parseInt(e.target.value, 10) || 1)})} 
+                    className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all font-mono"
+                  />
                 </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-ink">Harga (Per Satuan Terkecil)</label>
-                <input type="number" step="0.01" required value={formData.harga} onChange={e => setFormData({...formData, harga: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-stone-500 font-semibold select-none">Rp</span>
+                  <input 
+                    type="number" 
+                    step="1" 
+                    min="0" 
+                    required 
+                    placeholder="0"
+                    value={formData.harga === 0 ? '' : formData.harga} 
+                    onChange={e => {
+                      const val = e.target.value === '' ? 0 : Math.max(0, parseInt(e.target.value, 10) || 0);
+                      setFormData({...formData, harga: val});
+                    }} 
+                    className="w-full pl-11 pr-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all font-mono font-medium text-ink"
+                  />
+                </div>
               </div>
               <div className="flex items-center gap-2 pt-2">
                 <input type="checkbox" id="satuanConfirm" checked={formData.satuan_perlu_konfirmasi} onChange={e => setFormData({...formData, satuan_perlu_konfirmasi: e.target.checked})} className="w-4 h-4 text-richisam-orange focus:ring-richisam-orange rounded border-line cursor-pointer"/>

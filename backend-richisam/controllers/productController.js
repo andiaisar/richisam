@@ -15,11 +15,20 @@ const productSchema = z.object({
 
 exports.getProducts = async (req, res) => {
   try {
-    const { page, limit, search, kategori } = req.query;
-    const result = await ProductService.getProducts(page, limit, search, kategori);
+    const { page, limit, search, kategori, status } = req.query;
+    const result = await ProductService.getProducts(page, limit, search, kategori, status);
     res.json({ success: true, message: 'Daftar produk', data: result });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
+  }
+};
+
+exports.checkProductUsage = async (req, res) => {
+  try {
+    const result = await ProductService.checkProductUsage(parseInt(req.params.id));
+    res.json({ success: true, data: result });
+  } catch (e) {
+    res.status(400).json({ success: false, message: e.message });
   }
 };
 
@@ -49,9 +58,20 @@ exports.updateProduct = async (req, res) => {
 
 exports.deleteProduct = async (req, res) => {
   try {
-    const product = await ProductService.softDeleteProduct(parseInt(req.params.id));
-    res.json({ success: true, message: 'Produk berhasil dihapus', data: product });
+    const mode = req.query.mode || req.body?.mode || 'auto';
+    const result = await ProductService.deleteProduct(parseInt(req.params.id), mode);
+    res.json({ success: true, message: result.message, data: result });
   } catch (e) {
     res.status(400).json({ success: false, message: e.message });
   }
 };
+
+exports.restoreProduct = async (req, res) => {
+  try {
+    const product = await ProductService.restoreProduct(parseInt(req.params.id));
+    res.json({ success: true, message: 'Produk berhasil diaktifkan kembali', data: product });
+  } catch (e) {
+    res.status(400).json({ success: false, message: e.message });
+  }
+};
+

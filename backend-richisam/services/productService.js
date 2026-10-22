@@ -1,11 +1,19 @@
 const pool = require('../config/db');
 
 class ProductService {
-  static async getProducts(page = 1, limit = 10, search, kategori) {
+  static async getProducts(page = 1, limit = 10, search, kategori, status = 'active') {
     const offset = (page - 1) * limit;
-    let query = 'SELECT * FROM products WHERE is_active = true';
+    let query = 'SELECT * FROM products WHERE 1=1';
     const params = [];
     let paramIndex = 1;
+
+    if (status === 'active') {
+      query += ' AND is_active = true';
+    } else if (status === 'inactive') {
+      query += ' AND is_active = false';
+    } else if (status === 'all') {
+      // do not filter by is_active
+    }
 
     if (search) {
       query += ` AND (nama ILIKE $${paramIndex} OR kode ILIKE $${paramIndex})`;
@@ -21,7 +29,7 @@ class ProductService {
     const countRes = await pool.query(`SELECT COUNT(*) FROM (${query}) AS t`, params);
     const total = parseInt(countRes.rows[0].count);
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` ORDER BY urutan ASC, created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);
@@ -34,8 +42,12 @@ class ProductService {
     return { data: formattedData, meta: { total, page: parseInt(page), limit: parseInt(limit) } };
   }
 
-  static async getProductById(id) {
-    const result = await pool.query('SELECT * FROM products WHERE id = $1 AND is_active = true', [id]);
+  static async getProductById(id, onlyActive = false) {
+    let query = 'SELECT * FROM products WHERE id = $1';
+    if (onlyActive) {
+      query += ' AND is_active = true';
+    }
+    const result = await pool.query(query, [id]);
     if (!result.rows[0]) return null;
     const r = result.rows[0];
     return {
@@ -82,7 +94,7 @@ class ProductService {
   }
 
   static async updateProduct(id, data) {
-    const existing = await this.getProductById(id);
+    const existing = await this.getProductById(id, false);
     if (!existing) throw new Error('Produk tidak ditemukan');
 
     if (data.kode && data.kode !== existing.kode) {
@@ -91,7 +103,7 @@ class ProductService {
     }
 
     const res = await pool.query(
-      'UPDATE products SET kode = $1, nama = $2, satuan = $3, kategori = $4, urutan = $5, harga = $6, satuan_perlu_konfirmasi = $7, satuan_besar = $8, konversi = $9, updated_at = CURRENT_TIMESTAMP WHERE id = $10 RETURNING *',
+      'UPDATE products SET kode = $1, nama = $2, satuan = $3, kategori = $4, urutan = $5, harga = $6, satuan_perlu_konfirmasi = $7, satuan_besar = $8, konversi = $9, is_active = $10, updated_at = CURRENT_TIMESTAMP WHERE id = $11 RETURNING *',
       [
         data.kode || existing.kode, 
         data.nama || existing.nama, 
@@ -102,6 +114,7 @@ class ProductService {
         data.satuan_perlu_konfirmasi !== undefined ? data.satuan_perlu_konfirmasi : existing.satuan_perlu_konfirmasi,
         data.satuan_besar || existing.satuan_besar,
         data.konversi !== undefined ? data.konversi : existing.konversi,
+        data.is_active !== undefined ? data.is_active : existing.is_active,
         id
       ]
     );
@@ -114,9 +127,106 @@ class ProductService {
     };
   }
 
+  static async checkProductUsage(id) {
+    const client = await pool.connect();
+    try {
+      const prodRes = await client.query('SELECT * FROM products WHERE id = $1', [id]);
+      if (prodRes.rows.length === 0) throw new Error('Produk tidak ditemukan');
+      const product = prodRes.rows[0];
+
+      const mutasiRes = await client.query('SELECT COUNT(*) FROM stock_mutations WHERE product_id = $1', [id]);
+      const ticketRes = await client.query('SELECT COUNT(*) FROM restock_ticket_items WHERE product_id = $1', [id]);
+      const defectRes = await client.query('SELECT COUNT(*) FROM defect_reports WHERE product_id = $1', [id]);
+      const opnameRes = await client.query('SELECT COUNT(*) FROM stock_opname_items WHERE product_id = $1', [id]);
+      const stockRes = await client.query('SELECT COALESCE(SUM(qty_current), 0) as total_stock FROM stocks WHERE product_id = $1', [id]);
+
+      const mutationCount = parseInt(mutasiRes.rows[0].count, 10);
+      const ticketCount = parseInt(ticketRes.rows[0].count, 10);
+      const defectCount = parseInt(defectRes.rows[0].count, 10);
+      const opnameCount = parseInt(opnameRes.rows[0].count, 10);
+      const currentStock = parseInt(stockRes.rows[0].total_stock, 10);
+
+      const hasTransactions = mutationCount > 0 || ticketCount > 0 || defectCount > 0 || opnameCount > 0;
+      const canHardDelete = !hasTransactions && currentStock === 0;
+
+      return {
+        product: {
+          id: product.id,
+          kode: product.kode,
+          nama: product.nama,
+          is_active: product.is_active
+        },
+        usage: {
+          mutationCount,
+          ticketCount,
+          defectCount,
+          opnameCount,
+          currentStock,
+          hasTransactions,
+          canHardDelete
+        }
+      };
+    } finally {
+      client.release();
+    }
+  }
+
+  static async deleteProduct(id, mode = 'auto') {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const check = await this.checkProductUsage(id);
+      const { canHardDelete, hasTransactions } = check.usage;
+      const product = check.product;
+
+      if (mode === 'hard') {
+        if (!canHardDelete) {
+          throw new Error('Produk tidak dapat dihapus permanen karena sudah memiliki riwayat transaksi/mutasi atau masih memiliki sisa stok fisik.');
+        }
+        await client.query('DELETE FROM products WHERE id = $1', [id]);
+        await client.query('COMMIT');
+        return {
+          action: 'HARD_DELETE',
+          message: `Produk "${product.nama}" (${product.kode}) berhasil dihapus permanen dari database.`
+        };
+      }
+
+      // Default: Soft Delete / Deaktivasi
+      await client.query('UPDATE products SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
+      await client.query('COMMIT');
+      return {
+        action: 'SOFT_DELETE',
+        message: hasTransactions
+          ? `Produk "${product.nama}" memiliki riwayat transaksi sehingga dinonaktifkan (diarsipkan). Riwayat transaksi masa lalu tetap tersimpan utuh di laporan.`
+          : `Produk "${product.nama}" berhasil dinonaktifkan.`
+      };
+    } catch (e) {
+      await client.query('ROLLBACK');
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async restoreProduct(id) {
+    const res = await pool.query(
+      'UPDATE products SET is_active = true, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+      [id]
+    );
+    if (res.rows.length === 0) throw new Error('Produk tidak ditemukan');
+    const r = res.rows[0];
+    return {
+      ...r,
+      harga: Math.round(Number(r.harga || 0)),
+      urutan: parseInt(r.urutan || 0, 10),
+      konversi: parseInt(r.konversi || 1, 10)
+    };
+  }
+
   static async softDeleteProduct(id) {
-    const res = await pool.query('UPDATE products SET is_active = false, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *', [id]);
-    return res.rows[0];
+    return this.deleteProduct(id, 'soft');
   }
 }
+
 module.exports = ProductService;

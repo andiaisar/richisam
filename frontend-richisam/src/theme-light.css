@@ -262,98 +262,265 @@ html[data-theme="light"] :is(.text-teal-100, .text-teal-200, .text-teal-300, .te
   color: #0F766E !important; 
 }
 
-/* ── Permukaan aksen solid: teks harus tetap putih ── */
+/* ── Permukaan aksen solid: teks harus tetap putih (HANYA warna solid tanpa opacity /) ── */
 html[data-theme="light"] :is(
   [class~="bg-[#F9610D]"],
   [class~="bg-richisam-orange"],
   [class~="bg-[#EC1F27]"],
   [class~="bg-[#d9530a]"],
   [class~="bg-ember"],
+  [class~="bg-emerald-500"],
+  [class~="bg-emerald-600"],
+  [class~="bg-emerald-700"],
+  [class~="bg-red-500"],
+  [class~="bg-red-600"],
+  [class~="bg-red-700"],
+  [class~="bg-rose-500"],
+  [class~="bg-rose-600"],
+  [class~="bg-rose-700"],
+  [class~="bg-green-600"],
+  [class~="bg-green-700"],
+  [class~="bg-blue-500"],
+  [class~="bg-blue-600"],
+  [class~="bg-blue-700"],
+  [class~="bg-indigo-600"],
+  [class~="bg-amber-600"],
+  [class~="bg-sky-600"],
+  [class~="bg-purple-600"],
+  [class~="bg-black"],
   [class*="from-[#F9610D]"],
   [class*="from-[#BA4F18]"],
   [class*="from-[#FA6E20]"],
-  [class*="from-[#FFCE00]"],
-  [class*="bg-emerald-500"],
-  [class*="bg-emerald-600"],
-  [class*="bg-emerald-700"],
-  [class*="bg-red-500"],
-  [class*="bg-red-600"],
-  [class*="bg-red-700"],
-  [class*="bg-rose-500"],
-  [class*="bg-rose-600"],
-  [class*="bg-rose-700"],
-  [class*="bg-green-600"],
-  [class*="bg-green-700"],
-  [class*="bg-blue-500"],
-  [class*="bg-blue-600"],
-  [class*="bg-blue-700"],
-  [class*="bg-indigo-600"],
-  [class*="bg-amber-600"],
-  [class*="bg-sky-600"],
-  [class*="bg-purple-600"],
-  [class~="bg-black"]
-) :is(.text-white, .text-stone-50, .text-stone-100, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"], span, p, h1, h2, h3, h4, svg) {
+  [class*="from-[#FFCE00]"]
+):not([class*="/"]):not([class*="bg-white"]):not([class*="bg-cream"]) :is(.text-white, .text-stone-50, .text-stone-100, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
   color: #FFFFFF !important;
-  fill: currentColor;
 }
 
-html[data-theme="light"] :is(
+/* Tombol solid: ikon SVG di dalamnya tetap putih bila tombol berwarna solid */
+html[data-theme="light"] button:is(
   [class~="bg-[#F9610D]"],
   [class~="bg-richisam-orange"],
   [class~="bg-[#EC1F27]"],
   [class~="bg-[#d9530a]"],
   [class~="bg-ember"],
-  [class*="from-[#F9610D]"],
-  [class*="from-[#BA4F18]"],
-  [class*="from-[#FA6E20]"],
-  [class*="from-[#FFCE00]"],
-  [class*="bg-emerald-500"],
-  [class*="bg-emerald-600"],
-  [class*="bg-emerald-700"],
-  [class*="bg-red-500"],
-  [class*="bg-red-600"],
-  [class*="bg-red-700"],
-  [class*="bg-rose-500"],
-  [class*="bg-rose-600"],
-  [class*="bg-rose-700"],
-  [class*="bg-green-600"],
-  [class*="bg-green-700"],
-  [class*="bg-blue-500"],
-  [class*="bg-blue-600"],
-  [class*="bg-blue-700"],
-  [class*="bg-indigo-600"],
-  [class*="bg-amber-600"],
-  [class*="bg-sky-600"],
-  [class*="bg-purple-600"],
-  [class~="bg-black"]
-):is(.text-white, .text-stone-50, .text-stone-100, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
+  [class~="bg-emerald-600"],
+  [class~="bg-red-600"],
+  [class~="bg-rose-600"],
+  [class~="bg-blue-600"]
+):not([class*="/"]) :is(svg, span) {
   color: #FFFFFF !important;
+  stroke: currentColor;
 }
 
-/* Tint gelap transparan di luar kartu aksen → panel terang tipis */
-html[data-theme="light"] [class*="bg-black/"]:not(.fixed):not(:is(
-  [class*="from-[#F9610D]"],
-  [class*="from-[#BA4F18]"],
-  [class~="bg-[#F9610D]"]
-) *) {
-  background-color: rgba(31, 22, 17, 0.04) !important;
+/* ── Badge & Pill Berlatar Tint Tipis (Opacity /) di Mode Terang ── */
+/* Mencegah teks dan icon berubah putih (invisible) pada badge / tombol lembut */
+html[data-theme="light"] :is([class*="bg-rose-500/"], [class*="bg-red-500/"], [class*="bg-rose-600/"], [class*="bg-red-600/"], .bg-red-50) {
+  background-color: rgba(225, 29, 72, 0.12) !important;
+  border-color: rgba(225, 29, 72, 0.35) !important;
+}
+html[data-theme="light"] :is([class*="bg-rose-500/"], [class*="bg-red-500/"], [class*="bg-rose-600/"], [class*="bg-red-600/"], .bg-red-50) :is(span, svg) {
+  color: #BE123C !important;
+  stroke: currentColor;
 }
 
-/* Dark warning/danger 950 backgrounds -> clean soft pastels */
+html[data-theme="light"] :is([class*="bg-emerald-500/"], [class*="bg-emerald-600/"], [class*="bg-green-500/"], .bg-green-50) {
+  background-color: rgba(16, 185, 129, 0.14) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+}
+html[data-theme="light"] :is([class*="bg-emerald-500/"], [class*="bg-emerald-600/"], [class*="bg-green-500/"], .bg-green-50) :is(span, svg) {
+  color: #047857 !important;
+  stroke: currentColor;
+}
+
+html[data-theme="light"] :is([class*="bg-amber-500/"], [class*="bg-yellow-500/"], [class*="bg-amber-600/"], .bg-yellow-50) {
+  background-color: rgba(245, 158, 11, 0.14) !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+html[data-theme="light"] :is([class*="bg-amber-500/"], [class*="bg-yellow-500/"], [class*="bg-amber-600/"], .bg-yellow-50) :is(span, svg) {
+  color: #92400E !important;
+  stroke: currentColor;
+}
+
+html[data-theme="light"] :is([class*="bg-[#F9610D]/"], [class*="bg-orange-500/"], .bg-orange-50) {
+  background-color: rgba(249, 97, 13, 0.14) !important;
+  border-color: rgba(249, 97, 13, 0.4) !important;
+}
+html[data-theme="light"] :is([class*="bg-[#F9610D]/"], [class*="bg-orange-500/"], .bg-orange-50) :is(span, svg) {
+  color: #C2410C !important;
+  stroke: currentColor;
+}
+
+html[data-theme="light"] :is([class*="bg-sky-500/"], [class*="bg-blue-500/"], [class*="bg-indigo-500/"]) {
+  background-color: rgba(14, 165, 233, 0.12) !important;
+  border-color: rgba(14, 165, 233, 0.4) !important;
+}
+html[data-theme="light"] :is([class*="bg-sky-500/"], [class*="bg-blue-500/"], [class*="bg-indigo-500/"]) :is(span, svg) {
+  color: #0369A1 !important;
+  stroke: currentColor;
+}
+
+html[data-theme="light"] :is([class*="bg-purple-500/"], [class*="bg-violet-500/"]) {
+  background-color: rgba(168, 85, 247, 0.14) !important;
+  border-color: rgba(168, 85, 247, 0.4) !important;
+}
+html[data-theme="light"] :is([class*="bg-purple-500/"], [class*="bg-violet-500/"]) :is(span, svg) {
+  color: #6B21A8 !important;
+  stroke: currentColor;
+}
+
+/* Tint gelap 950 di mode gelap -> pastels bersih di mode terang */
 html[data-theme="light"] :is([class*="bg-orange-950"], [class*="bg-amber-950"]) {
   background-color: rgba(249, 97, 13, 0.12) !important;
+  border-color: rgba(249, 97, 13, 0.35) !important;
 }
 html[data-theme="light"] :is([class*="bg-red-950"], [class*="bg-rose-950"]) {
   background-color: rgba(236, 31, 39, 0.12) !important;
+  border-color: rgba(236, 31, 39, 0.35) !important;
 }
 html[data-theme="light"] [class*="bg-emerald-950"] {
   background-color: rgba(16, 185, 129, 0.12) !important;
+  border-color: rgba(16, 185, 129, 0.35) !important;
 }
 html[data-theme="light"] :is([class*="bg-blue-950"], [class*="bg-sky-950"], [class*="bg-indigo-950"]) {
   background-color: rgba(59, 130, 246, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.35) !important;
 }
 html[data-theme="light"] [class*="bg-purple-950"] {
   background-color: rgba(168, 85, 247, 0.12) !important;
+  border-color: rgba(168, 85, 247, 0.35) !important;
+}
+
+/* ── Helper Class Tombol Aksi Tabel Terstandarisasi ── */
+.btn-action-amber {
+  background-color: rgba(245, 158, 11, 0.15);
+  color: #FCD34D;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.btn-action-amber:hover {
+  background-color: rgba(245, 158, 11, 0.28);
+  border-color: rgba(245, 158, 11, 0.65);
+}
+.btn-action-amber svg {
+  color: #FCD34D;
+  stroke: currentColor;
+}
+
+html[data-theme="light"] .btn-action-amber {
+  background-color: #FEF3C7 !important;
+  color: #92400E !important;
+  border-color: #FCD34D !important;
+}
+html[data-theme="light"] .btn-action-amber:hover {
+  background-color: #FDE68A !important;
+  color: #78350F !important;
+  border-color: #F59E0B !important;
+}
+html[data-theme="light"] .btn-action-amber :is(span, svg) {
+  color: #92400E !important;
+  stroke: currentColor;
+}
+
+.btn-action-orange {
+  background-color: rgba(249, 97, 13, 0.15);
+  color: #F9610D;
+  border: 1px solid rgba(249, 97, 13, 0.35);
+}
+.btn-action-orange:hover {
+  background-color: rgba(249, 97, 13, 0.28);
+  border-color: rgba(249, 97, 13, 0.65);
+}
+.btn-action-orange svg {
+  color: #F9610D;
+  stroke: currentColor;
+}
+
+html[data-theme="light"] .btn-action-orange {
+  background-color: #FFEDD5 !important;
+  color: #C2410C !important;
+  border-color: #FDBA74 !important;
+}
+html[data-theme="light"] .btn-action-orange:hover {
+  background-color: #FED7AA !important;
+  color: #9A3412 !important;
+  border-color: #FB923C !important;
+}
+html[data-theme="light"] .btn-action-orange :is(span, svg) {
+  color: #C2410C !important;
+  stroke: currentColor;
+}
+
+.btn-action-rose {
+  background-color: rgba(244, 63, 94, 0.15);
+  color: #FDA4AF;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+.btn-action-rose:hover {
+  background-color: rgba(244, 63, 94, 0.28);
+  border-color: rgba(244, 63, 94, 0.65);
+}
+.btn-action-rose svg {
+  color: #FDA4AF;
+  stroke: currentColor;
+}
+
+html[data-theme="light"] .btn-action-rose {
+  background-color: #FFE4E6 !important;
+  color: #BE123C !important;
+  border-color: #FDA4AF !important;
+}
+html[data-theme="light"] .btn-action-rose:hover {
+  background-color: #FECDD3 !important;
+  color: #9F1239 !important;
+  border-color: #FB7185 !important;
+}
+html[data-theme="light"] .btn-action-rose :is(span, svg) {
+  color: #BE123C !important;
+  stroke: currentColor;
+}
+
+/* ── Helper Class Badge Peran (Role) ── */
+.badge-role-owner {
+  background-color: rgba(88, 28, 135, 0.4);
+  color: #D8B4FE;
+  border-color: rgba(168, 85, 247, 0.4);
+}
+html[data-theme="light"] .badge-role-owner {
+  background-color: #F3E8FF !important;
+  color: #6B21A8 !important;
+  border-color: #D8B4FE !important;
+}
+
+.badge-role-admin {
+  background-color: rgba(120, 53, 15, 0.4);
+  color: #FCD34D;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+html[data-theme="light"] .badge-role-admin {
+  background-color: #FEF3C7 !important;
+  color: #92400E !important;
+  border-color: #FCD34D !important;
+}
+
+.badge-role-ck {
+  background-color: rgba(249, 97, 13, 0.2);
+  color: #F9610D;
+  border-color: rgba(249, 97, 13, 0.4);
+}
+html[data-theme="light"] .badge-role-ck {
+  background-color: #FFEDD5 !important;
+  color: #C2410C !important;
+  border-color: #FDBA74 !important;
+}
+
+.badge-role-outlet {
+  background-color: rgba(12, 74, 110, 0.4);
+  color: #7DD3FC;
+  border-color: rgba(14, 165, 233, 0.4);
+}
+html[data-theme="light"] .badge-role-outlet {
+  background-color: #E0F2FE !important;
+  color: #0369A1 !important;
+  border-color: #BAE6FD !important;
 }
 
 /* ── Tabel ── */

@@ -246,8 +246,13 @@ const Products = () => {
                     </td>
                     <td className="px-6 py-4 text-ink font-medium">{formatRupiah(p.harga)}</td>
                     <td className="px-6 py-4 text-right">
-                      <button onClick={() => openModal(p)} className="p-1.5 text-muted hover:text-richisam-orange hover:bg-orange-50 rounded-md transition-colors cursor-pointer" title="Edit Produk">
-                        <Edit2 size={16} />
+                      <button 
+                        onClick={() => openModal(p)} 
+                        className="btn-action-orange inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs" 
+                        title="Edit Produk"
+                      >
+                        <Edit2 size={13} />
+                        <span>Edit</span>
                       </button>
                     </td>
                   </tr>

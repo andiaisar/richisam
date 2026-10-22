@@ -1,7 +1,7 @@
 import useAuthStore from '../store/useAuthStore';
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { Users as UsersIcon, Search, Plus, RefreshCw, FileText, X, Key, Trash2, AlertTriangle, Eye, EyeOff } from 'lucide-react';
+import { Users as UsersIcon, Search, Plus, RefreshCw, FileText, X, Key, Trash2, AlertTriangle, Eye, EyeOff, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Pagination from '../components/Pagination';
 
@@ -215,15 +215,15 @@ const Users = () => {
         </div>
 
         <div className="overflow-x-auto min-h-[300px]">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-cream/50 text-muted font-semibold border-b border-line">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-cream/50 text-muted font-semibold border-b border-line text-xs uppercase tracking-wider">
               <tr>
-                <th className="px-6 py-4">Nama Lengkap</th>
-                <th className="px-6 py-4">Username</th>
-                <th className="px-6 py-4">Peran (Role)</th>
-                <th className="px-6 py-4">Penempatan Cabang</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Aksi</th>
+                <th className="px-4 py-3.5">Nama Lengkap</th>
+                <th className="px-3.5 py-3.5">Username</th>
+                <th className="px-3.5 py-3.5">Peran (Role)</th>
+                <th className="px-3.5 py-3.5">Penempatan Cabang</th>
+                <th className="px-3.5 py-3.5">Status</th>
+                <th className="px-4 py-3.5 text-right whitespace-nowrap">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
@@ -234,20 +234,20 @@ const Users = () => {
               ) : paginatedUsers.length > 0 ? (
                 paginatedUsers.map((u) => (
                   <tr key={u.id} className="hover:bg-cream/30 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-ink">{u.nama}</td>
-                    <td className="px-6 py-4 text-ink/80 font-mono text-xs">{u.username}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3.5 font-medium text-ink max-w-[170px] truncate" title={u.nama}>{u.nama}</td>
+                    <td className="px-3.5 py-3.5 text-ink/80 font-mono text-xs whitespace-nowrap">{u.username}</td>
+                    <td className="px-3.5 py-3.5 whitespace-nowrap">
                       {(() => {
                         if (u.role === 'OWNER') {
                           return (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-purple-950/40 text-purple-300 border-purple-500/40">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase badge-role-owner">
                               OWNER
                             </span>
                           );
                         }
                         if (u.role === 'ADMIN_PUSAT') {
                           return (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-amber-950/40 text-amber-300 border-amber-500/40">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase badge-role-admin">
                               ADMIN PUSAT
                             </span>
                           );
@@ -255,24 +255,24 @@ const Users = () => {
                         const isCK = u.outlet_id === 1 || u.outlet_name?.toLowerCase().includes('central kitchen') || u.outlet_name?.toLowerCase().includes('ck');
                         if (isCK) {
                           return (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-[#F9610D]/20 text-[#F9610D] border-[#F9610D]/40">
-                              STAF CENTRAL KITCHEN (CK)
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase badge-role-ck" title="Staf Central Kitchen (CK)">
+                              STAF CK
                             </span>
                           );
                         }
                         return (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase bg-sky-950/40 text-sky-300 border-sky-500/40">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase badge-role-outlet">
                             STAF OUTLET
                           </span>
                         );
                       })()}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3.5 py-3.5">
                       {(() => {
                         if (u.role === 'OWNER') {
                           return (
-                            <span className="text-purple-400 font-medium text-xs flex items-center gap-1.5">
-                              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 inline-block"/>
+                            <span className="text-purple-600 dark:text-purple-400 font-medium text-xs flex items-center gap-1.5 whitespace-nowrap">
+                              <span className="w-1.5 h-1.5 rounded-full bg-purple-600 dark:bg-purple-400 inline-block"/>
                               Semua Unit / Pusat
                             </span>
                           );
@@ -281,10 +281,10 @@ const Users = () => {
                           const isCK = u.outlet_id === 1 || u.outlet_name.toLowerCase().includes('central kitchen') || u.outlet_name.toLowerCase().includes('ck');
                           return (
                             <div className="flex items-center gap-2">
-                              <span className="font-semibold text-ink text-sm">{u.outlet_name}</span>
+                              <span className="font-semibold text-ink text-sm max-w-[170px] truncate block" title={u.outlet_name}>{u.outlet_name}</span>
                               {isCK && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F9610D]/10 text-[#F9610D] border border-[#F9610D]/30">
-                                  Gudang Pusat
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold badge-role-ck whitespace-nowrap">
+                                  Pusat
                                 </span>
                               )}
                             </div>
@@ -295,36 +295,49 @@ const Users = () => {
                         );
                       })()}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3.5 py-3.5 whitespace-nowrap">
                       {u.is_active ? (
-                        <span className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"/>Aktif</span>
+                        <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1.5 text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 inline-block"/>
+                          Aktif
+                        </span>
                       ) : (
-                        <span className="text-rose-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"/>Nonaktif</span>
+                        <span className="text-rose-700 dark:text-rose-400 font-bold flex items-center gap-1.5 text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400 inline-block"/>
+                          Nonaktif
+                        </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-3">
+                    <td className="px-4 py-3.5 text-right whitespace-nowrap">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Tombol Ubah Password */}
                         <button 
                           onClick={() => openResetModal(u)} 
-                          className="text-[#FFCE00] hover:text-[#e5b800] font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer" 
+                          className="btn-action-amber inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs" 
                           title="Ubah Password Pengguna"
                         >
-                          <Key size={14} />
-                          <span>Ubah Password</span>
+                          <Key size={13} />
+                          <span>Password</span>
                         </button>
+
+                        {/* Tombol Edit */}
                         <button 
                           onClick={() => openEditModal(u)} 
-                          className="text-[#F9610D] hover:text-[#d9530a] font-bold text-xs transition-colors cursor-pointer"
+                          className="btn-action-orange inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+                          title="Edit Pengguna"
                         >
-                          Edit
+                          <Edit2 size={13} />
+                          <span>Edit</span>
                         </button>
+
+                        {/* Tombol Hapus */}
                         {u.id !== user?.id && (
                           <button 
                             onClick={() => openDeleteModal(u)} 
-                            className="text-rose-400 hover:text-rose-300 font-bold text-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            className="btn-action-rose inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
                             title="Hapus Pengguna"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                             <span>Hapus</span>
                           </button>
                         )}
@@ -497,26 +510,26 @@ const Users = () => {
 
       {/* Modal Konfirmasi Hapus User */}
       {isDeleteModalOpen && userToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#1A1412] border border-[#382E28] rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-white animate-scale-up">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-line rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-ink animate-scale-up">
             <div className="p-5 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto mb-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 flex items-center justify-center mx-auto mb-3">
                 <AlertTriangle size={24} />
               </div>
-              <h3 className="text-base font-extrabold text-white">Konfirmasi Hapus Pengguna</h3>
-              <p className="text-xs text-stone-400 mt-2 leading-relaxed">
-                Apakah Anda yakin ingin menghapus akun <strong className="text-white font-bold">{userToDelete.nama}</strong> (<span className="font-mono text-stone-300">@{userToDelete.username}</span>)?
+              <h3 className="text-base font-extrabold text-ink">Konfirmasi Hapus Pengguna</h3>
+              <p className="text-xs text-muted mt-2 leading-relaxed">
+                Apakah Anda yakin ingin menghapus akun <strong className="text-ink font-bold">{userToDelete.nama}</strong> (<span className="font-mono text-ink/80">@{userToDelete.username}</span>)?
               </p>
-              <p className="text-[11px] text-stone-500 mt-2 bg-[#140F0D] p-2.5 rounded-xl border border-[#2D241E]">
+              <p className="text-[11px] text-muted mt-2 bg-cream/40 p-2.5 rounded-xl border border-line">
                 * Jika pengguna ini memiliki riwayat mutasi/transaksi di database, akun akan otomatis dinonaktifkan demi menjaga integritas data audit.
               </p>
             </div>
-            <div className="p-4 border-t border-[#2D241E] flex items-center justify-end gap-3 bg-[#16110F]">
+            <div className="p-4 border-t border-line flex items-center justify-end gap-3 bg-cream/20">
               <button
                 type="button"
                 disabled={submitting}
                 onClick={() => setIsDeleteModalOpen(false)}
-                className="px-4 py-2 text-xs font-bold text-stone-400 hover:text-white transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-bold text-muted hover:text-ink transition-colors cursor-pointer"
               >
                 Batal
               </button>

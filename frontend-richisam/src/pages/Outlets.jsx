@@ -1,7 +1,7 @@
 import useAuthStore from '../store/useAuthStore';
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { Store, Search, Plus, RefreshCw, FileText } from 'lucide-react';
+import { Store, Search, Plus, RefreshCw, FileText, Edit2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Outlets = () => {
@@ -101,20 +101,29 @@ const Outlets = () => {
                   <tr key={o.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4 font-medium text-ink">{o.nama}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase ${o.tipe === 'PUSAT' ? 'bg-[#F9610D]/20 text-[#F9610D] border-[#F9610D]/40' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'}`}>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase ${o.tipe === 'PUSAT' ? 'badge-role-ck' : 'badge-role-outlet'}`}>
                         {o.tipe === 'PUSAT' ? 'CENTRAL KITCHEN (CK)' : 'OUTLET'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-ink/80 truncate max-w-xs">{o.alamat || '-'}</td>
                     <td className="px-6 py-4">
                       {o.is_active ? (
-                        <span className="text-emerald-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block"/>Buka</span>
+                        <span className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1.5 text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400 inline-block"/>
+                          Buka
+                        </span>
                       ) : (
-                        <span className="text-rose-400 font-bold flex items-center gap-1.5 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-rose-400 inline-block"/>Tutup</span>
+                        <span className="text-rose-700 dark:text-rose-400 font-bold flex items-center gap-1.5 text-xs">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600 dark:bg-rose-400 inline-block"/>
+                          Tutup
+                        </span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-richisam-orange hover:text-richisam-merah-muda font-medium text-sm transition-colors">Edit</button>
+                      <button className="btn-action-orange inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs">
+                        <Edit2 size={13} />
+                        <span>Edit</span>
+                      </button>
                     </td>
                   </tr>
                 ))

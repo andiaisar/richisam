@@ -262,7 +262,7 @@ html[data-theme="light"] :is(.text-teal-100, .text-teal-200, .text-teal-300, .te
   color: #0F766E !important; 
 }
 
-/* ── Permukaan aksen solid: teks harus tetap putih (HANYA warna solid tanpa opacity /) ── */
+/* ── Permukaan aksen solid: teks dan ikon HARUS selalu putih murni (#FFFFFF) ── */
 html[data-theme="light"] :is(
   [class~="bg-[#F9610D]"],
   [class~="bg-richisam-orange"],
@@ -292,24 +292,42 @@ html[data-theme="light"] :is(
   [class*="from-[#BA4F18]"],
   [class*="from-[#FA6E20]"],
   [class*="from-[#FFCE00]"]
-):not([class*="/"]):not([class*="bg-white"]):not([class*="bg-cream"]) :is(.text-white, .text-stone-50, .text-stone-100, [class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"]) {
+) {
   color: #FFFFFF !important;
 }
 
-/* Tombol solid: ikon SVG di dalamnya tetap putih bila tombol berwarna solid */
-html[data-theme="light"] button:is(
+html[data-theme="light"] :is(
   [class~="bg-[#F9610D]"],
   [class~="bg-richisam-orange"],
   [class~="bg-[#EC1F27]"],
   [class~="bg-[#d9530a]"],
   [class~="bg-ember"],
+  [class~="bg-emerald-500"],
   [class~="bg-emerald-600"],
+  [class~="bg-emerald-700"],
+  [class~="bg-red-500"],
   [class~="bg-red-600"],
+  [class~="bg-red-700"],
+  [class~="bg-rose-500"],
   [class~="bg-rose-600"],
-  [class~="bg-blue-600"]
-):not([class*="/"]) :is(svg, span) {
+  [class~="bg-rose-700"],
+  [class~="bg-green-600"],
+  [class~="bg-green-700"],
+  [class~="bg-blue-500"],
+  [class~="bg-blue-600"],
+  [class~="bg-blue-700"],
+  [class~="bg-indigo-600"],
+  [class~="bg-amber-600"],
+  [class~="bg-sky-600"],
+  [class~="bg-purple-600"],
+  [class~="bg-black"],
+  [class*="from-[#F9610D]"],
+  [class*="from-[#BA4F18]"],
+  [class*="from-[#FA6E20]"],
+  [class*="from-[#FFCE00]"]
+) :is(span, p, svg, a, div, strong, b, h1, h2, h3, i) {
   color: #FFFFFF !important;
-  stroke: currentColor;
+  stroke: currentColor !important;
 }
 
 /* ── Badge & Pill Berlatar Tint Tipis (Opacity /) di Mode Terang ── */
@@ -599,6 +617,65 @@ html[data-theme="light"] ::-webkit-scrollbar-thumb {
 }
 html[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
   background: rgba(31, 22, 17, 0.3);
+}
+
+/* ── Radar Kadaluarsa: Peringatan FEFO Dapur Banner (Light Mode) ── */
+html[data-theme="light"] .banner-fefo-alert {
+  background: linear-gradient(135deg, #FFF1F2 0%, #FFFFFF 55%, #FFF7ED 100%) !important;
+  border-color: #FECDD3 !important;
+  box-shadow: 0 4px 20px -2px rgba(225, 29, 72, 0.08) !important;
+}
+html[data-theme="light"] .banner-fefo-icon {
+  background-color: #FFE4E6 !important;
+  border-color: #FDA4AF !important;
+  color: #E11D48 !important;
+}
+html[data-theme="light"] .banner-fefo-badge {
+  background-color: #FFE4E6 !important;
+  border-color: #FDA4AF !important;
+  color: #BE123C !important;
+  font-weight: 800 !important;
+}
+html[data-theme="light"] .banner-fefo-subtitle {
+  color: #78716C !important;
+}
+html[data-theme="light"] .banner-fefo-title {
+  color: #9F1239 !important;
+  font-weight: 800 !important;
+}
+html[data-theme="light"] .banner-fefo-desc {
+  color: #57534E !important;
+}
+
+/* ── Kartu Kondisi Par Stock (Light Mode) ── */
+html[data-theme="light"] .card-par-stock {
+  background: linear-gradient(135deg, #C2410C 0%, #EA580C 45%, #9A3412 100%) !important;
+  border-color: rgba(194, 65, 12, 0.35) !important;
+  box-shadow: 0 10px 25px -4px rgba(234, 88, 12, 0.28) !important;
+}
+html[data-theme="light"] .card-par-stock :is(p, span, a, div, h2, h3) {
+  color: #FFFFFF !important;
+}
+html[data-theme="light"] .card-par-stock .card-par-label {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+html[data-theme="light"] .card-par-stock .card-par-badge {
+  background-color: rgba(0, 0, 0, 0.22) !important;
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="light"] .card-par-stock .card-par-value {
+  color: #FFFFFF !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+html[data-theme="light"] .card-par-stock .card-par-desc {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+html[data-theme="light"] .card-par-stock .card-par-footer {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+html[data-theme="light"] .card-par-stock .card-par-footer a {
+  color: #FFFFFF !important;
 }
 
 /* Transisi halus saat berganti mode */

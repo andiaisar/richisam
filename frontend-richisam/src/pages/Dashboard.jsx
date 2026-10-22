@@ -181,22 +181,22 @@ const Dashboard = () => {
 
       {/* ── RADAR KADALUARSA (FEFO ALERT BANNER) ── */}
       {((batchSummary?.metrics?.total_expired || 0) > 0 || (batchSummary?.metrics?.total_critical || 0) > 0) && (
-        <div className="p-5 rounded-3xl bg-gradient-to-r from-red-950/40 via-[#1A1412] to-amber-950/30 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+        <div className="banner-fefo-alert p-5 rounded-3xl bg-gradient-to-r from-red-950/40 via-[#1A1412] to-amber-950/30 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
           <div className="flex items-start sm:items-center gap-3.5">
-            <div className="h-10 w-10 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0 mt-0.5 sm:mt-0">
+            <div className="banner-fefo-icon h-10 w-10 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0 mt-0.5 sm:mt-0">
               <CalendarClock className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-red-400 bg-red-950/70 border border-red-500/30 px-2 py-0.5 rounded-md">
+                <span className="banner-fefo-badge text-xs font-black uppercase tracking-wider text-red-400 bg-red-950/70 border border-red-500/30 px-2 py-0.5 rounded-md">
                   Peringatan FEFO Dapur
                 </span>
-                <span className="text-xs text-stone-400">Pilar Operasional #2</span>
+                <span className="banner-fefo-subtitle text-xs text-stone-400">Pilar Operasional #2</span>
               </div>
-              <p className="text-sm font-bold text-white mt-1">
+              <p className="banner-fefo-title text-sm font-bold text-white mt-1">
                 Terdapat {batchSummary?.metrics?.total_expired || 0} batch kadaluarsa dan {batchSummary?.metrics?.total_critical || 0} batch kritis (H ≤ 3 hari)!
               </p>
-              <p className="text-xs text-stone-400 mt-0.5">
+              <p className="banner-fefo-desc text-xs text-stone-400 mt-0.5">
                 Segera prioritaskan pemakaian bahan di dapur untuk mencegah pemborosan (food waste).
               </p>
             </div>
@@ -222,25 +222,25 @@ const Dashboard = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Kartu 1: Highlighted Focus Card (Menyerupai Kartu Ungu Ethereum di Referensi) */}
-          <div className="rounded-2xl sm:rounded-3xl p-5 bg-gradient-to-br from-[#BA4F18] via-[#A03E15] to-[#782810] text-white shadow-xl shadow-[#F9610D]/20 border border-white/10 relative overflow-hidden flex flex-col justify-between group transition-all duration-300 hover:scale-[1.02]">
+          <div className="card-par-stock rounded-2xl sm:rounded-3xl p-5 bg-gradient-to-br from-[#BA4F18] via-[#A03E15] to-[#782810] text-white shadow-xl shadow-[#F9610D]/20 border border-white/10 relative overflow-hidden flex flex-col justify-between group transition-all duration-300 hover:scale-[1.02]">
             <div className="pointer-events-none absolute -bottom-10 -right-10 w-36 h-36 rounded-full bg-[#FFCE00]/25 blur-2xl" />
 
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-white/80">Kondisi Par Stock</span>
-                <span className="px-2 py-0.5 rounded-full bg-black/25 text-[10px] font-bold text-white border border-white/20">
+                <span className="card-par-label text-xs font-bold uppercase tracking-wider text-white/80">Kondisi Par Stock</span>
+                <span className="card-par-badge px-2 py-0.5 rounded-full bg-black/25 text-[10px] font-bold text-white border border-white/20">
                   {stokMenipis === 0 ? 'Optimal' : 'Waspada'}
                 </span>
               </div>
-              <p className="text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">
+              <p className="card-par-value text-2xl sm:text-3xl font-black text-white mt-3 tracking-tight">
                 {stokMenipis === 0 ? '100% Aman' : `${stokMenipis} Peringatan`}
               </p>
-              <p className="text-xs text-white/80 mt-1 font-medium">
+              <p className="card-par-desc text-xs text-white/80 mt-1 font-medium">
                 {stokMenipis === 0 ? 'Semua produk di atas batas par stock' : 'Segera restock sebelum habis'}
               </p>
             </div>
 
-            <div className="mt-6 pt-4 border-t border-white/20 flex items-center justify-between">
+            <div className="card-par-footer mt-6 pt-4 border-t border-white/20 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center p-1">
                   <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />

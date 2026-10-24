@@ -51,7 +51,7 @@ exports.getAssetStocks = async (req, res) => {
 exports.updateAssetStocks = async (req, res) => {
   try {
     const { items } = req.body;
-    const outlet_id = req.query.outlet_id;
+    const outlet_id = req.query.outlet_id || req.body.outlet_id;
     if (!outlet_id || !items) return res.status(400).json({ success: false, message: 'outlet_id dan items diperlukan' });
     
     await AssetService.updateAssetStocks(outlet_id, items);

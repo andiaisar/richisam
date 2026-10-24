@@ -214,8 +214,14 @@ html[data-theme="light"] [class*="from-amber-950"] {
 }
 
 /* ── Teks ── */
-html[data-theme="light"] :is(.text-white, .text-stone-50, .text-stone-100, .text-gray-50, .text-gray-100, .text-zinc-50, .text-zinc-100, .text-slate-50, .text-slate-100, .text-neutral-50, .text-neutral-100) {
-  color: var(--lt-text);
+html[data-theme="light"] :is(.text-white, .text-stone-50, .text-stone-100, .text-gray-50, .text-gray-100, .text-zinc-50, .text-zinc-100, .text-slate-50, .text-slate-100, .text-neutral-50, .text-neutral-100, .text-ink, .text-ink-soft, .analytics-forecast-val) {
+  color: var(--lt-text) !important;
+}
+html[data-theme="light"] :is([class*="dark:text-white"], [class*="dark:text-stone-100"], [class*="dark:text-stone-200"], [class*="dark:text-stone-300"]) {
+  color: var(--lt-text) !important;
+}
+html[data-theme="light"] :is(.text-muted, [class*="text-muted"]) {
+  color: var(--lt-text-3) !important;
 }
 html[data-theme="light"] :is([class~="text-white/70"], [class~="text-white/80"], [class~="text-white/85"], [class~="text-stone-100/80"]) {
   color: var(--lt-text-3);
@@ -406,6 +412,29 @@ html[data-theme="light"] :is([class*="bg-blue-950"], [class*="bg-sky-950"], [cla
 html[data-theme="light"] [class*="bg-purple-950"] {
   background-color: rgba(168, 85, 247, 0.12) !important;
   border-color: rgba(168, 85, 247, 0.35) !important;
+}
+
+/* ── Box Notifikasi WMA Forecasting Analitik ── */
+.analytics-wma-alert {
+  background-color: rgba(249, 97, 13, 0.12);
+  border: 1px solid rgba(249, 97, 13, 0.25);
+}
+.analytics-wma-alert p {
+  color: #FED7AA;
+}
+.analytics-wma-alert strong {
+  color: #FFFFFF;
+}
+
+html[data-theme="light"] .analytics-wma-alert {
+  background-color: #FFF7ED !important;
+  border-color: #FED7AA !important;
+}
+html[data-theme="light"] .analytics-wma-alert p {
+  color: #9A3412 !important;
+}
+html[data-theme="light"] .analytics-wma-alert strong {
+  color: #7C2D12 !important;
 }
 
 /* ── Helper Class Tombol Aksi Tabel Terstandarisasi ── */

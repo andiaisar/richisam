@@ -47,7 +47,7 @@ const Transfer = () => {
       setLoading(true);
       const [resOutlets, resProducts] = await Promise.all([
         axiosClient.get('/outlets'),
-        axiosClient.get('/products')
+        axiosClient.get('/products?limit=1000')
       ]);
       
       const outletsData = resOutlets?.data?.data || resOutlets?.data || [];

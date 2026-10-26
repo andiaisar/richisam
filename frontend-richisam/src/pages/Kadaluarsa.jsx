@@ -53,7 +53,7 @@ const Kadaluarsa = () => {
     try {
       const [resOutlets, resProducts] = await Promise.all([
         axiosClient.get('/outlets'),
-        axiosClient.get('/products')
+        axiosClient.get('/products?limit=1000')
       ]);
       setOutlets(resOutlets?.data?.data || resOutlets?.data || []);
       setProducts(resProducts?.data?.data || resProducts?.data || []);

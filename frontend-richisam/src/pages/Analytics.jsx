@@ -44,7 +44,7 @@ const Analytics = () => {
 
     const fetchProducts = async () => {
       try {
-        const res = await axiosClient.get('/products');
+        const res = await axiosClient.get('/products?limit=1000');
         const list = res?.data?.data || res?.data || [];
         setProducts(list);
         if (list.length > 0) {

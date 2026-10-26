@@ -43,7 +43,7 @@ const Defect = () => {
 
   const fetchProducts = async () => {
     try {
-      const res = await axiosClient.get('/products');
+      const res = await axiosClient.get('/products?limit=1000');
       setProducts(res?.data?.data || res?.data || []);
     } catch (e) {}
   };

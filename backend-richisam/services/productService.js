@@ -1,8 +1,10 @@
 const pool = require('../config/db');
 
 class ProductService {
-  static async getProducts(page = 1, limit = 10, search, kategori, status = 'active') {
-    const offset = (page - 1) * limit;
+  static async getProducts(page = 1, limit = 1000, search, kategori, status = 'active') {
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 1000;
+    const offset = (pageNum - 1) * limitNum;
     let query = 'SELECT * FROM products WHERE 1=1';
     const params = [];
     let paramIndex = 1;
@@ -30,7 +32,7 @@ class ProductService {
     const total = parseInt(countRes.rows[0].count);
 
     query += ` ORDER BY urutan ASC, created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
-    params.push(limit, offset);
+    params.push(limitNum, offset);
 
     const result = await pool.query(query, params);
     const formattedData = result.rows.map(r => ({
@@ -39,7 +41,7 @@ class ProductService {
       urutan: parseInt(r.urutan || 0, 10),
       konversi: parseInt(r.konversi || 1, 10)
     }));
-    return { data: formattedData, meta: { total, page: parseInt(page), limit: parseInt(limit) } };
+    return { data: formattedData, meta: { total, page: pageNum, limit: limitNum } };
   }
 
   static async getProductById(id, onlyActive = false) {

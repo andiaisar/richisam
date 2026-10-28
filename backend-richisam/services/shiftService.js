@@ -12,7 +12,7 @@ class ShiftService {
        WHERE outlet_id = $1 AND shift_date = $2 AND shift_name = $3`,
       [outletId, date, shiftName]
     );
-    if (res.rows.length === 0) return false;
+    if (!res || !res.rows || res.rows.length === 0) return false;
     return res.rows[0].status === 'CLOSED';
   }
 

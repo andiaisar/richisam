@@ -39,7 +39,7 @@ class MutationService {
     
     // Ambil semua mutasi form ini jika sudah ada
     const currentMuts = await pool.query(
-      'SELECT product_id, masuk, sak FROM stock_mutations WHERE outlet_id = $1 AND tanggal = $2 AND shift = $3',
+      'SELECT product_id, saw, masuk, sak FROM stock_mutations WHERE outlet_id = $1 AND tanggal = $2 AND shift = $3',
       [outlet_id, tanggal, shift]
     );
     const currentMutMap = {};
@@ -49,44 +49,71 @@ class MutationService {
 
     const formData = [];
     for (let p of products.rows) {
-       // Cek mutasi sebelumnya (SAK)
-       const prevMut = await pool.query(
-         'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4 ORDER BY id DESC LIMIT 1',
-         [outlet_id, p.id, prev.date, prev.shift]
-       );
-       
+       let current = currentMutMap[p.id];
        let saw = 0;
        let canInput = true;
        let message = null;
 
-       if (prevMut.rows.length > 0) {
-         saw = prevMut.rows[0].sak;
+       if (current) {
+         // Jika mutasi untuk shift ini sudah pernah disimpan, tampilkan saw aslinya
+         saw = current.saw;
        } else {
-         const anyMut = await pool.query(
-           'SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 LIMIT 1',
-           [outlet_id, p.id]
+         // Cari mutasi terakhir sebelum (tanggal, shift) ini berdasarkan kronologis 3 shift
+         const prevMut = await pool.query(
+           `SELECT sak, tanggal, shift FROM stock_mutations 
+            WHERE outlet_id = $1 AND product_id = $2 
+              AND (
+                tanggal < $3 
+                OR (
+                  tanggal = $3 
+                  AND (
+                    CASE shift 
+                      WHEN 'MIDNIGHT' THEN 1 
+                      WHEN 'PAGI' THEN 2 
+                      WHEN 'SORE' THEN 3 
+                      ELSE 0 
+                    END
+                  ) < (
+                    CASE $4 
+                      WHEN 'MIDNIGHT' THEN 1 
+                      WHEN 'PAGI' THEN 2 
+                      WHEN 'SORE' THEN 3 
+                      ELSE 0 
+                    END
+                  )
+                )
+              )
+            ORDER BY tanggal DESC, 
+                     (CASE shift 
+                       WHEN 'SORE' THEN 3 
+                       WHEN 'PAGI' THEN 2 
+                       WHEN 'MIDNIGHT' THEN 1 
+                       ELSE 0 
+                     END) DESC, 
+                     id DESC 
+            LIMIT 1`,
+           [outlet_id, p.id, tanggal, shift]
          );
-         if (anyMut.rows.length === 0) {
+         
+         if (prevMut.rows.length > 0) {
+           saw = prevMut.rows[0].sak;
+         } else {
+           // Jika belum pernah ada mutasi sebelumnya sama sekali, ambil dari opening_balances
            const opBal = await pool.query(
              'SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2',
              [outlet_id, p.id]
            );
            saw = opBal.rows.length > 0 ? opBal.rows[0].qty : 0;
-         } else {
-           saw = null;
-           canInput = false;
-           message = `Shift sebelumnya (${prev.date} ${prev.shift}) belum diinput!`;
          }
        }
        
-       let current = currentMutMap[p.id];
        formData.push({
          product_id: p.id,
          nama: p.nama,
          satuan: p.satuan,
          harga: parseFloat(p.harga),
          par_stock: parseInt(p.par_stock),
-         saw,
+         saw: saw !== null && saw !== undefined ? parseInt(saw) : 0,
          canInput,
          message,
          masuk: current ? current.masuk : null,
@@ -127,21 +154,46 @@ class MutationService {
 
         let saw = 0;
         const prevMut = await client.query(
-          'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND (tanggal < $3 OR (tanggal = $3 AND shift != $4)) ORDER BY id DESC LIMIT 1',
+          `SELECT sak FROM stock_mutations 
+           WHERE outlet_id = $1 AND product_id = $2 
+             AND (
+               tanggal < $3 
+               OR (
+                 tanggal = $3 
+                 AND (
+                   CASE shift 
+                     WHEN 'MIDNIGHT' THEN 1 
+                     WHEN 'PAGI' THEN 2 
+                     WHEN 'SORE' THEN 3 
+                     ELSE 0 
+                   END
+                 ) < (
+                   CASE $4 
+                     WHEN 'MIDNIGHT' THEN 1 
+                     WHEN 'PAGI' THEN 2 
+                     WHEN 'SORE' THEN 3 
+                     ELSE 0 
+                   END
+                 )
+               )
+             )
+           ORDER BY tanggal DESC, 
+                    (CASE shift 
+                      WHEN 'SORE' THEN 3 
+                      WHEN 'PAGI' THEN 2 
+                      WHEN 'MIDNIGHT' THEN 1 
+                      ELSE 0 
+                    END) DESC, 
+                    id DESC 
+           LIMIT 1`,
           [outlet_id, item.product_id, tanggal, shift]
         );
         
         if (prevMut.rows.length > 0) {
           saw = prevMut.rows[0].sak;
         } else {
-          const anyMut = await client.query('SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 LIMIT 1', [outlet_id, item.product_id]);
-          if (anyMut.rows.length === 0) {
-            const opBal = await client.query('SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2', [outlet_id, item.product_id]);
-            saw = opBal.rows.length > 0 ? opBal.rows[0].qty : 0;
-          } else {
-            errors.push({ product_id: item.product_id, message: `Shift sebelumnya (${prev.date} ${prev.shift}) belum diinput.` });
-            continue;
-          }
+          const opBal = await client.query('SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2', [outlet_id, item.product_id]);
+          saw = opBal.rows.length > 0 ? opBal.rows[0].qty : 0;
         }
 
         const keluar = saw + item.masuk - item.sak;
@@ -210,10 +262,33 @@ class MutationService {
          throw new Error(`Shift ${m.shift} pada tanggal ${dateStr} telah ditutup & dikunci. Tidak dapat diubah.`);
        }
        
-       // Cek apakah ada mutasi setelahnya
+       // Cek apakah ada mutasi setelahnya berdasarkan kronologis 3 shift
        const nextMut = await client.query(
-         'SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND (tanggal > $3 OR (tanggal = $3 AND shift != $4)) ORDER BY tanggal ASC, shift ASC LIMIT 1',
-         [m.outlet_id, m.product_id, m.tanggal, m.shift] // Asumsi shift Enum, komparasi text biasa nggak bener karena SORE > PAGI > MIDNIGHT tapi text MIDNIGHT < PAGI < SORE. Sebenarnya kita butuh urutan ID yg lebih baru.
+         `SELECT id FROM stock_mutations 
+          WHERE outlet_id = $1 AND product_id = $2 
+            AND (
+              tanggal > $3 
+              OR (
+                tanggal = $3 
+                AND (
+                  CASE shift 
+                    WHEN 'MIDNIGHT' THEN 1 
+                    WHEN 'PAGI' THEN 2 
+                    WHEN 'SORE' THEN 3 
+                    ELSE 0 
+                  END
+                ) > (
+                  CASE $4 
+                    WHEN 'MIDNIGHT' THEN 1 
+                    WHEN 'PAGI' THEN 2 
+                    WHEN 'SORE' THEN 3 
+                    ELSE 0 
+                  END
+                )
+              )
+            ) 
+          LIMIT 1`,
+         [m.outlet_id, m.product_id, m.tanggal, m.shift]
        );
        
        const anyNewer = await client.query('SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND id > $3 LIMIT 1', [m.outlet_id, m.product_id, id]);

@@ -74,11 +74,29 @@ class ReportService {
       ${defCond}
     `);
 
+    let assetCond = outlet_id ? `WHERE outlet_id = ${parseInt(outlet_id)}` : '';
+    const assetRes = await pool.query(`
+      SELECT 
+        COALESCE(SUM(qty_baik + qty_rusak), 0) as total_unit,
+        COALESCE(SUM(qty_baik), 0) as total_baik,
+        COALESCE(SUM(qty_rusak), 0) as total_rusak,
+        COUNT(DISTINCT asset_id) FILTER (WHERE (qty_baik + qty_rusak) > 0) as total_jenis_terdata
+      FROM asset_stocks
+      ${assetCond}
+    `);
+    const assetRow = assetRes.rows[0] || {};
+
     return {
       total_cabang: parseInt(cabangRes.rows[0].count),
       total_produk: parseInt(produkRes.rows[0].count),
       total_stok_menipis: parseInt(parRes.rows[0].count),
-      total_defect_bulan_ini: parseInt(defectRes.rows[0].total)
+      total_defect_bulan_ini: parseInt(defectRes.rows[0].total),
+      assets: {
+        total_unit: parseInt(assetRow.total_unit || 0),
+        total_baik: parseInt(assetRow.total_baik || 0),
+        total_rusak: parseInt(assetRow.total_rusak || 0),
+        total_jenis: parseInt(assetRow.total_jenis_terdata || 0)
+      }
     };
   }
 

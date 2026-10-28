@@ -27,7 +27,7 @@ exports.getDefectsReport = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const outlet_id = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : null;
+    const outlet_id = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : (req.query.outlet_id ? parseInt(req.query.outlet_id) : null);
     const data = await ReportService.getDashboardStats(outlet_id);
     res.json({ success: true, message: 'Dashboard Stats', data });
   } catch (e) {

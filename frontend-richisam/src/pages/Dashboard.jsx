@@ -73,6 +73,7 @@ const Dashboard = () => {
   const totalCabang = stats?.total_cabang || 0;
   const stokMenipis = stats?.total_stok_menipis || 0;
   const defectBulanIni = stats?.total_defect_bulan_ini || 0;
+  const assetStats = stats?.assets || { total_unit: 0, total_baik: 0, total_rusak: 0, total_jenis: 0 };
 
   return (
     <div className="space-y-8 animate-fade-in max-w-7xl pb-10 text-white">
@@ -121,12 +122,20 @@ const Dashboard = () => {
             </p>
           </div>
 
-          {user?.role !== 'STAF_CABANG' && (
+          {user?.role !== 'STAF_CABANG' ? (
             <div>
               <p className="text-xs font-semibold text-stone-400">Cabang Aktif</p>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-1.5 tracking-tight">
                 {totalCabang}{' '}
                 <span className="text-xs font-normal text-stone-500">Outlet</span>
+              </p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-xs font-semibold text-stone-400">Peralatan Cabang</p>
+              <p className="text-2xl sm:text-3xl font-extrabold text-white mt-1.5 tracking-tight">
+                {assetStats.total_unit}{' '}
+                <span className="text-xs font-normal text-stone-500">Unit</span>
               </p>
             </div>
           )}
@@ -291,16 +300,38 @@ const Dashboard = () => {
                 <span className="text-xs font-semibold text-stone-400">
                   {user?.role === 'STAF_CABANG' ? 'Inventaris Peralatan' : 'Outlet & Cabang'}
                 </span>
-                <span className="text-[11px] font-bold text-[#FFCE00]">
-                  {user?.role === 'STAF_CABANG' ? 'Terdata' : 'Beroperasi'}
-                </span>
+                {user?.role === 'STAF_CABANG' ? (
+                  assetStats.total_rusak > 0 ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                      {assetStats.total_rusak} Rusak
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      Semua Baik
+                    </span>
+                  )
+                ) : (
+                  <span className="text-[11px] font-bold text-[#FFCE00]">
+                    Beroperasi
+                  </span>
+                )}
               </div>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3 tracking-tight">
-                {user?.role === 'STAF_CABANG' ? 'Aset Cabang' : `${totalCabang} Mitra`}
+                {user?.role === 'STAF_CABANG' ? `${assetStats.total_unit} Unit` : `${totalCabang} Mitra`}
               </p>
-              <p className="text-xs text-stone-400 mt-1">
-                {user?.role === 'STAF_CABANG' ? 'Peralatan operasional harian' : 'Makassar & Wilayah Sekitarnya'}
-              </p>
+              <div className="text-xs text-stone-400 mt-1">
+                {user?.role === 'STAF_CABANG' ? (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-emerald-400 font-semibold">{assetStats.total_baik} Baik</span>
+                    {assetStats.total_rusak > 0 && (
+                      <span className="text-rose-400 font-semibold">• {assetStats.total_rusak} Rusak</span>
+                    )}
+                    <span className="text-stone-500">({assetStats.total_jenis} jenis terdata)</span>
+                  </div>
+                ) : (
+                  <span>Total Aset: {assetStats.total_unit} Unit ({assetStats.total_rusak} Rusak)</span>
+                )}
+              </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-[#241C18] flex items-center justify-between">
@@ -316,7 +347,7 @@ const Dashboard = () => {
                 to={user?.role === 'STAF_CABANG' ? '/assets' : '/outlets'}
                 className="text-xs font-semibold text-[#FFCE00] hover:underline"
               >
-                Buka
+                {user?.role === 'STAF_CABANG' ? 'Kelola' : 'Buka'}
               </Link>
             </div>
           </div>

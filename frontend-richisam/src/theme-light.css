@@ -619,8 +619,208 @@ html[data-theme="light"] div[role="dialog"] .bg-white {
   background-color: #FFFFFF !important;
   border-color: var(--lt-border) !important;
 }
-html[data-theme="light"] :is([class~="bg-black/80"], [class~="bg-black/70"]).fixed {
-  background-color: rgba(31, 22, 17, 0.45) !important;
+html[data-theme="light"] :is([class~="bg-black/80"], [class~="bg-black/75"], [class~="bg-black/70"]).fixed {
+  background-color: rgba(31, 22, 17, 0.5) !important;
+}
+
+/* ── Modal Par Stock Detail (Mode Terang) ── */
+html[data-theme="light"] .modal-par-stock-card {
+  background-color: #FFFFFF !important;
+  border-color: #E8DED3 !important;
+  color: #140F0D !important;
+  box-shadow: 0 20px 40px -10px rgba(80, 50, 30, 0.15) !important;
+}
+
+html[data-theme="light"] .modal-par-stock-header {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E8DED3 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-header h2 {
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .modal-par-stock-header p {
+  color: #66564B !important;
+}
+
+html[data-theme="light"] .modal-par-stock-header-badge {
+  background-color: #FEE2E2 !important;
+  border-color: #FECDD3 !important;
+  color: #B91C1C !important;
+}
+
+html[data-theme="light"] .modal-par-stock-icon-box {
+  background-color: #FEF2F2 !important;
+  border-color: #FECDD3 !important;
+  color: #DC2626 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-close-btn {
+  background-color: #F9F5F0 !important;
+  border-color: #E8DED3 !important;
+  color: #66564B !important;
+}
+
+html[data-theme="light"] .modal-par-stock-close-btn:hover {
+  background-color: #F0E8DE !important;
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .modal-par-stock-sub {
+  background-color: #F9F5F0 !important;
+  border-bottom: 1px solid #E8DED3 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-search-input {
+  background-color: #FFFFFF !important;
+  border-color: #D4C5B5 !important;
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .modal-par-stock-search-input::placeholder {
+  color: #8C7A6B !important;
+}
+
+html[data-theme="light"] .modal-par-stock-search-input:focus {
+  border-color: #F9610D !important;
+  outline: none !important;
+}
+
+html[data-theme="light"] .modal-par-stock-btn-tab {
+  background-color: #FFFFFF !important;
+  border-color: #D4C5B5 !important;
+  color: #4A3E36 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-btn-tab:hover {
+  background-color: #F0E8DE !important;
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .modal-par-stock-btn-tab.active-all {
+  background-color: #F9610D !important;
+  border-color: #F9610D !important;
+  color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .modal-par-stock-btn-tab.active-habis {
+  background-color: #DC2626 !important;
+  border-color: #DC2626 !important;
+  color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .modal-par-stock-btn-tab.active-kritis {
+  background-color: #D97706 !important;
+  border-color: #D97706 !important;
+  color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .modal-par-stock-body {
+  background-color: #FAF7F2 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-table-wrap {
+  background-color: #FFFFFF !important;
+  border-color: #E8DED3 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-table thead {
+  background-color: #F9F5F0 !important;
+  border-bottom: 1px solid #E8DED3 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-table thead th {
+  color: #4A3E36 !important;
+  background-color: #F9F5F0 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-table tbody {
+  background-color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .modal-par-stock-table tbody tr {
+  border-bottom-color: #EFE8DE !important;
+  background-color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .modal-par-stock-table tbody tr:hover {
+  background-color: #FFF8F3 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-table tbody td {
+  color: #241B16 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-product-name {
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .modal-par-stock-product-unit {
+  color: #66564B !important;
+}
+
+html[data-theme="light"] .modal-par-stock-badge-zero {
+  background-color: #FEF2F2 !important;
+  border-color: #FECDD3 !important;
+  color: #DC2626 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-badge-low {
+  background-color: #FFFBEB !important;
+  border-color: #FDE68A !important;
+  color: #B45309 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-badge-deficit {
+  background-color: #FFF1F2 !important;
+  border-color: #FECDD3 !important;
+  color: #BE123C !important;
+}
+
+html[data-theme="light"] .modal-par-stock-status-habis {
+  background-color: #FEE2E2 !important;
+  border-color: #FCA5A5 !important;
+  color: #B91C1C !important;
+}
+
+html[data-theme="light"] .modal-par-stock-status-kritis {
+  background-color: #FEF3C7 !important;
+  border-color: #FCD34D !important;
+  color: #B45309 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-footer {
+  background-color: #F9F5F0 !important;
+  border-top: 1px solid #E8DED3 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-footer-tip {
+  color: #66564B !important;
+}
+
+html[data-theme="light"] .modal-par-stock-btn-close {
+  background-color: #FFFFFF !important;
+  border-color: #D4C5B5 !important;
+  color: #241B16 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-btn-close:hover {
+  background-color: #F0E8DE !important;
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .modal-par-stock-empty {
+  background-color: #FFFFFF !important;
+  border-color: #E8DED3 !important;
+}
+
+html[data-theme="light"] .modal-par-stock-empty p.title {
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .modal-par-stock-empty p.desc {
+  color: #66564B !important;
 }
 
 /* Bayangan lebih lembut di latar terang */

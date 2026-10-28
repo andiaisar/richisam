@@ -10,16 +10,29 @@ import {
   CheckCircle2,
   FileWarning,
   ArrowUpRight,
-  CalendarClock
+  CalendarClock,
+  X,
+  Search,
+  AlertTriangle,
+  Plus,
+  ExternalLink
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
-import { Link } from 'react-router-dom';
+import useThemeStore from '../store/useThemeStore';
+import { Link, useNavigate } from 'react-router-dom';
 import VisualChartsSection from '../components/VisualChartsSection';
 
 const Dashboard = () => {
   const { user } = useAuthStore();
+  const { theme } = useThemeStore();
+  const isLight = theme === 'light';
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [lowStocks, setLowStocks] = useState([]);
+  const [allLowStocks, setAllLowStocks] = useState([]);
+  const [isLowStockModalOpen, setIsLowStockModalOpen] = useState(false);
+  const [searchLowStock, setSearchLowStock] = useState('');
+  const [filterLowStockStatus, setFilterLowStockStatus] = useState('ALL');
   const [recentRequests, setRecentRequests] = useState([]);
   const [batchSummary, setBatchSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +49,9 @@ const Dashboard = () => {
         ]);
 
         setStats(statsRes.data);
-        setLowStocks(lowRes.data?.slice(0, 4) || []);
+        const lowList = lowRes.data || [];
+        setAllLowStocks(lowList);
+        setLowStocks(lowList.slice(0, 4));
         setRecentRequests(reqRes.data?.data || []);
         setBatchSummary(batchRes?.data?.data || batchRes?.data || null);
       } catch (error) {
@@ -256,9 +271,13 @@ const Dashboard = () => {
                 </div>
                 <span className="text-xs font-bold text-white">RichiGuard</span>
               </div>
-              <Link to="/par-stock" className="text-xs font-bold text-white hover:underline flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setIsLowStockModalOpen(true)}
+                className="text-xs font-bold text-white hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+              >
                 Detail <ArrowRight size={12} />
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -403,12 +422,13 @@ const Dashboard = () => {
                   <p className="text-[11px] text-stone-400">Produk yang menyentuh batas kritis par stock</p>
                 </div>
               </div>
-              <Link
-                to="/par-stock"
-                className="text-xs font-bold text-[#F9610D] hover:underline flex items-center gap-1"
+              <button
+                type="button"
+                onClick={() => setIsLowStockModalOpen(true)}
+                className="text-xs font-bold text-[#F9610D] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
               >
-                Lihat Semua <ArrowRight size={13} />
-              </Link>
+                Lihat Semua ({allLowStocks.length}) <ArrowRight size={13} />
+              </button>
             </div>
 
             {/* List Items dengan Pill Container Shape */}
@@ -539,6 +559,360 @@ const Dashboard = () => {
           </div>
         </div>
       </section>
+
+      {/* ── MODAL POP-UP: DAFTAR STOK KRITIS & KEBUTUHAN RESTOCK (OPSI 1) ── */}
+      {isLowStockModalOpen && (
+        <div className={`fixed inset-0 z-50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-fade-in ${
+          isLight ? 'bg-black/45' : 'bg-black/75'
+        }`}>
+          <div className={`rounded-3xl shadow-2xl w-full max-w-4xl overflow-hidden max-h-[92vh] flex flex-col transition-colors ${
+            isLight
+              ? 'bg-white border border-[#E8DED3] text-[#140F0D]'
+              : 'bg-[#1A1412] border border-[#2D241E] text-white'
+          }`}>
+            
+            {/* Modal Header */}
+            <div className={`p-5 sm:p-6 border-b flex items-start justify-between gap-4 shrink-0 transition-colors ${
+              isLight
+                ? 'bg-white border-[#E8DED3]'
+                : 'bg-[#140F0D] border-[#2D241E]'
+            }`}>
+              <div className="flex items-center gap-3.5">
+                <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-sm ${
+                  isLight
+                    ? 'bg-rose-50 border border-rose-200 text-rose-600'
+                    : 'bg-[#EC1F27]/15 border border-[#EC1F27]/30 text-[#EC1F27]'
+                }`}>
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className={`text-lg sm:text-xl font-black tracking-tight ${
+                      isLight ? 'text-[#140F0D]' : 'text-white'
+                    }`}>
+                      Daftar Stok Kritis & Kebutuhan Restock
+                    </h2>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                      isLight
+                        ? 'bg-rose-50 border border-rose-200 text-rose-700'
+                        : 'bg-[#EC1F27]/20 border border-[#EC1F27]/30 text-[#EC1F27]'
+                    }`}>
+                      {allLowStocks.length} Item
+                    </span>
+                  </div>
+                  <p className={`text-xs mt-1 ${isLight ? 'text-[#66564B]' : 'text-stone-400'}`}>
+                    {user?.role === 'STAF_CABANG'
+                      ? `Monitoring stok kritis khusus ${user?.outlet_name || 'Outlet Cabang'} yang berada di bawah batas minimum par stock.`
+                      : 'Monitoring konsolidasi produk dari semua cabang yang berada di bawah batas aman.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsLowStockModalOpen(false)}
+                className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                  isLight
+                    ? 'bg-[#F9F5F0] hover:bg-[#F0E8DE] border border-[#E8DED3] text-[#66564B] hover:text-[#140F0D]'
+                    : 'bg-[#241B17] hover:bg-[#2F231E] border border-stone-700/50 text-stone-400 hover:text-white'
+                }`}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Sub-header: Quick Badges & Search Filter */}
+            <div className={`p-4 sm:p-5 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 transition-colors ${
+              isLight
+                ? 'bg-[#F9F5F0] border-[#E8DED3]'
+                : 'bg-[#140F0D] border-[#241C18]'
+            }`}>
+              {/* Filter Tabs / Badges */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+                <button
+                  type="button"
+                  onClick={() => setFilterLowStockStatus('ALL')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    filterLowStockStatus === 'ALL'
+                      ? 'bg-[#F9610D] text-white shadow-md shadow-[#F9610D]/20'
+                      : isLight
+                      ? 'bg-white text-[#4A3E36] hover:bg-[#F0E8DE] border border-[#D4C5B5]'
+                      : 'bg-[#201815] text-stone-400 hover:text-white border border-[#2D241E]'
+                  }`}
+                >
+                  Semua ({allLowStocks.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterLowStockStatus('HABIS')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                    filterLowStockStatus === 'HABIS'
+                      ? 'bg-red-600 text-white shadow-md shadow-red-600/20'
+                      : isLight
+                      ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                      : 'bg-[#201815] text-rose-400 hover:text-rose-300 border border-[#2D241E]'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-red-600" />
+                  Habis Total ({allLowStocks.filter((i) => Number(i.qty_current) === 0).length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterLowStockStatus('KRITIS')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer flex items-center gap-1.5 ${
+                    filterLowStockStatus === 'KRITIS'
+                      ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20'
+                      : isLight
+                      ? 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
+                      : 'bg-[#201815] text-amber-400 hover:text-amber-300 border border-[#2D241E]'
+                  }`}
+                >
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  Stok Menipis ({allLowStocks.filter((i) => Number(i.qty_current) > 0).length})
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative w-full sm:w-64">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 ${
+                  isLight ? 'text-[#8C7A6B]' : 'text-stone-400'
+                }`} />
+                <input
+                  type="text"
+                  value={searchLowStock}
+                  onChange={(e) => setSearchLowStock(e.target.value)}
+                  placeholder="Cari nama bahan baku..."
+                  className={`w-full pl-9 pr-3 py-1.5 rounded-xl text-xs transition-colors focus:outline-none focus:border-[#F9610D] ${
+                    isLight
+                      ? 'bg-white border border-[#D4C5B5] text-[#140F0D] placeholder-[#8C7A6B]'
+                      : 'bg-[#1C1513] border border-[#2E241E] text-white placeholder-stone-500'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Table Area (Scrollable) */}
+            <div className={`flex-1 overflow-y-auto p-4 sm:p-6 min-h-[260px] max-h-[50vh] transition-colors ${
+              isLight ? 'bg-[#FAF7F2]' : 'bg-[#140F0D]'
+            }`}>
+              {(() => {
+                const filtered = allLowStocks.filter((item) => {
+                  const q = searchLowStock.toLowerCase();
+                  const matches =
+                    !searchLowStock ||
+                    item.product_name?.toLowerCase().includes(q) ||
+                    item.outlet_name?.toLowerCase().includes(q);
+
+                  if (!matches) return false;
+                  if (filterLowStockStatus === 'HABIS') return Number(item.qty_current) === 0;
+                  if (filterLowStockStatus === 'KRITIS') return Number(item.qty_current) > 0;
+                  return true;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className={`py-12 text-center rounded-2xl border ${
+                      isLight
+                        ? 'bg-white border-[#E8DED3]'
+                        : 'bg-[#140F0D] border-[#241C18]'
+                    }`}>
+                      <CheckCircle2 size={36} className="mx-auto text-emerald-500 mb-2 opacity-80" />
+                      <p className={`font-bold text-sm ${isLight ? 'text-[#140F0D]' : 'text-white'}`}>
+                        Tidak ada data stok menipis
+                      </p>
+                      <p className={`text-xs mt-1 max-w-sm mx-auto ${isLight ? 'text-[#66564B]' : 'text-stone-400'}`}>
+                        {searchLowStock
+                          ? 'Tidak ditemukan bahan baku dengan kata kunci pencarian tersebut.'
+                          : 'Semua bahan baku cabang dalam kondisi aman di atas batas par stock.'}
+                      </p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className={`overflow-x-auto rounded-2xl border ${
+                    isLight ? 'bg-white border-[#E8DED3]' : 'border-[#2D241E]'
+                  }`}>
+                    <table className="w-full text-left text-xs whitespace-nowrap">
+                      <thead className={`font-bold uppercase tracking-wider border-b ${
+                        isLight
+                          ? 'bg-[#F9F5F0] text-[#4A3E36] border-[#E8DED3]'
+                          : 'bg-[#201815] text-stone-400 border-[#2D241E]'
+                      }`}>
+                        <tr>
+                          <th className="px-4 py-3">Bahan Baku</th>
+                          {user?.role === 'ADMIN_PUSAT' && <th className="px-4 py-3">Cabang</th>}
+                          <th className="px-4 py-3 text-center">Stok Fisik Saat Ini</th>
+                          <th className="px-4 py-3 text-center">Batas Minimum (Par)</th>
+                          <th className="px-4 py-3 text-center">Kebutuhan Restock</th>
+                          <th className="px-4 py-3 text-center">Status</th>
+                          <th className="px-4 py-3 text-right">Tindakan</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${
+                        isLight
+                          ? 'bg-white divide-[#EFE8DE]'
+                          : 'bg-[#140F0D] divide-[#241C18]'
+                      }`}>
+                        {filtered.map((item, idx) => {
+                          const isZero = Number(item.qty_current) === 0;
+                          return (
+                            <tr key={`${item.outlet_id}-${item.product_id}-${idx}`} className={`transition-colors ${
+                              isLight ? 'hover:bg-[#FFF8F3]' : 'hover:bg-[#1D1613]'
+                            }`}>
+                              <td className="px-4 py-3.5 font-bold">
+                                <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full ${isZero ? 'bg-red-500' : 'bg-amber-500'}`} />
+                                  <div>
+                                    <p className={`font-bold ${isLight ? 'text-[#140F0D]' : 'text-white'}`}>
+                                      {item.product_name}
+                                    </p>
+                                    <span className={`text-[10px] font-normal ${isLight ? 'text-[#66564B]' : 'text-stone-400'}`}>
+                                      Satuan: {item.satuan}
+                                    </span>
+                                  </div>
+                                </div>
+                              </td>
+                              {user?.role === 'ADMIN_PUSAT' && (
+                                <td className={`px-4 py-3.5 font-medium ${isLight ? 'text-[#4A3E36]' : 'text-stone-300'}`}>
+                                  {item.outlet_name}
+                                </td>
+                              )}
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${
+                                  isZero
+                                    ? isLight ? 'bg-rose-50 text-rose-700 border border-rose-200' : 'bg-[#EC1F27]/20 text-[#EC1F27] border border-[#EC1F27]/30'
+                                    : isLight ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                                }`}>
+                                  {item.qty_current} {item.satuan}
+                                </span>
+                              </td>
+                              <td className={`px-4 py-3.5 text-center font-bold ${isLight ? 'text-[#4A3E36]' : 'text-stone-300'}`}>
+                                {item.min_qty} {item.satuan}
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                <span className={`px-2.5 py-1 rounded-lg font-black text-xs ${
+                                  isLight
+                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                    : 'bg-red-950/40 text-red-300 border border-red-800/40'
+                                }`}>
+                                  Kurang {item.selisih} {item.satuan}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-center">
+                                {isZero ? (
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
+                                    isLight
+                                      ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                      : 'bg-[#EC1F27]/20 text-[#EC1F27] border border-[#EC1F27]/40'
+                                  }`}>
+                                    ● Habis Total
+                                  </span>
+                                ) : (
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1 ${
+                                    isLight
+                                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                                      : 'bg-[#FFCE00]/20 text-[#FFCE00] border border-[#FFCE00]/40'
+                                  }`}>
+                                    ▲ Stok Kritis
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                {user?.role === 'STAF_CABANG' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setIsLowStockModalOpen(false);
+                                      navigate('/permintaan', {
+                                        state: {
+                                          openAddModal: true,
+                                          product_id: item.product_id,
+                                          qty_needed: item.selisih > 0 ? item.selisih : item.min_qty
+                                        }
+                                      });
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#F9610D] to-[#BA4F18] text-white font-bold text-[11px] hover:brightness-110 shadow-sm transition-all cursor-pointer"
+                                  >
+                                    <Plus size={13} />
+                                    Minta Restock
+                                  </button>
+                                ) : (
+                                  <Link
+                                    to="/par-stock"
+                                    onClick={() => setIsLowStockModalOpen(false)}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-[11px] transition-all ${
+                                      isLight
+                                        ? 'bg-[#F9F5F0] hover:bg-[#F0E8DE] border border-[#D4C5B5] text-[#241B16]'
+                                        : 'bg-[#241C18] hover:bg-[#2E231E] border border-stone-700/60 text-stone-200'
+                                    }`}
+                                  >
+                                    Atur Par
+                                  </Link>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`p-4 sm:p-5 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0 transition-colors ${
+              isLight
+                ? 'bg-[#F9F5F0] border-[#E8DED3]'
+                : 'bg-[#140F0D] border-[#241C18]'
+            }`}>
+              <div className={`flex items-center gap-2 text-xs ${isLight ? 'text-[#66564B]' : 'text-stone-400'}`}>
+                <span className="text-[#F9610D] font-bold">💡 Tip Operasional:</span>
+                <span>Klik tombol <b>Minta Restock</b> untuk membuat tiket permintaan barang ke Gudang / Central Kitchen (CK).</span>
+              </div>
+
+              <div className="flex items-center gap-2.5 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setIsLowStockModalOpen(false)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isLight
+                      ? 'bg-white hover:bg-[#F0E8DE] border border-[#D4C5B5] text-[#241B16]'
+                      : 'bg-[#221B17] hover:bg-[#2B221D] border border-stone-700 text-stone-300 hover:text-white'
+                  }`}
+                >
+                  Tutup
+                </button>
+
+                {user?.role === 'STAF_CABANG' ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLowStockModalOpen(false);
+                      navigate('/permintaan', { state: { openAddModal: true } });
+                    }}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#F9610D] to-[#BA4F18] text-white text-xs font-bold hover:brightness-110 shadow-lg shadow-[#F9610D]/20 transition-all cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    Ajukan Permintaan Barang
+                  </button>
+                ) : (
+                  <Link
+                    to="/par-stock"
+                    onClick={() => setIsLowStockModalOpen(false)}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#F9610D] to-[#BA4F18] text-white text-xs font-bold hover:brightness-110 shadow-lg shadow-[#F9610D]/20 transition-all"
+                  >
+                    <ExternalLink size={14} />
+                    Buka Pengaturan Par Stock
+                  </Link>
+                )}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X, AlertTriangle, Check, Printer } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
@@ -8,6 +9,7 @@ import Pagination from '../components/Pagination';
 
 const Permintaan = () => {
   const { user } = useAuthStore();
+  const location = useLocation();
   const [tickets, setTickets] = useState([]);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +77,17 @@ const Permintaan = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [filter, searchQuery]);
+
+  useEffect(() => {
+    if (location.state?.openAddModal) {
+      setFormData({
+        product_id: location.state.product_id ? String(location.state.product_id) : '',
+        qty_requested: location.state.qty_needed ? String(location.state.qty_needed) : ''
+      });
+      setIsModalOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const openEmergencyModal = () => {
     setEmergencyData({ outlet_id: '', product_id: '', qty: '', password: '' });

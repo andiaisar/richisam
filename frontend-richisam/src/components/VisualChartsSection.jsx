@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import { 
   LineChart as LineChartIcon, PieChart as PieChartIcon, 
-  BarChart3, ArrowUpDown, RefreshCw, Sparkles, Filter, Store, Calendar
+  BarChart3, ArrowUpDown, RefreshCw, Filter, Store, Calendar
 } from 'lucide-react';
 
 // Custom Tooltip Elegan (Luxury Dark Theme)
@@ -86,18 +86,13 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
       {/* Header & Filter Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#1A1412] p-5 sm:p-6 rounded-3xl border border-[#2D241E] shadow-xl">
         <div>
-          <div className="flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
             <span className="p-1.5 rounded-lg bg-[#F9610D]/20 text-[#F9610D] border border-[#F9610D]/30">
-              <LineChartIcon size={16} />
+              <LineChartIcon size={18} />
             </span>
-            <span className="text-xs font-bold uppercase tracking-wider text-[#FFCE00]">
-              Pilar Visual Analytics
-            </span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black text-white mt-1.5 tracking-tight">
             {title}
           </h2>
-          <p className="text-xs text-stone-400 mt-0.5">
+          <p className="text-xs text-stone-400 mt-1">
             {subtitle}
           </p>
         </div>
@@ -151,8 +146,8 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#130E0C] border border-[#2D241E] text-[10px] font-bold text-stone-300">
-                  <Sparkles size={11} className="text-[#FFCE00]" />
-                  <span>Realtime Feed</span>
+                  <Calendar size={11} className="text-[#FFCE00]" />
+                  <span>Harian</span>
                 </div>
               </div>
 

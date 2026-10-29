@@ -186,7 +186,7 @@ export default function Register() {
               onFocus={focusIn}
               onBlur={focusOut}
             >
-              <option value="">— Tidak ditugaskan —</option>
+              <option value="">-- Tidak ditugaskan --</option>
               {cabangList.map(c => (
                 <option key={c.id_cabang} value={c.id_cabang}>{c.nama_cabang}</option>
               ))}

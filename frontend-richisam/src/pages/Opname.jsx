@@ -3,7 +3,7 @@ import axiosClient from '../api/axiosClient';
 import { 
   ClipboardCheck, Search, Plus, RefreshCw, FileText, CheckCircle, 
   AlertTriangle, X, Lock, Calculator, TrendingDown, TrendingUp, 
-  ArrowLeft, Printer, ShieldAlert, Sparkles, Store, Calendar
+  ArrowLeft, Printer, ShieldAlert, Store, Calendar
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -341,7 +341,7 @@ const Opname = () => {
 
         {!isFinal && canFinalize && (
           <div className="bg-blue-950/25 border border-blue-500/30 rounded-2xl p-4 text-xs text-blue-200 flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
             <div>
               <span className="font-bold text-blue-300 block mb-0.5">Otoritas Validasi & Finalisasi (Admin Pusat / Owner)</span>
               Anda memiliki wewenang untuk memeriksa hasil hitungan fisik lapangan dan alasan selisih yang dicatat staf. Klik <strong>"Finalisasi Opname"</strong> untuk mengunci dokumen secara permanen dan menerapkan penyesuaian stok sistem (Stock Adjustment).
@@ -359,9 +359,6 @@ const Opname = () => {
               <div>
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   Kalkulator Kerugian Selisih Fisik (Food Waste & Shrinkage)
-                  <span className="px-2 py-0.5 rounded-full bg-red-950/60 border border-red-500/30 text-[10px] font-mono text-red-400 uppercase">
-                    Pilar 2
-                  </span>
                 </h3>
                 <p className="text-xs text-stone-400 mt-0.5">
                   Perhitungan valuasi rupiah dari selisih stok fisik vs stok sistem secara realtime

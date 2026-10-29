@@ -134,7 +134,7 @@ const AuditTrail = () => {
       case 'SHIFT_CLOSE':
         return 'bg-[#F9610D]/20 text-[#F9610D] border-[#F9610D]/40';
       case 'SHIFT_UNLOCK':
-        return 'bg-purple-500/20 text-purple-300 border-purple-500/40 animate-pulse';
+        return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
       case 'LOGIN':
         return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
       default:
@@ -147,16 +147,7 @@ const AuditTrail = () => {
       {/* ── HEADER ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <span className="px-2.5 py-0.5 rounded-full bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30 text-[10px] font-bold uppercase tracking-wider">
-              Pilar Integritas & Keamanan
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#1A1412] border border-[#2D241E] text-xs font-medium text-stone-300">
-              <ShieldAlert size={13} className="text-[#FFCE00]" />
-              Immutable Audit Log
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white mt-2 tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
             <ShieldAlert className="text-[#F9610D]" size={28} />
             Audit Trail & Log Aktivitas Pengguna
           </h1>

@@ -147,36 +147,34 @@ CREATE TABLE IF NOT EXISTS product_batches (
 -- 10. Tabel branch_transfers (Transfer Stok Antar Cabang)
 CREATE TABLE IF NOT EXISTS branch_transfers (
     id SERIAL PRIMARY KEY,
-    kode_transfer VARCHAR(50) UNIQUE NOT NULL,
+    kode_transfer VARCHAR(50),
     from_outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
     to_outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     qty INTEGER NOT NULL,
     catatan TEXT,
-    status VARCHAR(30) DEFAULT 'PENDING',
-    requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    received_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    received_at TIMESTAMP
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 11. Tabel shift_closings (Tutup Buku Shift)
 CREATE TABLE IF NOT EXISTS shift_closings (
     id SERIAL PRIMARY KEY,
     outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
-    tanggal DATE NOT NULL,
-    shift VARCHAR(20) NOT NULL,
+    shift_name VARCHAR(20) NOT NULL,
+    shift_date DATE NOT NULL,
     status VARCHAR(20) DEFAULT 'CLOSED',
-    total_items_mutated INTEGER DEFAULT 0,
-    total_qty_masuk NUMERIC(12,2) DEFAULT 0,
-    total_qty_keluar NUMERIC(12,2) DEFAULT 0,
-    total_nilai_keluar NUMERIC(15,2) DEFAULT 0,
-    catatan TEXT,
-    closed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    closed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    unlocked_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    notes TEXT,
+    closed_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    closed_by_name VARCHAR(100),
+    unlocked_by_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     unlocked_at TIMESTAMP,
-    UNIQUE(outlet_id, tanggal, shift)
+    total_items_in INTEGER DEFAULT 0,
+    total_items_out INTEGER DEFAULT 0,
+    total_defect_cases INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(outlet_id, shift_date, shift_name)
 );
 
 -- 12. Tabel audit_logs (Jejak Audit Sistem)
@@ -184,8 +182,9 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     user_name VARCHAR(100),
-    user_role VARCHAR(50),
+    role VARCHAR(50),
     outlet_id INTEGER REFERENCES outlets(id) ON DELETE SET NULL,
+    outlet_name VARCHAR(100),
     module VARCHAR(50) NOT NULL,
     action VARCHAR(50) NOT NULL,
     description TEXT NOT NULL,

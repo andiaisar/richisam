@@ -121,9 +121,9 @@ export default function DashboardCabang() {
       <section>
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">🚚 Penerimaan Barang</h2>
+            <h2 className="text-xl font-bold text-gray-800">Penerimaan Barang</h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              Pesanan <strong>Diproses</strong> — konfirmasi setelah barang dihitung secara fisik
+              Pesanan <strong>Diproses</strong>: konfirmasi setelah barang dihitung secara fisik
             </p>
           </div>
           <Button size="sm" color="light" onClick={fetchPesanan}>

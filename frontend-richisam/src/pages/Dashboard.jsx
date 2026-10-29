@@ -93,29 +93,16 @@ const Dashboard = () => {
   return (
     <div className="space-y-8 animate-fade-in max-w-7xl pb-10 text-white">
 
-      {/* ── SEKSI 1: TOP HERO METRIC BAR (Model Dashboard Referensi) ── */}
       <section className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
-        {/* Ambient glow lembut di sudut */}
-        <div className="pointer-events-none absolute -top-24 -right-24 w-80 h-80 rounded-full bg-[#F9610D]/10 blur-[100px]" />
-
         {/* Header Bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#241C18]">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30 text-[10px] font-bold uppercase tracking-wider">
-                Portal {roleDisplay}
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#130E0C] border border-[#2D241E] text-xs font-medium text-stone-300">
-                <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
-                </span>
-                Sistem Terhubung
-              </span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white mt-2 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               Dashboard Ikhtisar
             </h1>
+            <p className="text-xs sm:text-sm text-stone-400 mt-1">
+              Portal {roleDisplay} • Ringkasan stok, distribusi, dan operasional cabang
+            </p>
           </div>
 
           <Link
@@ -127,7 +114,6 @@ const Dashboard = () => {
           </Link>
         </div>
 
-        {/* Angka Agregat Utama (Mirip Total Balance, Crypto, Fiat pada gambar referensi) */}
         <div className="pt-6 grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-xs font-semibold text-stone-400">Total Produk</p>
@@ -171,36 +157,6 @@ const Dashboard = () => {
             </p>
           </div>
         </div>
-
-        {/* Multi-Segment Color Progress Bar (Menyerupai baris warna-warni pada referensi) */}
-        <div className="mt-6 pt-2">
-          <div className="w-full h-2 rounded-full overflow-hidden flex bg-[#120E0C]">
-            <div className="h-full bg-[#F9610D]" style={{ width: '45%' }} title="Produk Aktif" />
-            <div className="h-full bg-[#FFCE00]" style={{ width: '25%' }} title="Cabang Terhubung" />
-            <div className="h-full bg-emerald-500" style={{ width: '20%' }} title="Stok Aman" />
-            <div className="h-full bg-[#EC1F27]" style={{ width: '10%' }} title="Perlu Tindakan" />
-          </div>
-
-          {/* Sub-Legend Bar */}
-          <div className="flex flex-wrap items-center gap-4 sm:gap-8 mt-3 text-[11px] font-medium text-stone-400">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#F9610D]" />
-              Katalog Produk
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#FFCE00]" />
-              Jaringan Mitra
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Tingkat Kepatuhan Par-Stock
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#EC1F27]" />
-              Stok di Bawah Batas
-            </span>
-          </div>
-        </div>
       </section>
 
       {/* ── RADAR KADALUARSA (FEFO ALERT BANNER) ── */}
@@ -208,14 +164,13 @@ const Dashboard = () => {
         <div className="banner-fefo-alert p-5 rounded-3xl bg-gradient-to-r from-red-950/40 via-[#1A1412] to-amber-950/30 border border-red-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
           <div className="flex items-start sm:items-center gap-3.5">
             <div className="banner-fefo-icon h-10 w-10 rounded-2xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0 mt-0.5 sm:mt-0">
-              <CalendarClock className="w-5 h-5 animate-pulse" />
+              <CalendarClock className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="banner-fefo-badge text-xs font-black uppercase tracking-wider text-red-400 bg-red-950/70 border border-red-500/30 px-2 py-0.5 rounded-md">
                   Peringatan FEFO Dapur
                 </span>
-                <span className="banner-fefo-subtitle text-xs text-stone-400">Pilar Operasional #2</span>
               </div>
               <p className="banner-fefo-title text-sm font-bold text-white mt-1">
                 Terdapat {batchSummary?.metrics?.total_expired || 0} batch kadaluarsa dan {batchSummary?.metrics?.total_critical || 0} batch kritis (H ≤ 3 hari)!
@@ -235,20 +190,15 @@ const Dashboard = () => {
         </div>
       )}
 
-      {/* ── SEKSI 2: KARTU METRIK KUNCI (Model 'Wallets' pada Referensi) ── */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
             <span>Metrik & Status Operasional</span>
           </h2>
-          <span className="text-xs text-stone-400 font-medium">Sinkronisasi Realtime</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Kartu 1: Highlighted Focus Card (Menyerupai Kartu Ungu Ethereum di Referensi) */}
-          <div className="card-par-stock rounded-2xl sm:rounded-3xl p-5 bg-gradient-to-br from-[#BA4F18] via-[#A03E15] to-[#782810] text-white shadow-xl shadow-[#F9610D]/20 border border-white/10 relative overflow-hidden flex flex-col justify-between group transition-all duration-300 hover:scale-[1.02]">
-            <div className="pointer-events-none absolute -bottom-10 -right-10 w-36 h-36 rounded-full bg-[#FFCE00]/25 blur-2xl" />
-
+          <div className="card-par-stock rounded-2xl sm:rounded-3xl p-5 bg-gradient-to-br from-[#BA4F18] via-[#A03E15] to-[#782810] text-white shadow-xl shadow-[#F9610D]/20 border border-white/10 relative overflow-hidden flex flex-col justify-between group transition-all duration-300">
             <div>
               <div className="flex items-center justify-between">
                 <span className="card-par-label text-xs font-bold uppercase tracking-wider text-white/80">Kondisi Par Stock</span>
@@ -269,7 +219,7 @@ const Dashboard = () => {
                 <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center p-1">
                   <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
                 </div>
-                <span className="text-xs font-bold text-white">RichiGuard</span>
+                <span className="text-xs font-bold text-white">Par Stock</span>
               </div>
               <button
                 type="button"
@@ -286,9 +236,6 @@ const Dashboard = () => {
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-stone-400">Katalog Produk</span>
-                <span className="text-[11px] font-bold text-emerald-400 flex items-center gap-1">
-                  +3 aktif
-                </span>
               </div>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3 tracking-tight">
                 {totalProduk}
@@ -403,10 +350,8 @@ const Dashboard = () => {
         </div>
       </section>
 
-      {/* ── SEKSI VISUAL ANALYTICS: GRAFIK & TREN OPERASIONAL (Pilar 4) ── */}
       <VisualChartsSection />
 
-      {/* ── SEKSI 3: SUMMARY LISTS & RECENT TRANSACTIONS (Model 'Summary' pada Referensi) ── */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* Kolom Kiri: Peringatan Stok Menipis */}
@@ -538,24 +483,9 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Mini Visual Bar Chart Decorative (Menyerupai chart batang pada kanan-bawah referensi) */}
-          <div className="mt-5 pt-4 border-t border-[#241C18]">
-            <div className="flex items-center justify-between text-xs mb-2">
-              <span className="text-stone-400 font-medium">Distribusi Aktivitas Hari Ini</span>
-              <span className="text-emerald-400 font-bold">+5.4% Efisiensi</span>
-            </div>
-            <div className="h-9 flex items-end gap-1.5 px-2 py-1 bg-[#140F0D] rounded-xl border border-[#241C18]">
-              <span className="flex-1 bg-[#F9610D]/70 rounded-sm h-[40%]" />
-              <span className="flex-1 bg-[#F9610D] rounded-sm h-[65%]" />
-              <span className="flex-1 bg-[#FFCE00] rounded-sm h-[90%]" />
-              <span className="flex-1 bg-[#FFCE00]/70 rounded-sm h-[50%]" />
-              <span className="flex-1 bg-emerald-500 rounded-sm h-[80%]" />
-              <span className="flex-1 bg-emerald-500/70 rounded-sm h-[45%]" />
-              <span className="flex-1 bg-[#F9610D] rounded-sm h-[100%]" />
-              <span className="flex-1 bg-[#FFCE00] rounded-sm h-[60%]" />
-              <span className="flex-1 bg-[#EC1F27] rounded-sm h-[30%]" />
-              <span className="flex-1 bg-emerald-400 rounded-sm h-[75%]" />
-            </div>
+          <div className="mt-5 pt-3 border-t border-[#241C18] flex items-center justify-between text-xs text-stone-400">
+            <span>Distribusi & Logistik Cabang</span>
+            <span className="text-[#F9610D] font-semibold">{recentRequests.length} Tiket Ditampilkan</span>
           </div>
         </div>
       </section>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { FileBarChart, Download, Calendar, Store, Table2, FileSpreadsheet, Sparkles } from 'lucide-react';
+import { FileBarChart, Download, Calendar, Store, Table2, FileSpreadsheet } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -125,14 +125,12 @@ const Laporan = () => {
         
         {/* ── KARTU 1: FORMAT BULANAN MITRA (31 SHEET) ── */}
         <div className="bg-[#1A1412] border border-[#2D241E] hover:border-[#F9610D]/40 rounded-3xl p-6 sm:p-7 shadow-xl relative overflow-hidden flex flex-col justify-between group transition-all">
-          <div className="pointer-events-none absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#F9610D]/10 blur-3xl group-hover:scale-125 transition-transform" />
-          
           <div>
             <div className="flex items-start justify-between mb-5">
               <div>
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="px-2.5 py-0.5 rounded-full bg-[#F9610D]/20 text-[#F9610D] border border-[#F9610D]/35 text-[10px] font-extrabold uppercase tracking-wide flex items-center gap-1">
-                    <Sparkles size={11} /> Rekomendasi Resmi
+                    Format Standar
                   </span>
                 </div>
                 <h3 className="text-lg font-black text-white tracking-tight">Format Spreadsheet Mitra (31 Sheet)</h3>

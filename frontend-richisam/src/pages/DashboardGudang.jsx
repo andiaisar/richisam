@@ -48,7 +48,6 @@ export default function DashboardGudang() {
   return (
     <div className="space-y-6">
 
-      {/* ══ KARTU METRIK — warna eksplisit agar tidak ikut dark mode OS ══ */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Kartu Menunggu */}
         <div style={{
@@ -112,7 +111,6 @@ export default function DashboardGudang() {
         <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm">
           <Table hoverable>
             <TableHead>
-              {/* ✅ TableRow wajib di dalam TableHead */}
               <TableRow>
                 <TableHeadCell>ID Tiket</TableHeadCell>
                 <TableHeadCell>Cabang Pemohon</TableHeadCell>
@@ -124,7 +122,6 @@ export default function DashboardGudang() {
                 </TableHeadCell>
               </TableRow>
             </TableHead>
-            {/* ✅ Hapus prop divideY — tidak dikenal di v0.12 */}
             <TableBody>
               {loading ? (
                 <TableRow>

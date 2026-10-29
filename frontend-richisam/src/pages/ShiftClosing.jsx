@@ -17,7 +17,7 @@ import {
   History,
   FileText,
   RotateCcw,
-  Sparkles,
+  Package,
   Filter,
   Eye,
   CheckCircle,
@@ -273,28 +273,10 @@ const ShiftClosing = () => {
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-12 text-white">
-      {/* ── HEADER TITLE & ROLE BADGE ── */}
+      {/* ── HEADER TITLE ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5 flex-wrap">
-            {isSuperUser ? (
-              <span className="px-3 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                <ShieldCheck size={14} className="text-amber-400" />
-                Mode Supervisor & Otorisasi Manajerial ({user?.role === 'OWNER' ? 'Owner' : 'Admin Pusat'})
-              </span>
-            ) : (
-              <span className="px-3 py-1 rounded-full bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30 text-[11px] font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                <Store size={14} className="text-[#F9610D]" />
-                Mode Operasional Staf Cabang
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1A1412] border border-[#2D241E] text-xs font-medium text-stone-300">
-              <Lock size={12} className="text-emerald-400" />
-              Period Immutability Active
-            </span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-black text-white mt-2 tracking-tight flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
             <Lock className="text-[#F9610D]" size={28} />
             Tutup Buku Shift & Rekonsiliasi Mutasi
           </h1>
@@ -343,7 +325,7 @@ const ShiftClosing = () => {
                       Monitoring Kepatuhan Shift Seluruh Cabang
                     </h2>
                     <p className="text-xs text-stone-400">
-                      Sesi: <strong className="text-white">{selectedDate} (Shift {selectedShift})</strong> — Klik cabang untuk meninjau detail atau buka kunci.
+                      Sesi: <strong className="text-white">{selectedDate} (Shift {selectedShift})</strong> • Klik cabang untuk meninjau detail atau buka kunci.
                     </p>
                   </div>
                 </div>
@@ -393,7 +375,7 @@ const ShiftClosing = () => {
                                 isCardLocked
                                   ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                                   : isCardUnlocked
-                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                   : 'bg-stone-500/15 text-stone-400 border-stone-500/30'
                               }`}
                             >
@@ -459,8 +441,6 @@ const ShiftClosing = () => {
 
           {/* ── FILTER CONTROL PANEL ── */}
           <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
-            <div className="pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full bg-[#F9610D]/10 blur-[80px]" />
-
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Cabang */}
               <div>
@@ -575,7 +555,7 @@ const ShiftClosing = () => {
                 /* STATUS UNLOCKED (SEDANG DIREVISI) */
                 <div className="rounded-3xl p-6 bg-gradient-to-r from-amber-950/60 via-[#1A1412] to-[#120E0C] border border-amber-500/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0 animate-pulse">
+                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
                       <Unlock size={24} />
                     </div>
                     <div>
@@ -671,7 +651,7 @@ const ShiftClosing = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-stone-400">Varian Bahan</span>
                     <div className="w-7 h-7 rounded-lg bg-[#FFCE00]/10 border border-[#FFCE00]/20 flex items-center justify-center text-[#FFCE00]">
-                      <Sparkles size={16} />
+                      <Package size={16} />
                     </div>
                   </div>
                   <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3">
@@ -913,7 +893,7 @@ const ShiftClosing = () => {
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
                           h.status === 'CLOSED'
                             ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                            : 'bg-amber-500/20 text-amber-300 border-amber-500/40 animate-pulse'
+                            : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                         }`}>
                           {h.status === 'CLOSED' ? 'LOCKED' : 'UNLOCKED (Revisi)'}
                         </span>

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { 
   CalendarClock, AlertTriangle, AlertCircle, CheckCircle2, Plus, 
-  Search, RefreshCw, Trash2, Filter, ShieldAlert, Sparkles, X, ChevronRight, Store
+  Search, RefreshCw, Trash2, Filter, ShieldAlert, X, ChevronRight, Store
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -219,7 +219,7 @@ const Kadaluarsa = () => {
       <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-[#1E1714] via-[#241B17] to-[#1E1714] border border-[#3D2D24] flex items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <div className="h-10 w-10 rounded-2xl bg-[#FFCE00]/10 border border-[#FFCE00]/30 flex items-center justify-center text-[#FFCE00] shrink-0">
-            <Sparkles className="w-5 h-5" />
+            <CalendarClock className="w-5 h-5" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
@@ -391,7 +391,7 @@ const Kadaluarsa = () => {
                   } else if (days === 0) {
                     countdownText = 'Hari Ini!';
                     statusBadge = (
-                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase bg-red-950/60 border border-red-500/40 text-red-400 animate-pulse">
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase bg-red-950/60 border border-red-500/40 text-red-400">
                         HARI INI
                       </span>
                     );

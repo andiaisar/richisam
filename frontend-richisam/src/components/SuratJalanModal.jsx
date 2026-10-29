@@ -46,7 +46,6 @@ const SuratJalanModal = ({ isOpen, onClose, data }) => {
         {/* Top Control Bar (Hidden when printed) */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#140F0D] border-b border-[#2D241E] print:hidden">
           <div className="flex items-center gap-2">
-            <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-pulse"></span>
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-400">Preview Dokumen Resmi Surat Jalan</span>
           </div>
           <div className="flex items-center gap-3">

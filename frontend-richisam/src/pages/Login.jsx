@@ -53,22 +53,14 @@ const Login = () => {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#120E0C] p-4 sm:p-6 lg:p-10 font-sans selection:bg-[#F9610D] selection:text-white relative overflow-hidden">
-      {/* Background Soft Glow Ambient (Orange & Merah Halus) */}
-      <div className="pointer-events-none absolute -top-40 -left-40 w-[36rem] h-[36rem] rounded-full bg-[#F9610D]/10 blur-[140px]" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 w-[36rem] h-[36rem] rounded-full bg-[#EC1F27]/10 blur-[150px]" />
-
       {/* ── Main Container: Split Layout ── */}
       <div className="w-full max-w-6xl min-h-[640px] lg:min-h-[700px] flex flex-col lg:flex-row rounded-[28px] sm:rounded-[36px] overflow-hidden shadow-2xl shadow-black/80 border border-white/10 relative z-10">
 
-        {/* ── PANEL KIRI: Showcase Logo & Brand Visual Mitra (Soft Sunset Terracotta-Crimson) ── */}
+        {/* ── PANEL KIRI: Showcase Logo & Brand Visual Mitra ── */}
         <section
           aria-label="Branding Richisam"
           className="w-full lg:w-1/2 flex flex-col justify-between p-8 sm:p-12 lg:p-14 relative overflow-hidden bg-gradient-to-br from-[#BA4F18] via-[#9C3814] to-[#6E1F0F] text-white"
         >
-          {/* Soft ambient radial lighting yang diolah dari Kuning #FFCE00 & Orange #F9610D */}
-          <div className="pointer-events-none absolute -top-20 -left-20 w-80 h-80 rounded-full bg-[#FFCE00]/20 blur-[100px]" />
-          <div className="pointer-events-none absolute bottom-0 right-0 w-96 h-96 rounded-full bg-[#F9610D]/25 blur-[120px]" />
-          {/* Subtle noise/texture overlay agar warnanya matte dan lembut */}
           <div className="pointer-events-none absolute inset-0 bg-black/10 mix-blend-overlay" />
 
           {/* Top-Left: Brand Typography & Slogan Mitra */}
@@ -86,20 +78,15 @@ const Login = () => {
             </span>
           </div>
 
-          {/* Center: Showcase Logo Richisam (Floating 3D dengan glow lembut) */}
+          {/* Center: Showcase Logo Richisam */}
           <div className="relative z-10 my-10 lg:my-0 flex flex-col items-center justify-center">
-            {/* Ambient Radial Glow lembut di belakang logo */}
-            <div className="pointer-events-none absolute w-60 h-60 sm:w-72 sm:h-72 rounded-full bg-gradient-to-tr from-[#FFCE00]/30 via-[#F9610D]/25 to-transparent blur-3xl animate-pulse" />
-
-            {/* Container Logo dengan efek elevasi 3D & bayangan realistis */}
-            <div className="relative group transition-transform duration-500 hover:scale-105">
+            <div className="relative group transition-transform duration-500">
               <img
                 src="/logo.png"
                 alt="Logo Resmi Richisam Chicken"
-                className="w-56 h-56 sm:w-64 sm:h-64 lg:w-72 lg:h-72 xl:w-80 xl:h-80 object-contain drop-shadow-[0_22px_32px_rgba(0,0,0,0.55)] transition-all duration-500 group-hover:drop-shadow-[0_28px_40px_rgba(0,0,0,0.65)]"
+                className="w-56 h-56 sm:w-64 sm:h-64 lg:w-72 lg:h-72 xl:w-80 xl:h-80 object-contain drop-shadow-[0_22px_32px_rgba(0,0,0,0.55)]"
               />
-              {/* Soft ellipse shadow di bawah logo agar terkesan mengambang/floating */}
-              <div className="mx-auto -mt-3 w-40 sm:w-48 h-6 bg-black/45 blur-md rounded-full pointer-events-none group-hover:w-36 group-hover:opacity-80 transition-all duration-500" />
+              <div className="mx-auto -mt-3 w-40 sm:w-48 h-6 bg-black/45 blur-md rounded-full pointer-events-none" />
             </div>
           </div>
 

@@ -55,7 +55,7 @@ class NotificationService {
       `;
       const res = await client.query(query, [outlet_id, product_id]);
       
-      if (res.rows.length > 0) {
+      if (res && res.rows && res.rows.length > 0) {
         const { qty_current, min_qty, product_name, outlet_name } = res.rows[0];
         
         if (qty_current <= min_qty) {

@@ -186,7 +186,7 @@ export default function DashboardLayout() {
           <div className="hidden md:flex" style={{ alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '3px', height: '14px', borderRadius: '2px', background: 'var(--color-richisam-orange)', opacity: 0.8 }} />
             <span style={{ fontSize: '13px', fontWeight: '600', color: '#2D1810', letterSpacing: '-0.1px' }}>
-              Sistem Inventaris Terpusat — Richisam
+              Sistem Inventaris Terpusat • Richisam
             </span>
           </div>
 

@@ -30,7 +30,7 @@ class AuditService {
            WHERE u.id = $1`,
           [userId]
         );
-        if (uRes.rows.length > 0) {
+        if (uRes && uRes.rows && uRes.rows.length > 0) {
           finalUserName = finalUserName || uRes.rows[0].nama;
           finalRole = finalRole || uRes.rows[0].role;
           finalOutletName = finalOutletName || uRes.rows[0].outlet_nama;
@@ -40,7 +40,7 @@ class AuditService {
       // Jika outletId ada tapi outletName belum ada
       if (outletId && !finalOutletName) {
         const oRes = await pool.query('SELECT nama FROM outlets WHERE id = $1', [outletId]);
-        if (oRes.rows.length > 0) {
+        if (oRes && oRes.rows && oRes.rows.length > 0) {
           finalOutletName = oRes.rows[0].nama;
         }
       }

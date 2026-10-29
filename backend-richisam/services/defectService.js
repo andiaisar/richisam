@@ -88,7 +88,11 @@ class DefectService {
 
          await client.query(
            `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'MANUAL')`,
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'MANUAL')
+            ON CONFLICT (product_id, outlet_id, tanggal, shift)
+            DO UPDATE SET
+              keluar = stock_mutations.keluar + EXCLUDED.keluar,
+              sak = EXCLUDED.sak`,
            [defect.product_id, defect.outlet_id, tanggal, shift, saw, 0, defect.qty, sak, req_user.id]
          );
 

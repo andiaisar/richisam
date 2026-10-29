@@ -3,12 +3,10 @@ import { Printer, X, ClipboardCheck, Store, Calendar, FileText, CheckCircle2, Sh
 import QRCode from 'qrcode';
 
 const BeritaAcaraOpnameModal = ({ isOpen, onClose, opname, items = [] }) => {
-  if (!isOpen || !opname) return null;
-
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
 
   useEffect(() => {
-    if (opname) {
+    if (isOpen && opname) {
       const payload = `RICHISTOCK-VERIFIED|OPNAME-ID:${opname.id}|CODE:${opname.kode_opname || 'OPN-' + opname.id}|OUTLET:${opname.outlet_name || 'PUSAT'}|DATE:${opname.tanggal}|VALID:TRUE`;
       QRCode.toDataURL(payload, {
         width: 140,
@@ -21,7 +19,9 @@ const BeritaAcaraOpnameModal = ({ isOpen, onClose, opname, items = [] }) => {
         .then(url => setQrCodeDataUrl(url))
         .catch(err => console.error('Failed to generate QR', err));
     }
-  }, [opname]);
+  }, [isOpen, opname]);
+
+  if (!isOpen || !opname) return null;
 
   const handlePrint = () => {
     window.scrollTo(0, 0);

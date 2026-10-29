@@ -57,6 +57,12 @@ const emergencySchema = z.object({
 
 exports.emergencyRequest = async (req, res) => {
   try {
+    const isCK = req.user && (req.user.role === 'ADMIN_GUDANG' || (req.user.role === 'STAF_CABANG' && Number(req.user.outlet_id) === 1));
+    const isPusatOrOwner = req.user && (req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER');
+    if (!isCK && !isPusatOrOwner) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin Pusat, Owner, atau Staf Central Kitchen yang dapat mencatat pengambilan darurat (Cito).' });
+    }
+
     const parsed = emergencySchema.safeParse(req.body);
     if (!parsed.success) {
       console.error('Zod Error Payload:', req.body);

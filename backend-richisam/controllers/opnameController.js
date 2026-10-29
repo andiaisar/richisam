@@ -20,6 +20,13 @@ exports.updateOpnameItems = async (req, res) => {
     if (!items) {
       return res.status(400).json({ success: false, message: 'items diperlukan' });
     }
+    const existing = await OpnameService.getOpnameById(id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Opname tidak ditemukan' });
+    }
+    if (req.user.role === 'STAF_CABANG' && Number(existing.outlet_id) !== Number(req.user.outlet_id)) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Anda tidak dapat mengubah opname cabang lain' });
+    }
     await OpnameService.updateOpnameItems(id, items, asset_items || []);
     res.json({ success: true, message: 'Item opname berhasil disimpan' });
   } catch (e) {
@@ -53,6 +60,9 @@ exports.getOpnameById = async (req, res) => {
   try {
     const result = await OpnameService.getOpnameById(req.params.id);
     if (!result) return res.status(404).json({ success: false, message: 'Not found' });
+    if (req.user.role === 'STAF_CABANG' && Number(result.outlet_id) !== Number(req.user.outlet_id)) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Opname milik cabang lain' });
+    }
     res.json({ success: true, data: result });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });

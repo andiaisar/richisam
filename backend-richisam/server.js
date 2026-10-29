@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const path = require('path');
 require('dotenv').config();
 const helmet = require('helmet');
@@ -18,10 +17,9 @@ initCronJobs();
 app.use(helmet());
 app.use(helmet.crossOriginResourcePolicy({ policy: "cross-origin" })); // Allow serving static images across origins
 app.use(morgan('dev'));
-app.use(express.json());
 app.use(cors());
-app.use(bodyParser.json());           // Parsing JSON body
-app.use(bodyParser.urlencoded({ extended: true })); // Parsing form body
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Menyajikan folder public agar file yang diupload (mis. foto defect) bisa diakses via URL
 app.use(express.static(path.join(__dirname, 'public')));
@@ -73,7 +71,15 @@ app.get('/', (req, res) => {
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
+  if (err.name === 'MulterError' || (err.message && err.message.includes('file gambar'))) {
+    return res.status(400).json({
+      success: false,
+      message: err.code === 'LIMIT_FILE_SIZE'
+        ? 'Ukuran file melebihi batas maksimal 2MB'
+        : err.message
+    });
+  }
+  res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Terjadi kesalahan internal pada server'
   });

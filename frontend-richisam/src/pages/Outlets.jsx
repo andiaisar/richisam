@@ -1,7 +1,7 @@
 import useAuthStore from '../store/useAuthStore';
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { Store, Search, Plus, RefreshCw, FileText, Edit2 } from 'lucide-react';
+import { Store, Search, Plus, RefreshCw, FileText, Edit2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Outlets = () => {
@@ -9,13 +9,23 @@ const Outlets = () => {
   const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState('add');
+  const [editingOutlet, setEditingOutlet] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    nama: '',
+    tipe: 'CABANG',
+    alamat: '',
+    is_active: true
+  });
 
   const fetchOutlets = async () => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/outlets');
       setOutlets(res?.data?.data || res?.data || []);
-    } catch (e) {
+    } catch {
       toast.error('Gagal mengambil data cabang');
     } finally {
       setLoading(false);
@@ -25,6 +35,48 @@ const Outlets = () => {
   useEffect(() => {
     fetchOutlets();
   }, []);
+
+  const handleOpenAdd = () => {
+    setEditingOutlet(null);
+    setFormData({ nama: '', tipe: 'CABANG', alamat: '', is_active: true });
+    setModalMode('add');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (outlet) => {
+    setEditingOutlet(outlet);
+    setFormData({
+      nama: outlet.nama || '',
+      tipe: outlet.tipe || 'CABANG',
+      alamat: outlet.alamat || '',
+      is_active: outlet.is_active !== false
+    });
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+
+  const handleSaveOutlet = async (e) => {
+    e.preventDefault();
+    if (!formData.nama.trim()) {
+      return toast.error('Nama outlet wajib diisi');
+    }
+    setSubmitting(true);
+    try {
+      if (modalMode === 'add') {
+        await axiosClient.post('/outlets', formData);
+        toast.success('Outlet baru berhasil ditambahkan');
+      } else if (editingOutlet) {
+        await axiosClient.put(`/outlets/${editingOutlet.id}`, formData);
+        toast.success('Data outlet berhasil diperbarui');
+      }
+      setIsModalOpen(false);
+      fetchOutlets();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal menyimpan data outlet');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const filteredOutlets = outlets.filter(o => {
     if (!searchQuery) return true;
@@ -50,14 +102,10 @@ const Outlets = () => {
           >
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
-          {user?.role !== 'OWNER' && (
+          {(user?.role === 'ADMIN_PUSAT' || user?.role === 'OWNER') && (
             <button 
-              onClick={() => {
-                setFormData({ nama: '', alamat: '', is_active: true });
-                setModalMode('add');
-                setIsModalOpen(true);
-              }}
-              className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm"
+              onClick={handleOpenAdd}
+              className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer"
             >
               <Plus size={18} />
               Tambah Outlet
@@ -120,7 +168,10 @@ const Outlets = () => {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="btn-action-orange inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs">
+                      <button
+                        onClick={() => handleOpenEdit(o)}
+                        className="btn-action-orange inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs"
+                      >
                         <Edit2 size={13} />
                         <span>Edit</span>
                       </button>
@@ -136,6 +187,89 @@ const Outlets = () => {
           </table>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-line rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-line bg-cream/30">
+              <h2 className="text-lg font-bold text-ink">
+                {modalMode === 'add' ? 'Tambah Outlet Baru' : 'Edit Data Outlet'}
+              </h2>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 rounded-lg text-muted hover:text-ink hover:bg-cream transition-colors cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveOutlet} className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
+                  Nama Outlet / Unit
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.nama}
+                  onChange={(e) => setFormData({ ...formData, nama: e.target.value })}
+                  placeholder="Contoh: Richisam Cabang Panakkukang"
+                  className="w-full px-3.5 py-2.5 bg-white border border-line rounded-xl text-sm text-ink focus:outline-none focus:border-richisam-orange"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
+                  Tipe Unit
+                </label>
+                <select
+                  value={formData.tipe}
+                  onChange={(e) => setFormData({ ...formData, tipe: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-white border border-line rounded-xl text-sm text-ink focus:outline-none focus:border-richisam-orange"
+                >
+                  <option value="CABANG">OUTLET CABANG</option>
+                  <option value="PUSAT">CENTRAL KITCHEN (PUSAT)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-muted uppercase tracking-wider mb-1.5">
+                  Alamat Lengkap
+                </label>
+                <textarea
+                  rows={3}
+                  value={formData.alamat}
+                  onChange={(e) => setFormData({ ...formData, alamat: e.target.value })}
+                  placeholder="Masukkan alamat lengkap outlet..."
+                  className="w-full px-3.5 py-2.5 bg-white border border-line rounded-xl text-sm text-ink focus:outline-none focus:border-richisam-orange"
+                />
+              </div>
+              <div className="flex items-center justify-between pt-1">
+                <label className="text-sm font-semibold text-ink">Status Operasional Aktif (Buka)</label>
+                <input
+                  type="checkbox"
+                  checked={formData.is_active}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  className="h-4 w-4 accent-richisam-orange rounded cursor-pointer"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-line">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-line text-sm font-semibold text-muted hover:text-ink transition-colors cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-5 py-2 rounded-xl bg-richisam-orange hover:bg-[#d9530a] text-white text-sm font-bold transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {submitting ? 'Menyimpan...' : 'Simpan'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

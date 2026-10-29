@@ -138,7 +138,8 @@ const Mutasi = () => {
       // Optionally fetch again to reflect
       fetchForm();
     } catch (e) {
-      toast.error(e.response?.data?.message || 'Gagal menyimpan mutasi');
+      const firstDetailError = e.response?.data?.errors?.[0]?.message;
+      toast.error(firstDetailError || e.response?.data?.message || 'Gagal menyimpan mutasi');
     } finally {
       setSubmitting(false);
     }

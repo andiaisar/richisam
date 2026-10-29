@@ -8,6 +8,12 @@ class AnalyticsService {
    * Kelas C: ~5% nilai persediaan
    */
   static async getABCAnalysis(outlet_id, start_date, end_date) {
+    const params = [start_date, end_date];
+    let outletFilter = '';
+    if (outlet_id) {
+      params.push(parseInt(outlet_id));
+      outletFilter = `AND m.outlet_id = $${params.length}`;
+    }
     const query = `
       SELECT p.id, p.kode, p.nama, p.harga, p.satuan,
              SUM(m.keluar) as total_keluar,
@@ -15,12 +21,12 @@ class AnalyticsService {
       FROM products p
       JOIN stock_mutations m ON p.id = m.product_id
       WHERE m.tanggal >= $1 AND m.tanggal <= $2
-        ${outlet_id ? `AND m.outlet_id = ${parseInt(outlet_id)}` : ''}
+        ${outletFilter}
       GROUP BY p.id, p.kode, p.nama, p.harga, p.satuan
       HAVING SUM(m.keluar) > 0
       ORDER BY total_nilai DESC
     `;
-    const res = await pool.query(query, [start_date, end_date]);
+    const res = await pool.query(query, params);
     
     const items = res.rows;
     const grandTotal = items.reduce((sum, item) => sum + parseFloat(item.total_nilai), 0);
@@ -67,18 +73,19 @@ class AnalyticsService {
    * Menghitung Peramalan (Forecasting) dengan metode Weighted Moving Average (WMA)
    */
   static async getDemandForecast(outlet_id, product_id, history_days = 7) {
+    const safeDays = Math.max(1, parseInt(history_days) || 7);
     // Ambil data konsumsi harian agregat
     const query = `
       SELECT tanggal, SUM(keluar) as total_keluar
       FROM stock_mutations
       WHERE outlet_id = $1 AND product_id = $2
-        AND tanggal >= CURRENT_DATE - INTERVAL '${history_days} days'
+        AND tanggal >= CURRENT_DATE - ($3 * INTERVAL '1 day')
         AND tanggal <= CURRENT_DATE
       GROUP BY tanggal
       ORDER BY tanggal ASC
     `;
     
-    const res = await pool.query(query, [outlet_id, product_id]);
+    const res = await pool.query(query, [outlet_id, product_id, safeDays]);
     const history = res.rows.map(row => ({
       tanggal: row.tanggal.toISOString().split('T')[0],
       actual_keluar: parseInt(row.total_keluar)

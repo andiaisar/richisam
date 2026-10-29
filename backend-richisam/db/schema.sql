@@ -18,12 +18,12 @@ DROP TYPE IF EXISTS defect_status_enum CASCADE;
 DROP TYPE IF EXISTS notif_tipe_enum CASCADE;
 
 CREATE TYPE outlet_tipe_enum AS ENUM ('PUSAT', 'CABANG');
-CREATE TYPE user_role_enum AS ENUM ('OWNER', 'ADMIN_PUSAT', 'STAF_CABANG');
+CREATE TYPE user_role_enum AS ENUM ('OWNER', 'ADMIN_PUSAT', 'STAF_CABANG', 'ADMIN_GUDANG');
 CREATE TYPE shift_enum AS ENUM ('MIDNIGHT', 'PAGI', 'SORE');
-CREATE TYPE sumber_masuk_enum AS ENUM ('MANUAL', 'TIKET');
-CREATE TYPE ticket_status_enum AS ENUM ('DIAJUKAN', 'DIPROSES', 'SELESAI');
+CREATE TYPE sumber_masuk_enum AS ENUM ('MANUAL', 'TIKET', 'TRANSFER', 'IMPORT');
+CREATE TYPE ticket_status_enum AS ENUM ('DIAJUKAN', 'DIPROSES', 'DIKIRIM', 'SELESAI');
 CREATE TYPE defect_status_enum AS ENUM ('BARU', 'DITINJAU', 'SELESAI', 'DISETUJUI', 'DITOLAK', 'PENDING');
-CREATE TYPE notif_tipe_enum AS ENUM ('PAR_STOCK', 'TIKET', 'DEFECT');
+CREATE TYPE notif_tipe_enum AS ENUM ('PAR_STOCK', 'TIKET', 'DEFECT', 'KADALUARSA');
 
 CREATE TABLE outlets (
     id SERIAL PRIMARY KEY,
@@ -52,7 +52,12 @@ CREATE TABLE products (
     kode VARCHAR(50) UNIQUE NOT NULL,
     nama VARCHAR(100) NOT NULL,
     satuan VARCHAR(20) NOT NULL,
-    kategori VARCHAR(50),
+    satuan_besar VARCHAR(50),
+    konversi INTEGER DEFAULT 1,
+    kategori VARCHAR(60),
+    harga NUMERIC(14,0) NOT NULL DEFAULT 0,
+    urutan INTEGER,
+    satuan_perlu_konfirmasi BOOLEAN DEFAULT true,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

@@ -6,6 +6,15 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS urutan INTEGER;
 ALTER TABLE products ADD COLUMN IF NOT EXISTS harga NUMERIC(14,0) NOT NULL DEFAULT 0;
 ALTER TABLE products ALTER COLUMN kategori TYPE VARCHAR(60);
 ALTER TABLE products ADD COLUMN IF NOT EXISTS satuan_perlu_konfirmasi BOOLEAN DEFAULT true;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS satuan_besar VARCHAR(50);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS konversi INTEGER DEFAULT 1;
+
+-- Pastikan enum values terbaru tersedia
+ALTER TYPE ticket_status_enum ADD VALUE IF NOT EXISTS 'DIKIRIM';
+ALTER TYPE sumber_masuk_enum ADD VALUE IF NOT EXISTS 'TRANSFER';
+ALTER TYPE sumber_masuk_enum ADD VALUE IF NOT EXISTS 'IMPORT';
+ALTER TYPE notif_tipe_enum ADD VALUE IF NOT EXISTS 'KADALUARSA';
+ALTER TYPE user_role_enum ADD VALUE IF NOT EXISTS 'ADMIN_GUDANG';
 
 -- 2. ALTER TABLE stock_mutations
 ALTER TABLE stock_mutations ADD COLUMN IF NOT EXISTS harga_snapshot NUMERIC(14,0);
@@ -120,3 +129,67 @@ CREATE INDEX IF NOT EXISTS idx_opening_balances_outlet_tanggal ON opening_balanc
 CREATE INDEX IF NOT EXISTS idx_stock_opnames_outlet_tanggal ON stock_opnames(outlet_id, tanggal);
 CREATE INDEX IF NOT EXISTS idx_stock_mutations_product_outlet ON stock_mutations(product_id, outlet_id);
 CREATE INDEX IF NOT EXISTS idx_stocks_product_outlet ON stocks(product_id, outlet_id);
+
+-- 9. Tabel product_batches (FEFO & Pelacakan Kadaluarsa)
+CREATE TABLE IF NOT EXISTS product_batches (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
+    batch_no VARCHAR(100) NOT NULL,
+    qty INTEGER NOT NULL DEFAULT 0,
+    tanggal_masuk DATE NOT NULL DEFAULT CURRENT_DATE,
+    expired_date DATE NOT NULL,
+    catatan TEXT,
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 10. Tabel branch_transfers (Transfer Stok Antar Cabang)
+CREATE TABLE IF NOT EXISTS branch_transfers (
+    id SERIAL PRIMARY KEY,
+    kode_transfer VARCHAR(50) UNIQUE NOT NULL,
+    from_outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
+    to_outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    qty INTEGER NOT NULL,
+    catatan TEXT,
+    status VARCHAR(30) DEFAULT 'PENDING',
+    requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    received_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    received_at TIMESTAMP
+);
+
+-- 11. Tabel shift_closings (Tutup Buku Shift)
+CREATE TABLE IF NOT EXISTS shift_closings (
+    id SERIAL PRIMARY KEY,
+    outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
+    tanggal DATE NOT NULL,
+    shift VARCHAR(20) NOT NULL,
+    status VARCHAR(20) DEFAULT 'CLOSED',
+    total_items_mutated INTEGER DEFAULT 0,
+    total_qty_masuk NUMERIC(12,2) DEFAULT 0,
+    total_qty_keluar NUMERIC(12,2) DEFAULT 0,
+    total_nilai_keluar NUMERIC(15,2) DEFAULT 0,
+    catatan TEXT,
+    closed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    closed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    unlocked_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    unlocked_at TIMESTAMP,
+    UNIQUE(outlet_id, tanggal, shift)
+);
+
+-- 12. Tabel audit_logs (Jejak Audit Sistem)
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    user_name VARCHAR(100),
+    user_role VARCHAR(50),
+    outlet_id INTEGER REFERENCES outlets(id) ON DELETE SET NULL,
+    module VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    description TEXT NOT NULL,
+    details JSONB,
+    ip_address VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

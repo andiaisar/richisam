@@ -288,6 +288,37 @@ class RequestService {
 
         await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, outlet_id, item.product_id]);
         await NotificationService.checkParStock(outlet_id, item.product_id);
+
+        // Potong stok Central Kitchen (outlet_id = 1) jika pengiriman ditujukan ke cabang lain
+        const CK_OUTLET_ID = 1;
+        if (Number(outlet_id) !== CK_OUTLET_ID) {
+          const prevMutCK = await client.query(
+            'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
+            [CK_OUTLET_ID, item.product_id]
+          );
+          let sawCK = 0;
+          if (prevMutCK.rows.length > 0) {
+            sawCK = prevMutCK.rows[0].sak;
+          } else {
+            const stockCK = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [CK_OUTLET_ID, item.product_id]);
+            sawCK = stockCK.rows.length > 0 ? stockCK.rows[0].qty_current : 0;
+          }
+          const sakCK = Math.max(0, sawCK - qtyToOutlet);
+
+          await client.query(
+            `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
+             VALUES ($1, $2, $3, $4, $5, 0, $6, $7, $8, 'TIKET', $9)
+             ON CONFLICT (product_id, outlet_id, tanggal, shift)
+             DO UPDATE SET 
+               keluar = stock_mutations.keluar + EXCLUDED.keluar,
+               sak = EXCLUDED.sak,
+               ticket_id = EXCLUDED.ticket_id`,
+            [item.product_id, CK_OUTLET_ID, tanggal, shift, sawCK, qtyToOutlet, sakCK, req_user.id, ticket.id]
+          );
+
+          await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sakCK, CK_OUTLET_ID, item.product_id]);
+          await NotificationService.checkParStock(CK_OUTLET_ID, item.product_id);
+        }
       }
 
       // Notifikasi CITO darurat ke Pusat

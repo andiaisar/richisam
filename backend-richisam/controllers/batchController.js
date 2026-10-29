@@ -107,6 +107,13 @@ exports.createBatch = async (req, res) => {
 exports.deleteBatch = async (req, res) => {
   try {
     const { id } = req.params;
+    const check = await pool.query('SELECT outlet_id FROM product_batches WHERE id = $1', [id]);
+    if (check.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Batch tidak ditemukan' });
+    }
+    if (req.user.role === 'STAF_CABANG' && Number(check.rows[0].outlet_id) !== Number(req.user.outlet_id)) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Anda hanya dapat menghapus batch milik cabang Anda sendiri' });
+    }
     await pool.query('DELETE FROM product_batches WHERE id = $1', [id]);
     res.json({ success: true, message: 'Batch berhasil dihapus / selesai digunakan' });
   } catch (e) {

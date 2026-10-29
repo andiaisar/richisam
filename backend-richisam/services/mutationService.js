@@ -144,12 +144,28 @@ class MutationService {
         }
 
         const exist = await client.query(
-          'SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4 FOR UPDATE',
+          'SELECT id, saw FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4 FOR UPDATE',
           [outlet_id, item.product_id, tanggal, shift]
         );
         if (exist.rows.length > 0) {
-           errors.push({ product_id: item.product_id, message: `Mutasi sudah ada.` });
-           continue;
+          const existingMut = exist.rows[0];
+          const saw = existingMut.saw;
+          const keluar = saw + item.masuk - item.sak;
+          if (keluar < 0) {
+            errors.push({ product_id: item.product_id, message: `Stok akhir melebihi stok awal + barang masuk. (SAW: ${saw}, M: ${item.masuk}, SAK: ${item.sak}, K: ${keluar})` });
+            continue;
+          }
+
+          await client.query(
+            'UPDATE stock_mutations SET masuk = $1, keluar = $2, sak = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
+            [item.masuk, keluar, item.sak, existingMut.id]
+          );
+
+          await client.query(
+            'INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (outlet_id, product_id) DO UPDATE SET qty_current = EXCLUDED.qty_current, updated_at = EXCLUDED.updated_at',
+            [outlet_id, item.product_id, item.sak]
+          );
+          continue;
         }
 
         let saw = 0;

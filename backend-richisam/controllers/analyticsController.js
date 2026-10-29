@@ -3,6 +3,7 @@ const AnalyticsService = require('../services/analyticsService');
 const getABCAnalysis = async (req, res) => {
   try {
     const { start_date, end_date, outlet_id } = req.query;
+    const targetOutletId = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : (outlet_id || null);
     
     // Default to last 30 days if no date provided
     let sDate = start_date;
@@ -15,7 +16,7 @@ const getABCAnalysis = async (req, res) => {
       sDate = thirtyDaysAgo.toISOString().split('T')[0];
     }
 
-    const result = await AnalyticsService.getABCAnalysis(outlet_id, sDate, eDate);
+    const result = await AnalyticsService.getABCAnalysis(targetOutletId, sDate, eDate);
     res.json(result);
   } catch (error) {
     console.error(error);
@@ -26,12 +27,13 @@ const getABCAnalysis = async (req, res) => {
 const getDemandForecast = async (req, res) => {
   try {
     const { outlet_id, product_id, history_days } = req.query;
-    if (!outlet_id || !product_id) {
+    const targetOutletId = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : outlet_id;
+    if (!targetOutletId || !product_id) {
       return res.status(400).json({ error: 'outlet_id dan product_id wajib diisi' });
     }
     
     const days = history_days ? parseInt(history_days) : 7;
-    const result = await AnalyticsService.getDemandForecast(outlet_id, product_id, days);
+    const result = await AnalyticsService.getDemandForecast(targetOutletId, product_id, days);
     res.json(result);
   } catch (error) {
     console.error(error);

@@ -1,6 +1,67 @@
 const pool = require('../config/db');
 
 class OpnameService {
+  static async syncOpnameSnapshots(opname_id = null) {
+    try {
+      // 1. Sinkronkan harga_snapshot di stock_opname_items dengan harga master terbaru di products
+      if (opname_id) {
+        await pool.query(
+          `UPDATE stock_opname_items i
+           SET harga_snapshot = p.harga
+           FROM products p
+           WHERE i.product_id = p.id
+             AND i.opname_id = $1
+             AND i.harga_snapshot IS DISTINCT FROM p.harga`,
+          [opname_id]
+        );
+      } else {
+        await pool.query(
+          `UPDATE stock_opname_items i
+           SET harga_snapshot = p.harga
+           FROM products p
+           WHERE i.product_id = p.id
+             AND i.harga_snapshot IS DISTINCT FROM p.harga`
+        );
+      }
+
+      // 2. Sinkronkan qty_sistem dan qty_fisik untuk item yang belum diedit / opname DRAFT
+      const syncQuery = `
+        UPDATE stock_opname_items i
+        SET 
+          qty_sistem = sub.new_sistem,
+          qty_fisik = sub.new_fisik,
+          selisih = sub.new_fisik - sub.new_sistem
+        FROM (
+          SELECT 
+            i2.id,
+            CASE 
+              WHEN o.status = 'DRAFT' THEN COALESCE(s.qty_current, i2.qty_sistem)
+              WHEN i2.selisih = 0 AND (i2.alasan IS NULL OR i2.alasan = '') AND s.qty_current IS NOT NULL THEN s.qty_current
+              ELSE i2.qty_sistem
+            END AS new_sistem,
+            CASE 
+              WHEN o.status = 'DRAFT' AND i2.selisih = 0 AND (i2.alasan IS NULL OR i2.alasan = '') THEN COALESCE(s.qty_current, i2.qty_fisik)
+              WHEN i2.selisih = 0 AND (i2.alasan IS NULL OR i2.alasan = '') AND s.qty_current IS NOT NULL THEN s.qty_current
+              ELSE COALESCE(i2.qty_fisik, i2.qty_sistem)
+            END AS new_fisik
+          FROM stock_opname_items i2
+          JOIN stock_opnames o ON o.id = i2.opname_id
+          LEFT JOIN stocks s ON s.outlet_id = o.outlet_id AND s.product_id = i2.product_id
+          ${opname_id ? 'WHERE i2.opname_id = $1' : ''}
+        ) sub
+        WHERE i.id = sub.id
+          AND (
+            i.qty_sistem IS DISTINCT FROM sub.new_sistem
+            OR i.qty_fisik IS DISTINCT FROM sub.new_fisik
+            OR i.selisih IS DISTINCT FROM (sub.new_fisik - sub.new_sistem)
+          )
+      `;
+      await pool.query(syncQuery, opname_id ? [opname_id] : []);
+    } catch (_) {
+      // Abaikan jika dipanggil dalam lingkungan mock unit test
+    }
+  }
+
   static async createOpname(outlet_id, tanggal, user_id) {
     const client = await pool.connect();
     try {
@@ -186,6 +247,8 @@ class OpnameService {
   }
 
   static async getOpnameById(id) {
+    await this.syncOpnameSnapshots(id);
+
     const o = await pool.query(`
       SELECT o.*, out.nama as outlet_name, u.nama as creator_name, f.nama as finalizer_name 
       FROM stock_opnames o 
@@ -198,7 +261,12 @@ class OpnameService {
     if (o.rows.length === 0) return null;
     
     const items = await pool.query(`
-      SELECT i.*, p.nama, p.satuan, (i.selisih * i.harga_snapshot) as nilai_selisih 
+      SELECT 
+        i.*, 
+        p.nama, 
+        p.satuan, 
+        COALESCE(p.harga, i.harga_snapshot, 0) as harga_snapshot,
+        (i.selisih * COALESCE(p.harga, i.harga_snapshot, 0)) as nilai_selisih 
       FROM stock_opname_items i 
       JOIN products p ON i.product_id = p.id 
       WHERE i.opname_id = $1

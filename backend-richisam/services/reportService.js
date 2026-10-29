@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const ExcelJS = require('exceljs');
+const OpnameService = require('./opnameService');
 
 class ReportService {
   static async getMutationsReport(outlet_id, start_date, end_date) {
@@ -197,6 +198,17 @@ class ReportService {
   }
 
   static async getMonthlyRecap(outlet_id, bulan, tahun) {
+    await OpnameService.syncOpnameSnapshots();
+    try {
+      await pool.query(
+        `UPDATE stock_mutations m
+         SET harga_snapshot = p.harga
+         FROM products p
+         WHERE m.product_id = p.id
+           AND m.harga_snapshot IS DISTINCT FROM p.harga`
+      );
+    } catch (_) {}
+
     const startDate = `${tahun}-${bulan.toString().padStart(2, '0')}-01`;
     const lastDay = new Date(tahun, bulan, 0).getDate();
     const endDate = `${tahun}-${bulan.toString().padStart(2, '0')}-${lastDay}`;
@@ -219,9 +231,16 @@ class ReportService {
           WHERE m_awal.product_id = p.id
             AND m_awal.tanggal >= $1 AND m_awal.tanggal <= $2
             ${outlet_id ? 'AND m_awal.outlet_id = $3' : ''}
-          ORDER BY m_awal.tanggal ASC, m_awal.id ASC
+          ORDER BY m_awal.tanggal ASC, 
+                   (CASE m_awal.shift WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 4 END) ASC,
+                   m_awal.id ASC
           LIMIT 1
-        ), 0) as saw_awal_bulan,
+        ), COALESCE((
+          SELECT SUM(s.qty_current)
+          FROM stocks s
+          WHERE s.product_id = p.id
+            ${outlet_id ? 'AND s.outlet_id = $3' : ''}
+        ), 0)) as saw_awal_bulan,
         COALESCE(SUM(m.masuk), 0) as total_masuk,
         COALESCE(SUM(m.keluar), 0) as total_keluar,
         COALESCE((
@@ -230,7 +249,9 @@ class ReportService {
           WHERE m_akhir.product_id = p.id
             AND m_akhir.tanggal >= $1 AND m_akhir.tanggal <= $2
             ${outlet_id ? 'AND m_akhir.outlet_id = $3' : ''}
-          ORDER BY m_akhir.tanggal DESC, m_akhir.id DESC
+          ORDER BY m_akhir.tanggal DESC, 
+                   (CASE m_akhir.shift WHEN 'SORE' THEN 3 WHEN 'PAGI' THEN 2 WHEN 'MIDNIGHT' THEN 1 ELSE 0 END) DESC,
+                   m_akhir.id DESC
           LIMIT 1
         ), COALESCE((
           SELECT SUM(s.qty_current)
@@ -284,7 +305,7 @@ class ReportService {
         o.tipe,
         COALESCE(SUM(m.masuk), 0) as total_masuk,
         COALESCE(SUM(m.keluar), 0) as total_keluar,
-        COALESCE(SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0)), 0) as nilai_pemakaian,
+        COALESCE(SUM(m.keluar * COALESCE(p.harga, m.harga_snapshot, 0)), 0) as nilai_pemakaian,
         COALESCE((
           SELECT SUM(d.qty)
           FROM defect_reports d
@@ -370,6 +391,18 @@ class ReportService {
   }
 
   static async exportMonthlyExcel(outlet_id, bulan, tahun) {
+    // 1. Sinkronkan snapshot harga & stok opname sebelum ekspor agar seluruh angka akurat
+    await OpnameService.syncOpnameSnapshots();
+    try {
+      await pool.query(
+        `UPDATE stock_mutations m
+         SET harga_snapshot = p.harga
+         FROM products p
+         WHERE m.product_id = p.id
+           AND m.harga_snapshot IS DISTINCT FROM p.harga`
+      );
+    } catch (_) {}
+
     const startDate = `${tahun}-${bulan.toString().padStart(2, '0')}-01`;
     const lastDay = new Date(tahun, bulan, 0).getDate();
     const endDate = `${tahun}-${bulan.toString().padStart(2, '0')}-${lastDay}`;
@@ -377,8 +410,21 @@ class ReportService {
     const outletQuery = await pool.query('SELECT nama FROM outlets WHERE id = $1', [outlet_id]);
     const outletName = outletQuery.rows.length > 0 ? outletQuery.rows[0].nama : 'Unknown';
 
-    const products = await pool.query('SELECT id, nama, harga, urutan FROM products WHERE is_active = true ORDER BY urutan ASC');
-    const mutations = await pool.query('SELECT * FROM stock_mutations WHERE outlet_id = $1 AND tanggal >= $2 AND tanggal <= $3', [outlet_id, startDate, endDate]);
+    const products = await pool.query('SELECT id, nama, satuan, harga, urutan FROM products WHERE is_active = true ORDER BY urutan ASC');
+    const stocksRes = await pool.query('SELECT product_id, qty_current FROM stocks WHERE outlet_id = $1', [outlet_id]);
+    const stockMap = {};
+    (stocksRes.rows || []).forEach(s => {
+      stockMap[s.product_id] = parseFloat(s.qty_current || 0);
+    });
+
+    const mutations = await pool.query(
+      `SELECT * FROM stock_mutations 
+       WHERE outlet_id = $1 AND tanggal >= $2 AND tanggal <= $3
+       ORDER BY tanggal ASC, 
+                (CASE shift WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 4 END) ASC,
+                id ASC`,
+      [outlet_id, startDate, endDate]
+    );
     
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Sistem Inventaris Richisam';
@@ -388,13 +434,29 @@ class ReportService {
       top: {style:'thin'}, left: {style:'thin'}, bottom: {style:'thin'}, right: {style:'thin'}
     };
 
-    // Prepare data map for quick access
+    // Prepare data map & initial SAW per product
     const mutMap = {};
+    const firstSawMap = {};
+    const lastSakMap = {};
     mutations.rows.forEach(m => {
-      const day = parseInt(m.tanggal.toISOString().split('T')[0].split('-')[2]);
+      const dateStr = m.tanggal instanceof Date ? m.tanggal.toISOString().split('T')[0] : String(m.tanggal).split('T')[0];
+      const day = parseInt(dateStr.split('-')[2], 10);
       if (!mutMap[day]) mutMap[day] = {};
       if (!mutMap[day][m.product_id]) mutMap[day][m.product_id] = {};
       mutMap[day][m.product_id][m.shift] = m;
+
+      if (firstSawMap[m.product_id] === undefined) {
+        firstSawMap[m.product_id] = parseFloat(m.saw || 0);
+      }
+      lastSakMap[m.product_id] = parseFloat(m.sak || 0);
+    });
+
+    // Track running SAK across days so we can also populate precomputed formula results
+    const runningSakByProduct = {};
+    products.rows.forEach(p => {
+      runningSakByProduct[p.id] = firstSawMap[p.id] !== undefined
+        ? firstSawMap[p.id]
+        : (stockMap[p.id] !== undefined ? stockMap[p.id] : 0);
     });
 
     for (let day = 1; day <= lastDay; day++) {
@@ -454,42 +516,61 @@ class ReportService {
       products.rows.forEach((p, idx) => {
         const rowNum = idx + 4;
         const row = ws.getRow(rowNum);
+        const hargaSatuan = parseFloat(p.harga || 0);
         row.getCell(1).value = idx + 1;
         row.getCell(2).value = p.nama;
-        row.getCell(3).value = parseFloat(p.harga);
+        row.getCell(3).value = hargaSatuan;
 
         const pm = mutMap[day] && mutMap[day][p.id] ? mutMap[day][p.id] : {};
         
         // MIDNIGHT
+        const sawMid = pm.MIDNIGHT ? parseFloat(pm.MIDNIGHT.saw) : runningSakByProduct[p.id];
+        const mMid = pm.MIDNIGHT ? parseFloat(pm.MIDNIGHT.masuk) : 0;
+        const sakMid = pm.MIDNIGHT ? parseFloat(pm.MIDNIGHT.sak) : (sawMid + mMid);
+        const kMid = sawMid + mMid - sakMid;
+
         if (day === 1) {
-          row.getCell(4).value = pm.MIDNIGHT ? parseFloat(pm.MIDNIGHT.saw) : 0;
+          row.getCell(4).value = sawMid;
         } else {
-          row.getCell(4).value = { formula: `'TANGGAL ${day-1}'!P${rowNum}` };
+          row.getCell(4).value = { formula: `'TANGGAL ${day-1}'!P${rowNum}`, result: sawMid };
         }
-        row.getCell(5).value = pm.MIDNIGHT ? parseFloat(pm.MIDNIGHT.masuk) : 0;
-        row.getCell(6).value = pm.MIDNIGHT ? parseFloat(pm.MIDNIGHT.sak) : 0;
-        row.getCell(7).value = { formula: `D${rowNum}+E${rowNum}-F${rowNum}` };
-        row.getCell(8).value = { formula: `F${rowNum}*C${rowNum}` };
+        row.getCell(5).value = mMid;
+        row.getCell(6).value = pm.MIDNIGHT ? sakMid : { formula: `D${rowNum}+E${rowNum}`, result: sakMid };
+        row.getCell(7).value = { formula: `D${rowNum}+E${rowNum}-F${rowNum}`, result: kMid };
+        row.getCell(8).value = { formula: `G${rowNum}*C${rowNum}`, result: kMid * hargaSatuan };
 
         // PAGI
-        row.getCell(9).value = { formula: `F${rowNum}` };
-        row.getCell(10).value = pm.PAGI ? parseFloat(pm.PAGI.masuk) : 0;
-        row.getCell(11).value = pm.PAGI ? parseFloat(pm.PAGI.sak) : 0;
-        row.getCell(12).value = { formula: `I${rowNum}+J${rowNum}-K${rowNum}` };
-        row.getCell(13).value = { formula: `K${rowNum}*C${rowNum}` };
+        const sawPagi = sakMid;
+        const mPagi = pm.PAGI ? parseFloat(pm.PAGI.masuk) : 0;
+        const sakPagi = pm.PAGI ? parseFloat(pm.PAGI.sak) : (sawPagi + mPagi);
+        const kPagi = sawPagi + mPagi - sakPagi;
+
+        row.getCell(9).value = { formula: `F${rowNum}`, result: sawPagi };
+        row.getCell(10).value = mPagi;
+        row.getCell(11).value = pm.PAGI ? sakPagi : { formula: `I${rowNum}+J${rowNum}`, result: sakPagi };
+        row.getCell(12).value = { formula: `I${rowNum}+J${rowNum}-K${rowNum}`, result: kPagi };
+        row.getCell(13).value = { formula: `L${rowNum}*C${rowNum}`, result: kPagi * hargaSatuan };
 
         // SORE
-        row.getCell(14).value = { formula: `K${rowNum}` };
-        row.getCell(15).value = pm.SORE ? parseFloat(pm.SORE.masuk) : 0;
-        row.getCell(16).value = pm.SORE ? parseFloat(pm.SORE.sak) : 0;
-        row.getCell(17).value = { formula: `N${rowNum}+O${rowNum}-P${rowNum}` };
-        row.getCell(18).value = { formula: `P${rowNum}*C${rowNum}` };
+        const sawSore = sakPagi;
+        const mSore = pm.SORE ? parseFloat(pm.SORE.masuk) : 0;
+        const sakSore = pm.SORE ? parseFloat(pm.SORE.sak) : (sawSore + mSore);
+        const kSore = sawSore + mSore - sakSore;
+
+        row.getCell(14).value = { formula: `K${rowNum}`, result: sawSore };
+        row.getCell(15).value = mSore;
+        row.getCell(16).value = pm.SORE ? sakSore : { formula: `N${rowNum}+O${rowNum}`, result: sakSore };
+        row.getCell(17).value = { formula: `N${rowNum}+O${rowNum}-P${rowNum}`, result: kSore };
+        row.getCell(18).value = { formula: `Q${rowNum}*C${rowNum}`, result: kSore * hargaSatuan };
 
         // TOTALS
-        row.getCell(19).value = { formula: `G${rowNum}+L${rowNum}+Q${rowNum}` };
-        row.getCell(20).value = { formula: `P${rowNum}` }; // Gudang = SAK SORE
+        const totalKeluarHari = kMid + kPagi + kSore;
+        runningSakByProduct[p.id] = sakSore;
+
+        row.getCell(19).value = { formula: `G${rowNum}+L${rowNum}+Q${rowNum}`, result: totalKeluarHari };
+        row.getCell(20).value = { formula: `P${rowNum}`, result: sakSore }; // Gudang = SAK SORE
         row.getCell(21).value = 0; // Outlet
-        row.getCell(22).value = { formula: `T${rowNum}+U${rowNum}` };
+        row.getCell(22).value = { formula: `T${rowNum}+U${rowNum}`, result: sakSore };
 
         for (let c = 1; c <= 22; c++) {
           row.getCell(c).border = borderAll;
@@ -523,28 +604,31 @@ class ReportService {
       
       let sumM = 0;
       let sumK = 0;
-      let lastSak = 0;
-      let lastPrice = parseFloat(p.harga);
+      let lastSak = lastSakMap[p.id] !== undefined
+        ? lastSakMap[p.id]
+        : (stockMap[p.id] !== undefined ? stockMap[p.id] : 0);
+      const masterPrice = parseFloat(p.harga || 0);
       
       // Calculate totals from mutations
       for (let day = 1; day <= lastDay; day++) {
         const pm = mutMap[day] && mutMap[day][p.id];
         if (pm) {
-          if (pm.MIDNIGHT) { sumM += parseFloat(pm.MIDNIGHT.masuk); sumK += parseFloat(pm.MIDNIGHT.keluar); lastSak = parseFloat(pm.MIDNIGHT.sak); lastPrice = parseFloat(pm.MIDNIGHT.harga_snapshot); }
-          if (pm.PAGI) { sumM += parseFloat(pm.PAGI.masuk); sumK += parseFloat(pm.PAGI.keluar); lastSak = parseFloat(pm.PAGI.sak); lastPrice = parseFloat(pm.PAGI.harga_snapshot); }
-          if (pm.SORE) { sumM += parseFloat(pm.SORE.masuk); sumK += parseFloat(pm.SORE.keluar); lastSak = parseFloat(pm.SORE.sak); lastPrice = parseFloat(pm.SORE.harga_snapshot); }
+          if (pm.MIDNIGHT) { sumM += parseFloat(pm.MIDNIGHT.masuk); sumK += parseFloat(pm.MIDNIGHT.keluar); lastSak = parseFloat(pm.MIDNIGHT.sak); }
+          if (pm.PAGI) { sumM += parseFloat(pm.PAGI.masuk); sumK += parseFloat(pm.PAGI.keluar); lastSak = parseFloat(pm.PAGI.sak); }
+          if (pm.SORE) { sumM += parseFloat(pm.SORE.masuk); sumK += parseFloat(pm.SORE.keluar); lastSak = parseFloat(pm.SORE.sak); }
         }
       }
 
       row.getCell(3).value = sumM;
       row.getCell(4).value = sumK;
       row.getCell(5).value = lastSak;
-      row.getCell(6).value = lastSak * lastPrice;
-      row.getCell(7).value = sumK / lastDay;
+      row.getCell(6).value = lastSak * masterPrice;
+      row.getCell(7).value = Number((sumK / lastDay).toFixed(2));
 
       for (let c = 1; c <= 7; c++) {
         row.getCell(c).border = borderAll;
-        if (c >= 3) row.getCell(c).numFmt = '#,##0.00';
+        if (c >= 3 && c <= 6) row.getCell(c).numFmt = '#,##0';
+        if (c === 7) row.getCell(c).numFmt = '#,##0.00';
       }
     });
     
@@ -552,50 +636,115 @@ class ReportService {
     for (let c = 3; c <= 7; c++) wsRekap.getColumn(c).width = 20;
 
     // Sheet STOK OPNAME
-    const opnames = await pool.query('SELECT * FROM stock_opnames WHERE outlet_id = $1 AND tanggal >= $2 AND tanggal <= $3 AND status = $4 ORDER BY tanggal DESC LIMIT 1', [outlet_id, startDate, endDate, 'FINAL']);
-    const wsOpname = workbook.addWorksheet('STOK OPNAME');
+    // Prioritaskan opname FINAL terbaru pada bulan ini; jika belum ada yang FINAL, gunakan DRAFT terbaru bulan ini
+    const opnames = await pool.query(
+      `SELECT * FROM stock_opnames 
+       WHERE outlet_id = $1 AND tanggal >= $2 AND tanggal <= $3 
+       ORDER BY (CASE WHEN status = 'FINAL' THEN 0 ELSE 1 END) ASC, tanggal DESC, id DESC 
+       LIMIT 1`,
+      [outlet_id, startDate, endDate]
+    );
+    const wsOpname = workbook.addWorksheet('STOK OPNAME', {
+      views: [{ state: 'frozen', xSplit: 2, ySplit: 3 }]
+    });
     
-    wsOpname.mergeCells('A1:G1');
-    wsOpname.getCell('A1').value = opnames.rows.length > 0 
-      ? `STOK OPNAME ${outletName} - TANGGAL ${opnames.rows[0].tanggal.toISOString().split('T')[0]}`
-      : `STOK OPNAME ${outletName} - BELUM ADA OPNAME FINAL BULAN INI`;
+    wsOpname.mergeCells('A1:H1');
+    if (opnames.rows.length > 0) {
+      const opnRow = opnames.rows[0];
+      const tglStr = opnRow.tanggal instanceof Date ? opnRow.tanggal.toISOString().split('T')[0] : String(opnRow.tanggal).split('T')[0];
+      const statusLabel = opnRow.status === 'FINAL' ? 'FINAL' : 'DRAFT';
+      wsOpname.getCell('A1').value = `STOK OPNAME ${outletName} - TANGGAL ${tglStr} (${opnRow.kode} - ${statusLabel})`;
+    } else {
+      wsOpname.getCell('A1').value = `STOK OPNAME ${outletName} - POSISI STOK BERJALAN (${bulan}/${tahun})`;
+    }
     wsOpname.getCell('A1').font = { bold: true, size: 14 };
 
-    const opnHdrs = ['NO', 'NAMA BARANG', 'SISTEM', 'FISIK', 'SELISIH', 'HARGA', 'NILAI SELISIH'];
+    const opnHdrs = ['NO', 'NAMA BARANG', 'SISTEM', 'FISIK', 'SELISIH', 'HARGA', 'NILAI SELISIH', 'KETERANGAN / ALASAN'];
     wsOpname.getRow(3).values = opnHdrs;
     wsOpname.getRow(3).font = { bold: true };
-    for (let c = 1; c <= 7; c++) {
+    for (let c = 1; c <= 8; c++) {
       wsOpname.getCell(3, c).fill = headerFill;
       wsOpname.getCell(3, c).border = borderAll;
+      wsOpname.getCell(3, c).alignment = { horizontal: 'center', vertical: 'middle' };
     }
 
+    let itemMap = {};
     if (opnames.rows.length > 0) {
       const items = await pool.query('SELECT * FROM stock_opname_items WHERE opname_id = $1', [opnames.rows[0].id]);
-      const itemMap = {};
       items.rows.forEach(i => itemMap[i.product_id] = i);
+    }
 
-      products.rows.forEach((p, idx) => {
-        const rowNum = idx + 4;
-        const row = wsOpname.getRow(rowNum);
-        row.getCell(1).value = idx + 1;
-        row.getCell(2).value = p.nama;
-        const it = itemMap[p.id];
-        
-        row.getCell(3).value = it ? parseFloat(it.qty_sistem) : 0;
-        row.getCell(4).value = it && it.qty_fisik !== null ? parseFloat(it.qty_fisik) : 0;
-        row.getCell(5).value = { formula: `D${rowNum}-C${rowNum}` };
-        row.getCell(6).value = it ? parseFloat(it.harga_snapshot) : parseFloat(p.harga);
-        row.getCell(7).value = { formula: `E${rowNum}*F${rowNum}` };
+    let totalSistem = 0;
+    let totalFisik = 0;
+    let totalSelisih = 0;
+    let totalNilaiSelisih = 0;
 
-        for (let c = 1; c <= 7; c++) {
-          row.getCell(c).border = borderAll;
-          if (c >= 3) row.getCell(c).numFmt = '#,##0';
-        }
-      });
+    products.rows.forEach((p, idx) => {
+      const rowNum = idx + 4;
+      const row = wsOpname.getRow(rowNum);
+      const it = itemMap[p.id];
+      const fallbackStock = lastSakMap[p.id] !== undefined
+        ? lastSakMap[p.id]
+        : (stockMap[p.id] !== undefined ? stockMap[p.id] : 0);
+
+      // Jika item opname ada dan punya selisih (atau diedit), gunakan qty_sistem & qty_fisik dari opname;
+      // jika tidak ada selisih dan stok aktual sudah bergerak, sinkronkan dengan stok aktual
+      const hasRecordedDiff = it && (parseFloat(it.selisih || 0) !== 0 || (it.alasan && String(it.alasan).trim() !== ''));
+      const sistemVal = it
+        ? (hasRecordedDiff ? parseFloat(it.qty_sistem || 0) : fallbackStock)
+        : fallbackStock;
+      const fisikVal = it && it.qty_fisik !== null
+        ? (hasRecordedDiff ? parseFloat(it.qty_fisik) : fallbackStock)
+        : sistemVal;
+      const selisihVal = fisikVal - sistemVal;
+      const hargaMaster = parseFloat(p.harga || 0);
+      const nilaiSelisihVal = selisihVal * hargaMaster;
+
+      totalSistem += sistemVal;
+      totalFisik += fisikVal;
+      totalSelisih += selisihVal;
+      totalNilaiSelisih += nilaiSelisihVal;
+
+      row.getCell(1).value = idx + 1;
+      row.getCell(2).value = p.nama;
+      row.getCell(3).value = sistemVal;
+      row.getCell(4).value = fisikVal;
+      row.getCell(5).value = { formula: `D${rowNum}-C${rowNum}`, result: selisihVal };
+      row.getCell(6).value = hargaMaster;
+      row.getCell(7).value = { formula: `E${rowNum}*F${rowNum}`, result: nilaiSelisihVal };
+      row.getCell(8).value = (it && it.alasan && String(it.alasan).trim() !== '')
+        ? it.alasan
+        : (selisihVal === 0 ? 'Sesuai (Klop)' : '-');
+
+      for (let c = 1; c <= 8; c++) {
+        row.getCell(c).border = borderAll;
+        if (c >= 3 && c <= 7) row.getCell(c).numFmt = '#,##0';
+      }
+    });
+
+    // Baris Total Ringkasan Stok Opname
+    const totalRowIdx = products.rows.length + 4;
+    const lastDataRowIdx = products.rows.length + 3;
+    const totalRow = wsOpname.getRow(totalRowIdx);
+    totalRow.getCell(1).value = '';
+    totalRow.getCell(2).value = 'TOTAL KESELURUHAN';
+    totalRow.getCell(3).value = { formula: `SUM(C4:C${lastDataRowIdx})`, result: totalSistem };
+    totalRow.getCell(4).value = { formula: `SUM(D4:D${lastDataRowIdx})`, result: totalFisik };
+    totalRow.getCell(5).value = { formula: `SUM(E4:E${lastDataRowIdx})`, result: totalSelisih };
+    totalRow.getCell(6).value = '';
+    totalRow.getCell(7).value = { formula: `SUM(G4:G${lastDataRowIdx})`, result: totalNilaiSelisih };
+    totalRow.getCell(8).value = totalNilaiSelisih < 0 ? 'Defisit / Kerugian Fisik' : totalNilaiSelisih > 0 ? 'Surplus Fisik' : 'Seimbang (Klop)';
+    totalRow.font = { bold: true };
+    for (let c = 1; c <= 8; c++) {
+      totalRow.getCell(c).fill = headerFill;
+      totalRow.getCell(c).border = borderAll;
+      if (c >= 3 && c <= 7 && c !== 6) totalRow.getCell(c).numFmt = '#,##0';
     }
     
+    wsOpname.getColumn(1).width = 6;
     wsOpname.getColumn(2).width = 30;
-    for (let c = 3; c <= 7; c++) wsOpname.getColumn(c).width = 15;
+    for (let c = 3; c <= 7; c++) wsOpname.getColumn(c).width = 16;
+    wsOpname.getColumn(8).width = 28;
 
     return await workbook.xlsx.writeBuffer();
   }

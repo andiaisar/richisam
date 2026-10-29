@@ -38,7 +38,7 @@ const Opname = () => {
   
   const [showFinalizeModal, setShowFinalizeModal] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
-  const [applyAdjustment, setApplyAdjustment] = useState(false);
+  const [applyAdjustment, setApplyAdjustment] = useState(true);
   const [searchTableQuery, setSearchTableQuery] = useState('');
 
   const canFinalize = user?.role === 'ADMIN_PUSAT' || user?.role === 'OWNER';

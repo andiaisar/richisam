@@ -98,9 +98,13 @@ class MutationService {
          if (prevMut.rows.length > 0) {
            saw = prevMut.rows[0].sak;
          } else {
-           // Jika belum pernah ada mutasi sebelumnya sama sekali, ambil dari opening_balances
+           // Jika belum pernah ada mutasi sebelumnya sama sekali, ambil dari opening_balances atau stocks.qty_current
            const opBal = await pool.query(
-             'SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2',
+             `SELECT COALESCE(
+                (SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2 LIMIT 1),
+                (SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2 LIMIT 1),
+                0
+              ) AS qty`,
              [outlet_id, p.id]
            );
            saw = opBal.rows.length > 0 ? opBal.rows[0].qty : 0;
@@ -208,7 +212,14 @@ class MutationService {
         if (prevMut.rows.length > 0) {
           saw = prevMut.rows[0].sak;
         } else {
-          const opBal = await client.query('SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2', [outlet_id, item.product_id]);
+          const opBal = await client.query(
+            `SELECT COALESCE(
+               (SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2 LIMIT 1),
+               (SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2 LIMIT 1),
+               0
+             ) AS qty`,
+            [outlet_id, item.product_id]
+          );
           saw = opBal.rows.length > 0 ? opBal.rows[0].qty : 0;
         }
 

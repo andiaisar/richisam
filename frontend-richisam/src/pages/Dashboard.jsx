@@ -88,7 +88,13 @@ const Dashboard = () => {
   const totalCabang = stats?.total_cabang || 0;
   const stokMenipis = stats?.total_stok_menipis || 0;
   const defectBulanIni = stats?.total_defect_bulan_ini || 0;
+  const totalNilaiPersediaan = stats?.total_nilai_persediaan || 0;
+  const nilaiPemakaianBulanIni = stats?.nilai_pemakaian_bulan_ini || 0;
+  const totalMasukBulanIni = stats?.total_masuk_bulan_ini || 0;
+  const totalKeluarBulanIni = stats?.total_keluar_bulan_ini || 0;
+  const branchPerformance = stats?.branch_performance || [];
   const assetStats = stats?.assets || { total_unit: 0, total_baik: 0, total_rusak: 0, total_jenis: 0 };
+  const isExecutive = user?.role === 'OWNER' || user?.role === 'ADMIN_PUSAT';
 
   return (
     <div className="space-y-8 animate-fade-in max-w-7xl pb-10 text-white">
@@ -98,54 +104,60 @@ const Dashboard = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#241C18]">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Dashboard Ikhtisar
+              {user?.role === 'OWNER' ? 'Dashboard Eksekutif & Perkembangan Usaha' : 'Dashboard Ikhtisar'}
             </h1>
             <p className="text-xs sm:text-sm text-stone-400 mt-1">
-              Portal {roleDisplay} • Ringkasan stok, distribusi, dan operasional cabang
+              Portal {roleDisplay} • Ringkasan valuasi persediaan, distribusi logistik, dan performa cabang
             </p>
           </div>
 
-          <Link
-            to="/mutasi"
-            className="self-start sm:self-auto inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#221B17] hover:bg-[#2B231E] border border-stone-700/60 text-xs font-bold text-stone-200 hover:text-white transition-all cursor-pointer shadow-sm"
-          >
-            <span>Kelola Mutasi</span>
-            <ArrowUpRight size={15} className="text-[#F9610D]" />
-          </Link>
+          <div className="flex flex-wrap items-center gap-2.5">
+            {isExecutive && (
+              <Link
+                to="/laporan"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#F9610D] hover:bg-[#d9530a] text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+              >
+                <span>Rekap Bulanan Mitra</span>
+                <ArrowUpRight size={15} />
+              </Link>
+            )}
+            <Link
+              to={user?.role === 'OWNER' ? '/analytics' : '/mutasi'}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#221B17] hover:bg-[#2B231E] border border-stone-700/60 text-xs font-bold text-stone-200 hover:text-white transition-all cursor-pointer shadow-sm"
+            >
+              <span>{user?.role === 'OWNER' ? 'Analitik & Prediksi' : 'Kelola Mutasi'}</span>
+              <ArrowUpRight size={15} className="text-[#F9610D]" />
+            </Link>
+          </div>
         </div>
 
         <div className="pt-6 grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
-            <p className="text-xs font-semibold text-stone-400">Total Produk</p>
-            <p className="text-2xl sm:text-3xl font-extrabold text-white mt-1.5 tracking-tight">
-              {totalProduk}{' '}
-              <span className="text-xs font-normal text-stone-500">Item</span>
+            <p className="text-xs font-semibold text-stone-400">Valuasi Persediaan Aktif</p>
+            <p className="text-xl sm:text-2xl font-extrabold text-[#FFCE00] mt-1.5 tracking-tight">
+              Rp {totalNilaiPersediaan.toLocaleString('id-ID')}
+            </p>
+            <p className="text-[11px] text-stone-500 mt-0.5">{totalProduk} jenis bahan baku terdaftar</p>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-stone-400">Nilai Pemakaian Bulan Ini</p>
+            <p className="text-xl sm:text-2xl font-extrabold text-white mt-1.5 tracking-tight">
+              Rp {nilaiPemakaianBulanIni.toLocaleString('id-ID')}
+            </p>
+            <p className="text-[11px] text-stone-500 mt-0.5">
+              +{totalMasukBulanIni.toLocaleString('id-ID')} masuk / -{totalKeluarBulanIni.toLocaleString('id-ID')} keluar
             </p>
           </div>
 
-          {user?.role !== 'STAF_CABANG' ? (
-            <div>
-              <p className="text-xs font-semibold text-stone-400">Cabang Aktif</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-white mt-1.5 tracking-tight">
-                {totalCabang}{' '}
-                <span className="text-xs font-normal text-stone-500">Outlet</span>
-              </p>
-            </div>
-          ) : (
-            <div>
-              <p className="text-xs font-semibold text-stone-400">Peralatan Cabang</p>
-              <p className="text-2xl sm:text-3xl font-extrabold text-white mt-1.5 tracking-tight">
-                {assetStats.total_unit}{' '}
-                <span className="text-xs font-normal text-stone-500">Unit</span>
-              </p>
-            </div>
-          )}
-
           <div>
-            <p className="text-xs font-semibold text-stone-400">Stok Menipis</p>
+            <p className="text-xs font-semibold text-stone-400">Stok Menipis (Par Stock)</p>
             <p className={`text-2xl sm:text-3xl font-extrabold mt-1.5 tracking-tight ${stokMenipis > 0 ? 'text-[#EC1F27]' : 'text-emerald-400'}`}>
               {stokMenipis}{' '}
               <span className="text-xs font-normal text-stone-500">Peringatan</span>
+            </p>
+            <p className="text-[11px] text-stone-500 mt-0.5">
+              {user?.role !== 'STAF_CABANG' ? `Pada ${totalCabang} outlet cabang aktif` : 'Perlu pengajuan restock'}
             </p>
           </div>
 
@@ -153,8 +165,9 @@ const Dashboard = () => {
             <p className="text-xs font-semibold text-stone-400">Defect Bulan Ini</p>
             <p className={`text-2xl sm:text-3xl font-extrabold mt-1.5 tracking-tight ${defectBulanIni > 0 ? 'text-[#F9610D]' : 'text-stone-300'}`}>
               {defectBulanIni}{' '}
-              <span className="text-xs font-normal text-stone-500">Kasus</span>
+              <span className="text-xs font-normal text-stone-500">Unit</span>
             </p>
+            <p className="text-[11px] text-stone-500 mt-0.5">Barang rusak / afkir disetujui</p>
           </div>
         </div>
       </section>
@@ -349,6 +362,88 @@ const Dashboard = () => {
           </div>
         </div>
       </section>
+
+      {/* ── SEKSI PANTAUAN PERFORMA & KESEHATAN SELURUH CABANG (OWNER & ADMIN PUSAT) ── */}
+      {isExecutive && branchPerformance.length > 0 && (
+        <section className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 shadow-xl space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#241C18]">
+            <div>
+              <h2 className="text-base sm:text-lg font-extrabold text-white flex items-center gap-2">
+                <Store size={18} className="text-[#F9610D]" />
+                Pantauan Perkembangan & Kesehatan Stok Seluruh Cabang
+              </h2>
+              <p className="text-xs text-stone-400 mt-0.5">
+                Perbandingan valuasi aset bahan baku, perputaran konsumsi bulan berjalan, dan kepatuhan batas aman par-stock di setiap cabang.
+              </p>
+            </div>
+            <Link
+              to="/laporan"
+              className="text-xs font-bold text-[#F9610D] hover:underline flex items-center gap-1 self-start sm:self-auto"
+            >
+              <span>Buka Rekap Bulanan Lengkap</span>
+              <ArrowRight size={13} />
+            </Link>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-[#2D241E] text-stone-400 text-[11px] uppercase tracking-wider">
+                  <th className="py-3 px-3">Unit / Cabang</th>
+                  <th className="py-3 px-3 text-right">Valuasi Stok Saat Ini</th>
+                  <th className="py-3 px-3 text-right">Arus Bulan Ini (In / Out)</th>
+                  <th className="py-3 px-3 text-right">Nilai Konsumsi Bulan Ini</th>
+                  <th className="py-3 px-3 text-center">Kesehatan Par-Stock</th>
+                  <th className="py-3 px-3 text-center">Defect Bulan Ini</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#241C18]">
+                {branchPerformance.map((bp) => (
+                  <tr key={bp.id} className="hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3.5 px-3">
+                      <div className="font-bold text-white">{bp.nama}</div>
+                      <span className="text-[10px] text-stone-400 uppercase font-semibold">
+                        {bp.tipe === 'PUSAT' ? 'Central Kitchen / Gudang Pusat' : 'Cabang Mitra'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-extrabold text-[#FFCE00] font-mono">
+                      Rp {bp.nilai_stok.toLocaleString('id-ID')}
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-mono">
+                      <span className="text-emerald-400 font-bold">+{bp.masuk_bulan_ini.toLocaleString('id-ID')}</span>
+                      {' / '}
+                      <span className="text-[#F9610D] font-bold">-{bp.keluar_bulan_ini.toLocaleString('id-ID')}</span>
+                    </td>
+                    <td className="py-3.5 px-3 text-right font-bold text-white font-mono">
+                      Rp {bp.nilai_keluar_bulan_ini.toLocaleString('id-ID')}
+                    </td>
+                    <td className="py-3.5 px-3 text-center">
+                      {bp.stok_kritis > 0 ? (
+                        <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-bold">
+                          {bp.stok_kritis} Item Kritis
+                        </span>
+                      ) : (
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">
+                          100% Aman
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-3 text-center">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                        bp.defect_bulan_ini > 0
+                          ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                          : 'text-stone-400'
+                      }`}>
+                        {bp.defect_bulan_ini > 0 ? `${bp.defect_bulan_ini} Unit` : 'Nihil'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <VisualChartsSection />
 

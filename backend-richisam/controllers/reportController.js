@@ -35,6 +35,23 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
+exports.getMonthlyRecap = async (req, res) => {
+  try {
+    const now = new Date();
+    const bulan = parseInt(req.query.bulan) || (now.getMonth() + 1);
+    const tahun = parseInt(req.query.tahun) || now.getFullYear();
+    const rawOutletId = req.user.role === 'STAF_CABANG'
+      ? req.user.outlet_id
+      : (req.query.outlet_id || req.body?.outlet_id || null);
+    const outlet_id = rawOutletId ? parseInt(rawOutletId) : null;
+
+    const data = await ReportService.getMonthlyRecap(outlet_id, bulan, tahun);
+    res.json({ success: true, message: 'Rekap Bulanan', data });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+};
+
 exports.exportMutationsExcel = async (req, res) => {
   try {
     const { start_date, end_date } = req.query;

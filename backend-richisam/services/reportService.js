@@ -86,17 +86,254 @@ class ReportService {
     `);
     const assetRow = assetRes.rows[0] || {};
 
+    let stockValCond = outlet_id ? `AND s.outlet_id = ${parseInt(outlet_id)}` : '';
+    const stockValRes = await pool.query(`
+      SELECT 
+        COALESCE(SUM(s.qty_current * COALESCE(p.harga, 0)), 0) as total_nilai_persediaan,
+        COALESCE(SUM(s.qty_current), 0) as total_unit_stok
+      FROM stocks s
+      JOIN products p ON s.product_id = p.id
+      WHERE p.is_active = true ${stockValCond}
+    `);
+    const stockValRow = stockValRes.rows[0] || {};
+
+    let mutMonthCond = outlet_id ? `AND m.outlet_id = ${parseInt(outlet_id)}` : '';
+    const mutMonthRes = await pool.query(`
+      SELECT 
+        COALESCE(SUM(m.masuk), 0) as total_masuk_bulan_ini,
+        COALESCE(SUM(m.keluar), 0) as total_keluar_bulan_ini,
+        COALESCE(SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0)), 0) as nilai_pemakaian_bulan_ini
+      FROM stock_mutations m
+      JOIN products p ON m.product_id = p.id
+      WHERE EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+        AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ${mutMonthCond}
+    `);
+    const mutMonthRow = mutMonthRes.rows[0] || {};
+
+    let branchPerfRows = [];
+    if (!outlet_id) {
+      const branchPerfRes = await pool.query(`
+        SELECT 
+          o.id,
+          o.nama,
+          o.tipe,
+          COALESCE((
+            SELECT SUM(s.qty_current * COALESCE(p.harga, 0))
+            FROM stocks s
+            JOIN products p ON s.product_id = p.id
+            WHERE s.outlet_id = o.id AND p.is_active = true
+          ), 0) as nilai_stok,
+          COALESCE((
+            SELECT COUNT(*)
+            FROM stocks s
+            JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
+            WHERE s.outlet_id = o.id AND s.qty_current <= ps.min_qty
+          ), 0) as stok_kritis,
+          COALESCE((
+            SELECT SUM(m.masuk)
+            FROM stock_mutations m
+            WHERE m.outlet_id = o.id
+              AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+          ), 0) as masuk_bulan_ini,
+          COALESCE((
+            SELECT SUM(m.keluar)
+            FROM stock_mutations m
+            WHERE m.outlet_id = o.id
+              AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+          ), 0) as keluar_bulan_ini,
+          COALESCE((
+            SELECT SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0))
+            FROM stock_mutations m
+            JOIN products p ON m.product_id = p.id
+            WHERE m.outlet_id = o.id
+              AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+          ), 0) as nilai_keluar_bulan_ini,
+          COALESCE((
+            SELECT SUM(d.qty)
+            FROM defect_reports d
+            WHERE d.outlet_id = o.id AND d.status = 'DISETUJUI'
+              AND EXTRACT(MONTH FROM d.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+              AND EXTRACT(YEAR FROM d.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+          ), 0) as defect_bulan_ini
+        FROM outlets o
+        WHERE o.is_active = true
+        ORDER BY o.tipe DESC, o.id ASC
+      `);
+      branchPerfRows = (branchPerfRes?.rows || []).map(r => ({
+        id: r.id,
+        nama: r.nama,
+        tipe: r.tipe,
+        nilai_stok: parseFloat(r.nilai_stok || 0),
+        stok_kritis: parseInt(r.stok_kritis || 0),
+        masuk_bulan_ini: parseInt(r.masuk_bulan_ini || 0),
+        keluar_bulan_ini: parseInt(r.keluar_bulan_ini || 0),
+        nilai_keluar_bulan_ini: parseFloat(r.nilai_keluar_bulan_ini || 0),
+        defect_bulan_ini: parseInt(r.defect_bulan_ini || 0)
+      }));
+    }
+
     return {
       total_cabang: parseInt(cabangRes.rows[0].count),
       total_produk: parseInt(produkRes.rows[0].count),
       total_stok_menipis: parseInt(parRes.rows[0].count),
       total_defect_bulan_ini: parseInt(defectRes.rows[0].total),
+      total_nilai_persediaan: parseFloat(stockValRow.total_nilai_persediaan || 0),
+      total_unit_stok: parseInt(stockValRow.total_unit_stok || 0),
+      total_masuk_bulan_ini: parseInt(mutMonthRow.total_masuk_bulan_ini || 0),
+      total_keluar_bulan_ini: parseInt(mutMonthRow.total_keluar_bulan_ini || 0),
+      nilai_pemakaian_bulan_ini: parseFloat(mutMonthRow.nilai_pemakaian_bulan_ini || 0),
+      branch_performance: branchPerfRows,
       assets: {
         total_unit: parseInt(assetRow.total_unit || 0),
         total_baik: parseInt(assetRow.total_baik || 0),
         total_rusak: parseInt(assetRow.total_rusak || 0),
         total_jenis: parseInt(assetRow.total_jenis_terdata || 0)
       }
+    };
+  }
+
+  static async getMonthlyRecap(outlet_id, bulan, tahun) {
+    const startDate = `${tahun}-${bulan.toString().padStart(2, '0')}-01`;
+    const lastDay = new Date(tahun, bulan, 0).getDate();
+    const endDate = `${tahun}-${bulan.toString().padStart(2, '0')}-${lastDay}`;
+
+    const outletFilter = outlet_id ? `AND m.outlet_id = $3` : '';
+    const params = outlet_id ? [startDate, endDate, parseInt(outlet_id)] : [startDate, endDate];
+
+    // 1. Rekap Per Barang (Bulanan)
+    const itemsQuery = `
+      SELECT 
+        p.id,
+        p.kode,
+        p.nama,
+        p.kategori,
+        p.satuan,
+        COALESCE(p.harga, 0) as harga_master,
+        COALESCE((
+          SELECT m_awal.saw
+          FROM stock_mutations m_awal
+          WHERE m_awal.product_id = p.id
+            AND m_awal.tanggal >= $1 AND m_awal.tanggal <= $2
+            ${outlet_id ? 'AND m_awal.outlet_id = $3' : ''}
+          ORDER BY m_awal.tanggal ASC, m_awal.id ASC
+          LIMIT 1
+        ), 0) as saw_awal_bulan,
+        COALESCE(SUM(m.masuk), 0) as total_masuk,
+        COALESCE(SUM(m.keluar), 0) as total_keluar,
+        COALESCE((
+          SELECT m_akhir.sak
+          FROM stock_mutations m_akhir
+          WHERE m_akhir.product_id = p.id
+            AND m_akhir.tanggal >= $1 AND m_akhir.tanggal <= $2
+            ${outlet_id ? 'AND m_akhir.outlet_id = $3' : ''}
+          ORDER BY m_akhir.tanggal DESC, m_akhir.id DESC
+          LIMIT 1
+        ), COALESCE((
+          SELECT SUM(s.qty_current)
+          FROM stocks s
+          WHERE s.product_id = p.id
+            ${outlet_id ? 'AND s.outlet_id = $3' : ''}
+        ), 0)) as sak_akhir_bulan
+      FROM products p
+      LEFT JOIN stock_mutations m
+        ON p.id = m.product_id
+        AND m.tanggal >= $1 AND m.tanggal <= $2
+        ${outletFilter}
+      WHERE p.is_active = true
+      GROUP BY p.id, p.kode, p.nama, p.kategori, p.satuan, p.harga, p.urutan
+      ORDER BY p.urutan ASC, p.nama ASC
+    `;
+    const itemsRes = await pool.query(itemsQuery, params);
+
+    const items = (itemsRes?.rows || []).map(row => {
+      const harga = parseFloat(row.harga_master || 0);
+      const totalMasuk = parseInt(row.total_masuk || 0);
+      const totalKeluar = parseInt(row.total_keluar || 0);
+      const sawAwal = parseInt(row.saw_awal_bulan || 0);
+      const sakAkhir = parseInt(row.sak_akhir_bulan || 0);
+      const nilaiPersediaan = sakAkhir * harga;
+      const nilaiPemakaian = totalKeluar * harga;
+      const rataRataHarian = Number((totalKeluar / lastDay).toFixed(2));
+
+      return {
+        id: row.id,
+        kode: row.kode,
+        nama: row.nama,
+        kategori: row.kategori || 'Bahan Umum',
+        satuan: row.satuan || 'Pcs',
+        harga,
+        saw_awal_bulan: sawAwal,
+        total_masuk: totalMasuk,
+        total_keluar: totalKeluar,
+        rata_rata_harian: rataRataHarian,
+        sak_akhir_bulan: sakAkhir,
+        nilai_persediaan: nilaiPersediaan,
+        nilai_pemakaian: nilaiPemakaian
+      };
+    });
+
+    // 2. Rekap Per Cabang pada Bulan Terpilih
+    const branchRecapRes = await pool.query(`
+      SELECT 
+        o.id,
+        o.nama,
+        o.tipe,
+        COALESCE(SUM(m.masuk), 0) as total_masuk,
+        COALESCE(SUM(m.keluar), 0) as total_keluar,
+        COALESCE(SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0)), 0) as nilai_pemakaian,
+        COALESCE((
+          SELECT SUM(d.qty)
+          FROM defect_reports d
+          WHERE d.outlet_id = o.id AND d.status = 'DISETUJUI'
+            AND d.created_at::DATE >= $1 AND d.created_at::DATE <= $2
+        ), 0) as total_defect,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM stock_opnames so
+          WHERE so.outlet_id = o.id AND so.status = 'FINAL'
+            AND so.tanggal >= $1 AND so.tanggal <= $2
+        ), 0) as opname_final_count
+      FROM outlets o
+      LEFT JOIN stock_mutations m ON o.id = m.outlet_id AND m.tanggal >= $1 AND m.tanggal <= $2
+      LEFT JOIN products p ON m.product_id = p.id
+      WHERE o.is_active = true
+        ${outlet_id ? 'AND o.id = $3' : ''}
+      GROUP BY o.id, o.nama, o.tipe
+      ORDER BY o.tipe DESC, o.id ASC
+    `, params);
+
+    const branches = (branchRecapRes?.rows || []).map(b => ({
+      id: b.id,
+      nama: b.nama,
+      tipe: b.tipe,
+      total_masuk: parseInt(b.total_masuk || 0),
+      total_keluar: parseInt(b.total_keluar || 0),
+      nilai_pemakaian: parseFloat(b.nilai_pemakaian || 0),
+      total_defect: parseInt(b.total_defect || 0),
+      opname_final_count: parseInt(b.opname_final_count || 0)
+    }));
+
+    const summary = {
+      bulan,
+      tahun,
+      jumlah_hari: lastDay,
+      total_item: items.length,
+      item_aktif_bergerak: items.filter(i => i.total_masuk > 0 || i.total_keluar > 0).length,
+      total_unit_masuk: items.reduce((acc, i) => acc + i.total_masuk, 0),
+      total_unit_keluar: items.reduce((acc, i) => acc + i.total_keluar, 0),
+      total_nilai_pemakaian: items.reduce((acc, i) => acc + i.nilai_pemakaian, 0),
+      total_nilai_persediaan: items.reduce((acc, i) => acc + i.nilai_persediaan, 0),
+      total_defect_bulan: branches.reduce((acc, b) => acc + b.total_defect, 0)
+    };
+
+    return {
+      summary,
+      branches,
+      items
     };
   }
 

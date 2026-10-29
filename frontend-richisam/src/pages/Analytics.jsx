@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { LineChart, Search, Box, TrendingUp, AlertTriangle, ChevronRight, Activity, Zap, BarChart3 } from 'lucide-react';
+import { LineChart, Search, Box, TrendingUp, AlertTriangle, ChevronRight, Activity, BarChart3 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import VisualChartsSection from '../components/VisualChartsSection';
 
 const Analytics = () => {
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState('abc'); // 'abc' or 'forecast'
+  const isBranchLocked = user?.role === 'STAF_CABANG' || user?.role === 'ADMIN_GUDANG';
+  const [activeTab, setActiveTab] = useState('abc'); // 'abc', 'forecast', or 'charts'
   
   // Data State
   const [outlets, setOutlets] = useState([]);
@@ -26,7 +27,7 @@ const Analytics = () => {
   const [forecastLoading, setForecastLoading] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== 'STAF_CABANG') {
+    if (!isBranchLocked) {
       const fetchOutlets = async () => {
         try {
           const res = await axiosClient.get('/outlets');
@@ -39,7 +40,7 @@ const Analytics = () => {
       };
       fetchOutlets();
     } else {
-      setSelectedOutlet(user.outlet_id?.toString() || '');
+      setSelectedOutlet(user?.outlet_id ? user.outlet_id.toString() : (user?.role === 'ADMIN_GUDANG' ? '1' : ''));
     }
 
     const fetchProducts = async () => {
@@ -114,7 +115,7 @@ const Analytics = () => {
           <p className="mt-1 text-sm text-muted">Keputusan berbasis data untuk efisiensi persediaan gudang.</p>
         </div>
         
-        {user?.role !== 'STAF_CABANG' && (
+        {!isBranchLocked && (
           <div className="flex items-center gap-2">
             <label className="text-sm font-semibold text-muted">Cabang:</label>
             <select 
@@ -122,6 +123,9 @@ const Analytics = () => {
               onChange={(e) => setSelectedOutlet(e.target.value)}
               className="bg-white border border-line text-ink text-sm rounded-lg focus:ring-richisam-orange focus:border-richisam-orange block p-2.5 shadow-sm font-semibold"
             >
+              {activeTab === 'charts' && (
+                <option value="">Seluruh Cabang (Konsolidasi)</option>
+              )}
               {outlets.map(o => (
                 <option key={o.id} value={o.id}>{o.nama}</option>
               ))}
@@ -133,7 +137,10 @@ const Analytics = () => {
       {/* TABS */}
       <div className="flex space-x-1 p-1.5 bg-cream/60 rounded-xl border border-line overflow-x-auto">
         <button
-          onClick={() => setActiveTab('abc')}
+          onClick={() => {
+            if (!selectedOutlet && outlets.length > 0) setSelectedOutlet(outlets[0].id.toString());
+            setActiveTab('abc');
+          }}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'abc' ? 'bg-richisam-orange text-white shadow-md' : 'text-muted hover:text-ink hover:bg-black/5'
           }`}
@@ -141,7 +148,10 @@ const Analytics = () => {
           <Box size={18} /> Klasifikasi Kelas ABC
         </button>
         <button
-          onClick={() => setActiveTab('forecast')}
+          onClick={() => {
+            if (!selectedOutlet && outlets.length > 0) setSelectedOutlet(outlets[0].id.toString());
+            setActiveTab('forecast');
+          }}
           className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
             activeTab === 'forecast' ? 'bg-richisam-orange text-white shadow-md' : 'text-muted hover:text-ink hover:bg-black/5'
           }`}
@@ -277,7 +287,7 @@ const Analytics = () => {
 
           {!selectedProduct ? (
             <div className="bg-white border border-dashed border-line rounded-2xl p-16 flex flex-col items-center justify-center text-center shadow-sm">
-              <Zap size={48} className="text-muted mb-4 opacity-40" />
+              <TrendingUp size={48} className="text-muted mb-4 opacity-40" />
               <h3 className="text-xl font-bold text-ink mb-2">Pilih Barang Dulu</h3>
               <p className="text-muted max-w-sm">Sistem akan membaca tren historis mutasi keluar untuk memberikan rekomendasi persediaan yang akurat.</p>
             </div>
@@ -294,7 +304,7 @@ const Analytics = () => {
                 </div>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-richisam-orange">
-                    <Zap size={16} />
+                    <TrendingUp size={16} />
                   </div>
                   <h3 className="text-lg font-bold text-ink">Rekomendasi Restock</h3>
                 </div>
@@ -351,9 +361,13 @@ const Analytics = () => {
       {/* TAB 3: VISUAL CHARTS & TREN OPERASIONAL */}
       {activeTab === 'charts' && (
         <VisualChartsSection 
-          initialOutletId={selectedOutlet} 
+          initialOutletId={selectedOutlet}
+          onOutletChange={(val) => {
+            if (val) setSelectedOutlet(val);
+            else if (activeTab === 'charts') setSelectedOutlet('');
+          }}
           title="Visual Analytics Lanjutan"
-          subtitle={`Analisis grafik tren pemakaian harian, perputaran stok, dan arus logistik cabang`}
+          subtitle="Analisis grafik tren pemakaian harian, perputaran stok, dan arus logistik cabang"
         />
       )}
     </div>

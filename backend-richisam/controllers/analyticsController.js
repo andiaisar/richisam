@@ -1,9 +1,19 @@
 const AnalyticsService = require('../services/analyticsService');
 
+const getTargetOutletId = (req, queryOutletId) => {
+  if (req.user.role === 'STAF_CABANG') {
+    return req.user.outlet_id;
+  }
+  if (req.user.role === 'ADMIN_GUDANG') {
+    return queryOutletId || req.user.outlet_id || 1;
+  }
+  return queryOutletId || null;
+};
+
 const getABCAnalysis = async (req, res) => {
   try {
     const { start_date, end_date, outlet_id } = req.query;
-    const targetOutletId = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : (outlet_id || null);
+    const targetOutletId = getTargetOutletId(req, outlet_id);
     
     // Default to last 30 days if no date provided
     let sDate = start_date;
@@ -27,7 +37,7 @@ const getABCAnalysis = async (req, res) => {
 const getDemandForecast = async (req, res) => {
   try {
     const { outlet_id, product_id, history_days } = req.query;
-    const targetOutletId = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : outlet_id;
+    const targetOutletId = getTargetOutletId(req, outlet_id);
     if (!targetOutletId || !product_id) {
       return res.status(400).json({ error: 'outlet_id dan product_id wajib diisi' });
     }
@@ -43,7 +53,7 @@ const getDemandForecast = async (req, res) => {
 
 const getVisualCharts = async (req, res) => {
   try {
-    const outlet_id = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : (req.query.outlet_id || null);
+    const outlet_id = getTargetOutletId(req, req.query.outlet_id);
     const result = await AnalyticsService.getVisualCharts(outlet_id);
     res.json({ success: true, data: result });
   } catch (error) {

@@ -142,8 +142,10 @@ class AnalyticsService {
    * Mengambil Data Grafik Visual Analytics (Line, Bar, Donut, Stacked)
    */
   static async getVisualCharts(outlet_id = null) {
-    let outletCondition = outlet_id ? `AND m.outlet_id = ${parseInt(outlet_id)}` : '';
-    let outletStockCondition = outlet_id ? `AND s.outlet_id = ${parseInt(outlet_id)}` : '';
+    const parsedOutletId = outlet_id ? parseInt(outlet_id, 10) : null;
+    const hasOutlet = Number.isInteger(parsedOutletId) && parsedOutletId > 0;
+    const outletCondition = hasOutlet ? `AND m.outlet_id = ${parsedOutletId}` : '';
+    const outletStockCondition = hasOutlet ? `AND s.outlet_id = ${parsedOutletId}` : '';
 
     // 1. Top 5 Fast Moving Products (Konsumsi Tertinggi)
     const fastMovingQuery = `
@@ -154,13 +156,18 @@ class AnalyticsService {
       JOIN products p ON m.product_id = p.id
       WHERE 1=1 ${outletCondition}
       GROUP BY p.id, p.nama, p.satuan, p.harga
+      HAVING SUM(m.keluar) > 0
       ORDER BY total_keluar DESC
       LIMIT 5
     `;
     const fastMovingRes = await pool.query(fastMovingQuery);
 
     // 2. Daily Usage Trend for Top 3 Key Items
-    const top3Ids = fastMovingRes.rows.slice(0, 3).map(r => r.id);
+    const top3Rows = fastMovingRes.rows.slice(0, 3);
+    const top3Ids = top3Rows.map(r => r.id);
+    const top3ShortNames = top3Rows.map(r =>
+      r.nama.length > 15 ? r.nama.substring(0, 14) + '..' : r.nama
+    );
     let dailyTrends = [];
     if (top3Ids.length > 0) {
       const trendQuery = `
@@ -175,21 +182,27 @@ class AnalyticsService {
       
       const dateMap = new Map();
       for (const row of trendRes.rows) {
-        const dStr = row.tanggal.toISOString().split('T')[0];
+        const dStr = row.tanggal instanceof Date
+          ? row.tanggal.toISOString().split('T')[0]
+          : String(row.tanggal).split('T')[0];
         const dateObj = new Date(row.tanggal);
         const label = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         
         if (!dateMap.has(dStr)) {
-          dateMap.set(dStr, { tanggal: label, rawDate: dStr });
+          const initialEntry = { tanggal: label, rawDate: dStr };
+          for (const sName of top3ShortNames) {
+            initialEntry[sName] = 0;
+          }
+          dateMap.set(dStr, initialEntry);
         }
         const entry = dateMap.get(dStr);
         const shortName = row.nama.length > 15 ? row.nama.substring(0, 14) + '..' : row.nama;
-        entry[shortName] = parseInt(row.qty);
+        entry[shortName] = parseInt(row.qty, 10) || 0;
       }
       dailyTrends = Array.from(dateMap.values());
     }
 
-    // 3. Category Distribution (Item count & Total current stock)
+    // 3. Category Distribution (Item count & Total current stock per outlet)
     const categoryQuery = `
       SELECT 
         COALESCE(p.kategori, 'Bahan Umum') as kategori,
@@ -200,35 +213,36 @@ class AnalyticsService {
       LEFT JOIN stocks s ON p.id = s.product_id ${outletStockCondition}
       WHERE p.is_active = true
       GROUP BY p.kategori
-      ORDER BY total_item DESC
+      ORDER BY total_stok DESC, total_item DESC
     `;
     const catRes = await pool.query(categoryQuery);
     
     const colors = ['#F9610D', '#FFCE00', '#10B981', '#6366F1', '#EC4899', '#14B8A6', '#F59E0B', '#8B5CF6'];
     const categoryDistribution = catRes.rows.map((row, idx) => ({
       name: row.kategori,
-      total_item: parseInt(row.total_item),
-      total_stok: parseInt(row.total_stok),
-      total_nilai: parseFloat(row.total_nilai),
+      total_item: parseInt(row.total_item, 10) || 0,
+      total_stok: parseInt(row.total_stok, 10) || 0,
+      total_nilai: parseFloat(row.total_nilai) || 0,
       color: colors[idx % colors.length]
     }));
 
-    // 4. In vs Out Logistics Ratio per Outlet
+    // 4. In vs Out Logistics Ratio per Outlet (respects outlet_id filter if provided)
+    const branchWhere = hasOutlet ? `WHERE o.is_active = true AND o.id = ${parsedOutletId}` : `WHERE o.is_active = true`;
     const inOutQuery = `
       SELECT o.nama as branch_name,
              COALESCE(SUM(m.masuk), 0) as total_masuk,
              COALESCE(SUM(m.keluar), 0) as total_keluar
       FROM outlets o
       LEFT JOIN stock_mutations m ON o.id = m.outlet_id
-      WHERE o.is_active = true
-      GROUP BY o.id, o.nama
+      ${branchWhere}
+      GROUP BY o.id, o.nama, o.tipe
       ORDER BY o.tipe DESC, o.id ASC
     `;
     const inOutRes = await pool.query(inOutQuery);
     const branchComparison = inOutRes.rows.map(r => ({
-      cabang: r.branch_name.replace('Richisam', '').trim(),
-      masuk: parseInt(r.total_masuk),
-      keluar: parseInt(r.total_keluar)
+      cabang: r.branch_name.replace('Richisam', '').trim() || r.branch_name,
+      masuk: parseInt(r.total_masuk, 10) || 0,
+      keluar: parseInt(r.total_keluar, 10) || 0
     }));
 
     return {
@@ -236,8 +250,8 @@ class AnalyticsService {
         id: r.id,
         nama: r.nama,
         satuan: r.satuan,
-        qty: parseInt(r.total_keluar),
-        nilai: parseFloat(r.total_nilai)
+        qty: parseInt(r.total_keluar, 10) || 0,
+        nilai: parseFloat(r.total_nilai) || 0
       })),
       daily_usage_trend: dailyTrends,
       category_distribution: categoryDistribution,

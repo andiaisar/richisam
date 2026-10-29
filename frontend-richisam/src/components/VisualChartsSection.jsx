@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
+import useAuthStore from '../store/useAuthStore';
 import { 
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, 
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend 
@@ -32,15 +33,36 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics & Tren Inventaris", subtitle = "Grafik interaktif analisis pemakaian harian, perputaran stok, dan arus logistik cabang" }) => {
+const VisualChartsSection = ({
+  initialOutletId = null,
+  onOutletChange = null,
+  title = "Visual Analytics & Tren Inventaris",
+  subtitle = "Grafik interaktif analisis pemakaian harian, perputaran stok, dan arus logistik cabang"
+}) => {
+  const { user } = useAuthStore();
+  const isBranchLocked = user?.role === 'STAF_CABANG' || user?.role === 'ADMIN_GUDANG';
+  const lockedOutletId = user?.outlet_id ? String(user.outlet_id) : (user?.role === 'ADMIN_GUDANG' ? '1' : '');
+
   const [data, setData] = useState(null);
   const [outlets, setOutlets] = useState([]);
-  const [selectedOutlet, setSelectedOutlet] = useState(initialOutletId || '');
+  const [selectedOutlet, setSelectedOutlet] = useState(
+    initialOutletId !== null && initialOutletId !== undefined
+      ? String(initialOutletId)
+      : (isBranchLocked ? lockedOutletId : '')
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchOutlets();
   }, []);
+
+  useEffect(() => {
+    if (isBranchLocked && lockedOutletId) {
+      setSelectedOutlet(lockedOutletId);
+    } else if (initialOutletId !== null && initialOutletId !== undefined) {
+      setSelectedOutlet(String(initialOutletId));
+    }
+  }, [initialOutletId, isBranchLocked, lockedOutletId]);
 
   useEffect(() => {
     fetchChartData();
@@ -59,7 +81,8 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
     try {
       setLoading(true);
       let url = '/analytics/visual-charts';
-      if (selectedOutlet) url += `?outlet_id=${selectedOutlet}`;
+      const targetOutlet = isBranchLocked ? lockedOutletId : selectedOutlet;
+      if (targetOutlet) url += `?outlet_id=${targetOutlet}`;
       const res = await axiosClient.get(url);
       setData(res?.data?.data || res?.data || null);
     } catch (e) {
@@ -69,15 +92,31 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
     }
   };
 
+  const handleOutletSelectChange = (val) => {
+    setSelectedOutlet(val);
+    if (onOutletChange) {
+      onOutletChange(val);
+    }
+  };
+
   const dailyTrends = data?.daily_usage_trend || [];
   const topProducts = data?.top_products || [];
   const categoryDist = data?.category_distribution || [];
   const branchComparison = data?.branch_comparison || [];
 
-  // Extract keys for dynamic area chart lines
-  const trendKeys = dailyTrends.length > 0
-    ? Object.keys(dailyTrends[0]).filter(k => k !== 'tanggal' && k !== 'rawDate')
-    : [];
+  // Extract keys across all dailyTrends rows so products missing on day 1 are never dropped
+  const trendKeys = Array.from(
+    new Set(
+      dailyTrends.flatMap(d => Object.keys(d).filter(k => k !== 'tanggal' && k !== 'rawDate'))
+    )
+  );
+
+  const totalStokKategori = categoryDist.reduce((acc, c) => acc + (c.total_stok || 0), 0);
+  const totalItemKategori = categoryDist.reduce((acc, c) => acc + (c.total_item || 0), 0);
+  const donutDataKey = totalStokKategori > 0 ? 'total_stok' : 'total_item';
+
+  const currentOutletObj = outlets.find(o => String(o.id) === String(selectedOutlet));
+  const lockedOutletLabel = currentOutletObj?.nama || user?.outlet_name || (user?.role === 'ADMIN_GUDANG' ? 'Central Kitchen' : 'Cabang Aktif');
 
   const trendColors = ['#F9610D', '#FFCE00', '#10B981', '#6366F1'];
 
@@ -98,12 +137,17 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
         </div>
 
         <div className="flex items-center gap-3">
-          {outlets.length > 0 && (
+          {isBranchLocked ? (
+            <div className="flex items-center gap-2 bg-[#130E0C] border border-[#2D241E] px-3.5 py-2 rounded-xl text-xs font-semibold text-stone-200">
+              <Store size={14} className="text-[#F9610D]" />
+              <span>{lockedOutletLabel}</span>
+            </div>
+          ) : outlets.length > 0 && (
             <div className="flex items-center gap-2 bg-[#130E0C] border border-[#2D241E] px-3 py-1.5 rounded-xl">
               <Store size={14} className="text-stone-400" />
               <select
                 value={selectedOutlet}
-                onChange={(e) => setSelectedOutlet(e.target.value)}
+                onChange={(e) => handleOutletSelectChange(e.target.value)}
                 className="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer"
               >
                 <option value="" className="bg-[#140F0D]">Seluruh Cabang (Konsolidasi)</option>
@@ -226,7 +270,9 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
                   </div>
                   <div>
                     <h3 className="font-bold text-sm sm:text-base text-white">Komposisi Kategori</h3>
-                    <p className="text-[11px] text-stone-400">Distribusi varian katalog bahan</p>
+                    <p className="text-[11px] text-stone-400">
+                      {totalStokKategori > 0 ? 'Distribusi volume stok aktif per kategori' : 'Distribusi varian katalog bahan'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -243,7 +289,7 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
                         innerRadius={55}
                         outerRadius={85}
                         paddingAngle={4}
-                        dataKey="total_item"
+                        dataKey={donutDataKey}
                       >
                         {categoryDist.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} stroke="#1A1412" strokeWidth={2} />
@@ -256,7 +302,8 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
                             return (
                               <div className="bg-[#140F0D] border border-[#2D241E] p-2.5 rounded-xl shadow-xl text-xs space-y-1">
                                 <p className="font-bold text-white">{d.name}</p>
-                                <p className="text-stone-300">{d.total_item} Varian Produk</p>
+                                <p className="text-[#FFCE00] font-semibold">{(d.total_stok || 0).toLocaleString('id-ID')} Unit Stok</p>
+                                <p className="text-stone-400">{d.total_item} Varian Produk</p>
                               </div>
                             );
                           }
@@ -272,9 +319,11 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
                 )}
                 {/* Center Badge */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xs text-stone-400 font-semibold">Total Item</span>
+                  <span className="text-xs text-stone-400 font-semibold">
+                    {totalStokKategori > 0 ? 'Total Stok' : 'Total Item'}
+                  </span>
                   <span className="text-xl font-black text-white">
-                    {categoryDist.reduce((acc, c) => acc + c.total_item, 0)}
+                    {(totalStokKategori > 0 ? totalStokKategori : totalItemKategori).toLocaleString('id-ID')}
                   </span>
                 </div>
               </div>
@@ -287,7 +336,9 @@ const VisualChartsSection = ({ initialOutletId = null, title = "Visual Analytics
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                       <span className="text-stone-300 truncate">{cat.name}</span>
                     </div>
-                    <span className="font-bold text-white font-mono">{cat.total_item} Item</span>
+                    <span className="font-bold text-white font-mono">
+                      {totalStokKategori > 0 ? `${(cat.total_stok || 0).toLocaleString('id-ID')} Stok` : `${cat.total_item} Item`}
+                    </span>
                   </div>
                 ))}
               </div>

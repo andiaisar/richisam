@@ -15,7 +15,10 @@ import {
   Search,
   AlertTriangle,
   Plus,
-  ExternalLink
+  ExternalLink,
+  Filter,
+  UserCheck,
+  RotateCcw
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import useThemeStore from '../store/useThemeStore';
@@ -27,6 +30,10 @@ const Dashboard = () => {
   const { theme } = useThemeStore();
   const isLight = theme === 'light';
   const navigate = useNavigate();
+  const isExecutive = user?.role === 'OWNER' || user?.role === 'ADMIN_PUSAT';
+
+  const [outlets, setOutlets] = useState([]);
+  const [selectedOutletId, setSelectedOutletId] = useState('');
   const [stats, setStats] = useState(null);
   const [lowStocks, setLowStocks] = useState([]);
   const [allLowStocks, setAllLowStocks] = useState([]);
@@ -38,21 +45,49 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (isExecutive) {
+      axiosClient
+        .get('/outlets')
+        .then((res) => {
+          const list = res?.data?.data || res?.data || [];
+          setOutlets(Array.isArray(list) ? list : []);
+        })
+        .catch(() => {});
+    }
+  }, [isExecutive]);
+
+  useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        const outletQuery = isExecutive && selectedOutletId ? `?outlet_id=${selectedOutletId}` : '';
+        const reqQuery = isExecutive && selectedOutletId ? `?limit=15&outlet_id=${selectedOutletId}` : '?limit=15';
+
         const [statsRes, lowRes, reqRes, batchRes] = await Promise.all([
-          axiosClient.get('/reports/dashboard'),
-          axiosClient.get('/stocks/low'),
-          axiosClient.get('/requests?limit=5'),
-          axiosClient.get('/batches/summary').catch(() => ({ data: { data: null } }))
+          axiosClient.get(`/reports/dashboard${outletQuery}`),
+          axiosClient.get(`/stocks/low${outletQuery}`),
+          axiosClient.get(`/requests${reqQuery}`),
+          axiosClient.get(`/batches/summary${outletQuery}`).catch(() => ({ data: { data: null } }))
         ]);
 
         setStats(statsRes.data);
-        const lowList = lowRes.data || [];
-        setAllLowStocks(lowList);
-        setLowStocks(lowList.slice(0, 4));
-        setRecentRequests(reqRes.data?.data || []);
+
+        const rawLowList = Array.isArray(lowRes.data) ? lowRes.data : (lowRes.data?.data || []);
+        const filteredLowList =
+          isExecutive && selectedOutletId
+            ? rawLowList.filter((item) => String(item.outlet_id) === String(selectedOutletId))
+            : rawLowList;
+
+        setAllLowStocks(filteredLowList);
+        setLowStocks(filteredLowList.slice(0, 4));
+
+        const rawReqs = reqRes.data?.data || [];
+        const filteredReqs =
+          isExecutive && selectedOutletId
+            ? rawReqs.filter((r) => String(r.outlet_id) === String(selectedOutletId))
+            : rawReqs;
+        setRecentRequests(filteredReqs.slice(0, 5));
+
         setBatchSummary(batchRes?.data?.data || batchRes?.data || null);
       } catch (error) {
         console.error('Failed to fetch dashboard data', error);
@@ -62,9 +97,9 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [isExecutive, selectedOutletId]);
 
-  if (loading) {
+  if (loading && !stats) {
     return (
       <div className="flex h-96 items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -75,14 +110,37 @@ const Dashboard = () => {
     );
   }
 
+  const isCKAccount =
+    user?.role === 'ADMIN_GUDANG' ||
+    (user?.role === 'STAF_CABANG' &&
+      (Number(user?.outlet_id) === 1 ||
+        user?.outlet_name?.toLowerCase().includes('central kitchen') ||
+        user?.outlet_name?.toLowerCase().includes('ck')));
+
   const roleDisplay =
     user?.role === 'ADMIN_PUSAT'
-      ? 'Pusat'
+      ? 'Admin Pusat'
+      : isCKAccount
+      ? 'Central Kitchen (CK)'
       : user?.role === 'STAF_CABANG'
-      ? 'Cabang'
-      : user?.role === 'ADMIN_GUDANG'
-      ? 'Gudang'
+      ? user?.outlet_name || 'Outlet Cabang'
       : 'Owner';
+
+  const dashboardTitle =
+    user?.role === 'OWNER'
+      ? `Dashboard Owner — ${user?.nama || 'Owner Bos'}`
+      : user?.role === 'ADMIN_PUSAT'
+      ? `Dashboard Admin Pusat — ${user?.nama || 'Admin Pusat'}`
+      : isCKAccount
+      ? `Dashboard Central Kitchen — ${user?.nama || 'Staf CK'}`
+      : `Dashboard ${user?.outlet_name || 'Outlet Cabang'} — ${user?.nama || 'Staf Cabang'}`;
+
+  const selectedOutletObj = outlets.find((o) => String(o.id) === String(selectedOutletId));
+  const activeScopeLabel = selectedOutletObj
+    ? selectedOutletObj.nama
+    : isExecutive
+    ? 'Semua Unit (Konsolidasi Pusat & Cabang)'
+    : user?.outlet_name || roleDisplay;
 
   const totalProduk = stats?.total_produk || 0;
   const totalCabang = stats?.total_cabang || 0;
@@ -94,24 +152,64 @@ const Dashboard = () => {
   const totalKeluarBulanIni = stats?.total_keluar_bulan_ini || 0;
   const branchPerformance = stats?.branch_performance || [];
   const assetStats = stats?.assets || { total_unit: 0, total_baik: 0, total_rusak: 0, total_jenis: 0 };
-  const isExecutive = user?.role === 'OWNER' || user?.role === 'ADMIN_PUSAT';
 
   return (
     <div className="space-y-8 animate-fade-in max-w-7xl pb-10 text-white">
 
       <section className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-8 shadow-xl relative overflow-hidden">
         {/* Header Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-[#241C18]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-[#241C18]">
           <div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F9610D]/15 border border-[#F9610D]/30 text-[#F9610D] text-[11px] font-bold">
+                <UserCheck size={13} />
+                <span>Login Aktif: {user?.nama || user?.username} ({roleDisplay})</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#221B17] border border-[#2D241E] text-stone-300 text-[11px] font-semibold">
+                <Store size={12} className="text-[#FFCE00]" />
+                <span>Cakupan Data: {activeScopeLabel}</span>
+              </span>
+            </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              {user?.role === 'OWNER' ? 'Dashboard Eksekutif & Perkembangan Usaha' : 'Dashboard Ikhtisar'}
+              {dashboardTitle}
             </h1>
             <p className="text-xs sm:text-sm text-stone-400 mt-1">
-              Portal {roleDisplay} • Ringkasan valuasi persediaan, distribusi logistik, dan performa cabang
+              Portal {roleDisplay} • Ringkasan valuasi persediaan, distribusi logistik, dan performa {selectedOutletObj ? selectedOutletObj.nama : 'cabang'}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {isExecutive && (
+              <div className="flex items-center gap-2 bg-[#140F0D] border border-[#2D241E] px-3 py-2 rounded-xl">
+                <Filter size={14} className="text-[#F9610D] shrink-0" />
+                <select
+                  value={selectedOutletId}
+                  onChange={(e) => setSelectedOutletId(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1"
+                  aria-label="Filter Unit atau Cabang di Dashboard"
+                >
+                  <option value="" className="bg-[#1A1412] text-white">
+                    Semua Unit (Konsolidasi)
+                  </option>
+                  {outlets.map((o) => (
+                    <option key={o.id} value={String(o.id)} className="bg-[#1A1412] text-white">
+                      {o.nama} ({o.tipe === 'PUSAT' ? 'Pusat/CK' : 'Cabang'})
+                    </option>
+                  ))}
+                </select>
+                {selectedOutletId && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOutletId('')}
+                    title="Reset ke Semua Unit"
+                    className="p-1 rounded-lg bg-[#221B17] hover:bg-[#2D241E] text-stone-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <RotateCcw size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+
             {isExecutive && (
               <Link
                 to="/laporan"
@@ -373,16 +471,28 @@ const Dashboard = () => {
                 Pantauan Perkembangan & Kesehatan Stok Seluruh Cabang
               </h2>
               <p className="text-xs text-stone-400 mt-0.5">
-                Perbandingan valuasi aset bahan baku, perputaran konsumsi bulan berjalan, dan kepatuhan batas aman par-stock di setiap cabang.
+                Klik salah satu baris cabang di bawah untuk memfilter seluruh indikator dan grafik Dashboard ke cabang tersebut.
               </p>
             </div>
-            <Link
-              to="/laporan"
-              className="text-xs font-bold text-[#F9610D] hover:underline flex items-center gap-1 self-start sm:self-auto"
-            >
-              <span>Buka Rekap Bulanan Lengkap</span>
-              <ArrowRight size={13} />
-            </Link>
+            <div className="flex items-center gap-3 self-start sm:self-auto">
+              {selectedOutletId && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedOutletId('')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#221B17] hover:bg-[#2D241E] border border-[#F9610D]/40 text-xs font-bold text-[#F9610D] cursor-pointer transition-colors"
+                >
+                  <RotateCcw size={12} />
+                  <span>Tampilkan Semua Unit</span>
+                </button>
+              )}
+              <Link
+                to="/laporan"
+                className="text-xs font-bold text-[#F9610D] hover:underline flex items-center gap-1"
+              >
+                <span>Buka Rekap Bulanan Lengkap</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -398,54 +508,78 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#241C18]">
-                {branchPerformance.map((bp) => (
-                  <tr key={bp.id} className="hover:bg-white/[0.02] transition-colors">
-                    <td className="py-3.5 px-3">
-                      <div className="font-bold text-white">{bp.nama}</div>
-                      <span className="text-[10px] text-stone-400 uppercase font-semibold">
-                        {bp.tipe === 'PUSAT' ? 'Central Kitchen / Gudang Pusat' : 'Cabang Mitra'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-extrabold text-[#FFCE00] font-mono">
-                      Rp {bp.nilai_stok.toLocaleString('id-ID')}
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-mono">
-                      <span className="text-emerald-400 font-bold">+{bp.masuk_bulan_ini.toLocaleString('id-ID')}</span>
-                      {' / '}
-                      <span className="text-[#F9610D] font-bold">-{bp.keluar_bulan_ini.toLocaleString('id-ID')}</span>
-                    </td>
-                    <td className="py-3.5 px-3 text-right font-bold text-white font-mono">
-                      Rp {bp.nilai_keluar_bulan_ini.toLocaleString('id-ID')}
-                    </td>
-                    <td className="py-3.5 px-3 text-center">
-                      {bp.stok_kritis > 0 ? (
-                        <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-bold">
-                          {bp.stok_kritis} Item Kritis
+                {branchPerformance.map((bp) => {
+                  const isSelectedRow = String(bp.id) === String(selectedOutletId);
+                  return (
+                    <tr
+                      key={bp.id}
+                      onClick={() =>
+                        setSelectedOutletId(isSelectedRow ? '' : String(bp.id))
+                      }
+                      title="Klik untuk memfilter Dashboard ke unit ini"
+                      className={`cursor-pointer transition-colors ${
+                        isSelectedRow
+                          ? 'bg-[#F9610D]/10 hover:bg-[#F9610D]/15'
+                          : 'hover:bg-white/[0.03]'
+                      }`}
+                    >
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-white">{bp.nama}</span>
+                          {isSelectedRow && (
+                            <span className="px-2 py-0.5 rounded-full bg-[#F9610D] text-white text-[10px] font-extrabold uppercase tracking-wider">
+                              Sedang Dipantau
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-stone-400 uppercase font-semibold">
+                          {bp.tipe === 'PUSAT' ? 'Central Kitchen / Gudang Pusat' : 'Cabang Mitra'}
                         </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">
-                          100% Aman
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-extrabold text-[#FFCE00] font-mono">
+                        Rp {bp.nilai_stok.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-mono">
+                        <span className="text-emerald-400 font-bold">+{bp.masuk_bulan_ini.toLocaleString('id-ID')}</span>
+                        {' / '}
+                        <span className="text-[#F9610D] font-bold">-{bp.keluar_bulan_ini.toLocaleString('id-ID')}</span>
+                      </td>
+                      <td className="py-3.5 px-3 text-right font-bold text-white font-mono">
+                        Rp {bp.nilai_keluar_bulan_ini.toLocaleString('id-ID')}
+                      </td>
+                      <td className="py-3.5 px-3 text-center">
+                        {bp.stok_kritis > 0 ? (
+                          <span className="px-2.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30 text-[11px] font-bold">
+                            {bp.stok_kritis} Item Kritis
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">
+                            100% Aman
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-3 text-center">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                          bp.defect_bulan_ini > 0
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : 'text-stone-400'
+                        }`}>
+                          {bp.defect_bulan_ini > 0 ? `${bp.defect_bulan_ini} Unit` : 'Nihil'}
                         </span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                        bp.defect_bulan_ini > 0
-                          ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
-                          : 'text-stone-400'
-                      }`}>
-                        {bp.defect_bulan_ini > 0 ? `${bp.defect_bulan_ini} Unit` : 'Nihil'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </section>
       )}
 
-      <VisualChartsSection />
+      <VisualChartsSection
+        initialOutletId={selectedOutletId}
+        onOutletChange={(val) => setSelectedOutletId(val)}
+      />
 
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 

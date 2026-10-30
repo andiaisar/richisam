@@ -112,70 +112,67 @@ class ReportService {
     `);
     const mutMonthRow = mutMonthRes.rows[0] || {};
 
-    let branchPerfRows = [];
-    if (!outlet_id) {
-      const branchPerfRes = await pool.query(`
-        SELECT 
-          o.id,
-          o.nama,
-          o.tipe,
-          COALESCE((
-            SELECT SUM(s.qty_current * COALESCE(p.harga, 0))
-            FROM stocks s
-            JOIN products p ON s.product_id = p.id
-            WHERE s.outlet_id = o.id AND p.is_active = true
-          ), 0) as nilai_stok,
-          COALESCE((
-            SELECT COUNT(*)
-            FROM stocks s
-            JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
-            WHERE s.outlet_id = o.id AND s.qty_current <= ps.min_qty
-          ), 0) as stok_kritis,
-          COALESCE((
-            SELECT SUM(m.masuk)
-            FROM stock_mutations m
-            WHERE m.outlet_id = o.id
-              AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-              AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
-          ), 0) as masuk_bulan_ini,
-          COALESCE((
-            SELECT SUM(m.keluar)
-            FROM stock_mutations m
-            WHERE m.outlet_id = o.id
-              AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-              AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
-          ), 0) as keluar_bulan_ini,
-          COALESCE((
-            SELECT SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0))
-            FROM stock_mutations m
-            JOIN products p ON m.product_id = p.id
-            WHERE m.outlet_id = o.id
-              AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-              AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
-          ), 0) as nilai_keluar_bulan_ini,
-          COALESCE((
-            SELECT SUM(d.qty)
-            FROM defect_reports d
-            WHERE d.outlet_id = o.id AND d.status = 'DISETUJUI'
-              AND EXTRACT(MONTH FROM d.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
-              AND EXTRACT(YEAR FROM d.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
-          ), 0) as defect_bulan_ini
-        FROM outlets o
-        WHERE o.is_active = true
-        ORDER BY o.tipe DESC, o.id ASC
-      `);
-      branchPerfRows = (branchPerfRes?.rows || []).map(r => ({
-        id: r.id,
-        nama: r.nama,
-        tipe: r.tipe,
-        nilai_stok: parseFloat(r.nilai_stok || 0),
-        stok_kritis: parseInt(r.stok_kritis || 0),
-        masuk_bulan_ini: parseInt(r.masuk_bulan_ini || 0),
-        keluar_bulan_ini: parseInt(r.keluar_bulan_ini || 0),
-        nilai_keluar_bulan_ini: parseFloat(r.nilai_keluar_bulan_ini || 0),
-        defect_bulan_ini: parseInt(r.defect_bulan_ini || 0)
-      }));
-    }
+    const branchPerfRes = await pool.query(`
+      SELECT 
+        o.id,
+        o.nama,
+        o.tipe,
+        COALESCE((
+          SELECT SUM(s.qty_current * COALESCE(p.harga, 0))
+          FROM stocks s
+          JOIN products p ON s.product_id = p.id
+          WHERE s.outlet_id = o.id AND p.is_active = true
+        ), 0) as nilai_stok,
+        COALESCE((
+          SELECT COUNT(*)
+          FROM stocks s
+          JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
+          WHERE s.outlet_id = o.id AND s.qty_current <= ps.min_qty
+        ), 0) as stok_kritis,
+        COALESCE((
+          SELECT SUM(m.masuk)
+          FROM stock_mutations m
+          WHERE m.outlet_id = o.id
+            AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ), 0) as masuk_bulan_ini,
+        COALESCE((
+          SELECT SUM(m.keluar)
+          FROM stock_mutations m
+          WHERE m.outlet_id = o.id
+            AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ), 0) as keluar_bulan_ini,
+        COALESCE((
+          SELECT SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0))
+          FROM stock_mutations m
+          JOIN products p ON m.product_id = p.id
+          WHERE m.outlet_id = o.id
+            AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ), 0) as nilai_keluar_bulan_ini,
+        COALESCE((
+          SELECT SUM(d.qty)
+          FROM defect_reports d
+          WHERE d.outlet_id = o.id AND d.status = 'DISETUJUI'
+            AND EXTRACT(MONTH FROM d.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM d.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+        ), 0) as defect_bulan_ini
+      FROM outlets o
+      WHERE o.is_active = true
+      ORDER BY o.tipe DESC, o.id ASC
+    `);
+    const branchPerfRows = (branchPerfRes?.rows || []).map(r => ({
+      id: r.id,
+      nama: r.nama,
+      tipe: r.tipe,
+      nilai_stok: parseFloat(r.nilai_stok || 0),
+      stok_kritis: parseInt(r.stok_kritis || 0),
+      masuk_bulan_ini: parseInt(r.masuk_bulan_ini || 0),
+      keluar_bulan_ini: parseInt(r.keluar_bulan_ini || 0),
+      nilai_keluar_bulan_ini: parseFloat(r.nilai_keluar_bulan_ini || 0),
+      defect_bulan_ini: parseInt(r.defect_bulan_ini || 0)
+    }));
 
     return {
       total_cabang: parseInt(cabangRes.rows[0].count),

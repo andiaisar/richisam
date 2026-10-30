@@ -112,6 +112,49 @@ class ReportService {
     `);
     const mutMonthRow = mutMonthRes.rows[0] || {};
 
+    let reqSummaryRow = {};
+    try {
+      let reqCond = outlet_id ? `WHERE outlet_id = ${parseInt(outlet_id)}` : '';
+      const reqSummaryRes = await pool.query(`
+        SELECT 
+          COUNT(*) FILTER (WHERE status IN ('DIAJUKAN', 'DIPROSES', 'DIKIRIM')) as total_aktif,
+          COUNT(*) FILTER (WHERE status = 'DIAJUKAN') as total_diajukan,
+          COUNT(*) FILTER (WHERE status = 'DIPROSES') as total_diproses,
+          COUNT(*) FILTER (WHERE status = 'DIKIRIM') as total_dikirim,
+          COUNT(*) FILTER (
+            WHERE status = 'SELESAI'
+            AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+          ) as total_selesai_bulan_ini
+        FROM restock_tickets
+        ${reqCond}
+      `);
+      reqSummaryRow = reqSummaryRes.rows[0] || {};
+    } catch (_) {}
+
+    let opnameSummaryRow = {};
+    try {
+      let opnCond = outlet_id ? `WHERE outlet_id = ${parseInt(outlet_id)}` : '';
+      let shiftCond = outlet_id ? `AND sc.outlet_id = ${parseInt(outlet_id)}` : '';
+      const opnameSummaryRes = await pool.query(`
+        SELECT 
+          COUNT(*) FILTER (
+            WHERE status = 'FINAL'
+            AND EXTRACT(MONTH FROM tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
+            AND EXTRACT(YEAR FROM tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+          ) as total_final_bulan_ini,
+          COUNT(*) FILTER (WHERE status = 'DRAFT') as total_draft_aktif,
+          (
+            SELECT COUNT(*) FROM shift_closings sc
+            WHERE sc.shift_date = CURRENT_DATE AND sc.status = 'CLOSED'
+            ${shiftCond}
+          ) as shift_closed_hari_ini
+        FROM stock_opnames
+        ${opnCond}
+      `);
+      opnameSummaryRow = opnameSummaryRes.rows[0] || {};
+    } catch (_) {}
+
     const branchPerfRes = await pool.query(`
       SELECT 
         o.id,
@@ -190,6 +233,18 @@ class ReportService {
         total_baik: parseInt(assetRow.total_baik || 0),
         total_rusak: parseInt(assetRow.total_rusak || 0),
         total_jenis: parseInt(assetRow.total_jenis_terdata || 0)
+      },
+      requests_summary: {
+        total_aktif: parseInt(reqSummaryRow.total_aktif || 0),
+        total_diajukan: parseInt(reqSummaryRow.total_diajukan || 0),
+        total_diproses: parseInt(reqSummaryRow.total_diproses || 0),
+        total_dikirim: parseInt(reqSummaryRow.total_dikirim || 0),
+        total_selesai_bulan_ini: parseInt(reqSummaryRow.total_selesai_bulan_ini || 0)
+      },
+      opname_summary: {
+        total_final_bulan_ini: parseInt(opnameSummaryRow.total_final_bulan_ini || 0),
+        total_draft_aktif: parseInt(opnameSummaryRow.total_draft_aktif || 0),
+        shift_closed_hari_ini: parseInt(opnameSummaryRow.shift_closed_hari_ini || 0)
       }
     };
   }

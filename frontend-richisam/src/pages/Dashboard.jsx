@@ -18,7 +18,9 @@ import {
   ExternalLink,
   Filter,
   UserCheck,
-  RotateCcw
+  RotateCcw,
+  ClipboardCheck,
+  Wrench
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import useThemeStore from '../store/useThemeStore';
@@ -64,15 +66,17 @@ const Dashboard = () => {
         const reqQuery = isExecutive && selectedOutletId ? `?limit=15&outlet_id=${selectedOutletId}` : '?limit=15';
 
         const [statsRes, lowRes, reqRes, batchRes] = await Promise.all([
-          axiosClient.get(`/reports/dashboard${outletQuery}`),
-          axiosClient.get(`/stocks/low${outletQuery}`),
-          axiosClient.get(`/requests${reqQuery}`),
+          axiosClient.get(`/reports/dashboard${outletQuery}`).catch(() => null),
+          axiosClient.get(`/stocks/low${outletQuery}`).catch(() => ({ data: [] })),
+          axiosClient.get(`/requests${reqQuery}`).catch(() => ({ data: [] })),
           axiosClient.get(`/batches/summary${outletQuery}`).catch(() => ({ data: { data: null } }))
         ]);
 
-        setStats(statsRes.data);
+        if (statsRes) {
+          setStats(statsRes.data || statsRes);
+        }
 
-        const rawLowList = Array.isArray(lowRes.data) ? lowRes.data : (lowRes.data?.data || []);
+        const rawLowList = Array.isArray(lowRes?.data) ? lowRes.data : (lowRes?.data?.data || []);
         const filteredLowList =
           isExecutive && selectedOutletId
             ? rawLowList.filter((item) => String(item.outlet_id) === String(selectedOutletId))
@@ -81,7 +85,7 @@ const Dashboard = () => {
         setAllLowStocks(filteredLowList);
         setLowStocks(filteredLowList.slice(0, 4));
 
-        const rawReqs = reqRes.data?.data || [];
+        const rawReqs = Array.isArray(reqRes?.data) ? reqRes.data : (reqRes?.data?.data || []);
         const filteredReqs =
           isExecutive && selectedOutletId
             ? rawReqs.filter((r) => String(r.outlet_id) === String(selectedOutletId))
@@ -152,6 +156,18 @@ const Dashboard = () => {
   const totalKeluarBulanIni = stats?.total_keluar_bulan_ini || 0;
   const branchPerformance = stats?.branch_performance || [];
   const assetStats = stats?.assets || { total_unit: 0, total_baik: 0, total_rusak: 0, total_jenis: 0 };
+  const reqSummary = stats?.requests_summary || {
+    total_aktif: recentRequests.filter((r) => ['DIAJUKAN', 'DIPROSES', 'DIKIRIM'].includes(r.status)).length,
+    total_diajukan: recentRequests.filter((r) => r.status === 'DIAJUKAN').length,
+    total_diproses: recentRequests.filter((r) => r.status === 'DIPROSES').length,
+    total_dikirim: recentRequests.filter((r) => r.status === 'DIKIRIM').length,
+    total_selesai_bulan_ini: recentRequests.filter((r) => r.status === 'SELESAI').length
+  };
+  const opnSummary = stats?.opname_summary || {
+    total_final_bulan_ini: 0,
+    total_draft_aktif: 0,
+    shift_closed_hari_ini: 0
+  };
 
   return (
     <div className="space-y-8 animate-fade-in max-w-7xl pb-10 text-white">
@@ -342,119 +358,136 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Kartu 2: Total Produk Terdaftar */}
+          {/* Kartu 2: Antrean Tiket Restock & Distribusi Logistik */}
           <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] hover:border-[#F9610D]/40 transition-all flex flex-col justify-between group">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-stone-400">Katalog Produk</span>
+                <span className="text-xs font-semibold text-stone-400">Tiket Permintaan Stok</span>
+                {reqSummary.total_aktif > 0 ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30">
+                    {reqSummary.total_aktif} Berjalan
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Terkendali
+                  </span>
+                )}
               </div>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3 tracking-tight">
-                {totalProduk}
+                {reqSummary.total_aktif > 0
+                  ? `${reqSummary.total_aktif} Antrean`
+                  : `${reqSummary.total_selesai_bulan_ini} Selesai`}
               </p>
-              <div className="flex items-center gap-4 mt-2 text-xs text-stone-400">
-                <span>Bahan Baku: <strong className="text-stone-200">Utama</strong></span>
-                <span>Satuan: <strong className="text-stone-200">Kg/Pcs</strong></span>
+              <div className="flex items-center gap-2 flex-wrap mt-1.5 text-xs text-stone-400">
+                {reqSummary.total_aktif > 0 ? (
+                  <>
+                    <span className="text-[#FFCE00] font-semibold">{reqSummary.total_diajukan} Menunggu</span>
+                    <span>•</span>
+                    <span className="text-[#F9610D] font-semibold">{reqSummary.total_diproses + reqSummary.total_dikirim} Dikirim/Proses</span>
+                  </>
+                ) : (
+                  <span>{reqSummary.total_selesai_bulan_ini} distribusi restock selesai bulan ini</span>
+                )}
               </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-[#241C18] flex items-center justify-between">
               <div className="flex items-center gap-2 text-stone-300">
                 <div className="w-7 h-7 rounded-lg bg-[#221B17] border border-[#2D241E] flex items-center justify-center text-[#F9610D]">
-                  <Package size={15} />
+                  <Activity size={15} />
                 </div>
-                <span className="text-xs font-semibold text-white">Item Master</span>
+                <span className="text-xs font-semibold text-white">Logistik & Restock</span>
               </div>
-              <Link to="/products" className="text-xs font-semibold text-[#F9610D] hover:underline">
-                Kelola
+              <Link to="/permintaan" className="text-xs font-semibold text-[#F9610D] hover:underline">
+                {reqSummary.total_aktif > 0 ? 'Proses' : 'Buka'}
               </Link>
             </div>
           </div>
 
-          {/* Kartu 3: Jaringan Cabang (atau Inventaris Peralatan jika staf cabang) */}
+          {/* Kartu 3: Inventaris Peralatan Fisik */}
           <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] hover:border-[#FFCE00]/40 transition-all flex flex-col justify-between group">
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-stone-400">
-                  {user?.role === 'STAF_CABANG' ? 'Inventaris Peralatan' : 'Outlet & Cabang'}
+                  Inventaris Peralatan
                 </span>
-                {user?.role === 'STAF_CABANG' ? (
-                  assetStats.total_rusak > 0 ? (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30">
-                      {assetStats.total_rusak} Rusak
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      Semua Baik
-                    </span>
-                  )
+                {assetStats.total_rusak > 0 ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-400 border border-rose-500/30">
+                    {assetStats.total_rusak} Rusak
+                  </span>
                 ) : (
-                  <span className="text-[11px] font-bold text-[#FFCE00]">
-                    Beroperasi
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Semua Baik
                   </span>
                 )}
               </div>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3 tracking-tight">
-                {user?.role === 'STAF_CABANG' ? `${assetStats.total_unit} Unit` : `${totalCabang} Mitra`}
+                {assetStats.total_unit.toLocaleString('id-ID')} Unit
               </p>
-              <div className="text-xs text-stone-400 mt-1">
-                {user?.role === 'STAF_CABANG' ? (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-emerald-400 font-semibold">{assetStats.total_baik} Baik</span>
-                    {assetStats.total_rusak > 0 && (
-                      <span className="text-rose-400 font-semibold">• {assetStats.total_rusak} Rusak</span>
-                    )}
-                    <span className="text-stone-500">({assetStats.total_jenis} jenis terdata)</span>
-                  </div>
-                ) : (
-                  <span>Total Aset: {assetStats.total_unit} Unit ({assetStats.total_rusak} Rusak)</span>
-                )}
+              <div className="text-xs text-stone-400 mt-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-emerald-400 font-semibold">{assetStats.total_baik.toLocaleString('id-ID')} Baik</span>
+                  {assetStats.total_rusak > 0 && (
+                    <span className="text-rose-400 font-semibold">• {assetStats.total_rusak} Rusak</span>
+                  )}
+                  <span className="text-stone-500">({assetStats.total_jenis} jenis alat)</span>
+                </div>
               </div>
             </div>
 
             <div className="mt-6 pt-4 border-t border-[#241C18] flex items-center justify-between">
               <div className="flex items-center gap-2 text-stone-300">
                 <div className="w-7 h-7 rounded-lg bg-[#221B17] border border-[#2D241E] flex items-center justify-center text-[#FFCE00]">
-                  <Store size={15} />
+                  <Wrench size={15} />
                 </div>
                 <span className="text-xs font-semibold text-white">
-                  {user?.role === 'STAF_CABANG' ? 'Aset Fisik' : 'Jaringan Cabang'}
+                  Aset Peralatan
                 </span>
               </div>
               <Link
-                to={user?.role === 'STAF_CABANG' ? '/assets' : '/outlets'}
+                to="/assets"
                 className="text-xs font-semibold text-[#FFCE00] hover:underline"
               >
-                {user?.role === 'STAF_CABANG' ? 'Kelola' : 'Buka'}
+                Kelola
               </Link>
             </div>
           </div>
 
-          {/* Kartu 4: Laporan Defect & Kerusakan */}
-          <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] hover:border-[#EC1F27]/40 transition-all flex flex-col justify-between group">
+          {/* Kartu 4: Status Audit Stok Opname & Kepatuhan Shift */}
+          <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] hover:border-emerald-500/40 transition-all flex flex-col justify-between group">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-stone-400">Laporan Defect</span>
-                <span className={`text-[11px] font-bold ${defectBulanIni > 0 ? 'text-[#EC1F27]' : 'text-stone-500'}`}>
-                  Bulan Ini
-                </span>
+                <span className="text-xs font-semibold text-stone-400">Audit Opname & Shift</span>
+                {opnSummary.total_draft_aktif > 0 ? (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    {opnSummary.total_draft_aktif} Draf Menunggu
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    Bulan Ini
+                  </span>
+                )}
               </div>
-              <p className={`text-2xl sm:text-3xl font-extrabold mt-3 tracking-tight ${defectBulanIni > 0 ? 'text-[#EC1F27]' : 'text-stone-300'}`}>
-                {defectBulanIni} Kasus
+              <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3 tracking-tight">
+                {opnSummary.total_draft_aktif > 0
+                  ? `${opnSummary.total_draft_aktif} Draf Opname`
+                  : `${opnSummary.total_final_bulan_ini} Opname Final`}
               </p>
-              <p className="text-xs text-stone-400 mt-1">
-                {defectBulanIni > 0 ? 'Barang rusak / BS tercatat' : 'Nihil kerusakan tercatat'}
+              <p className="text-xs text-stone-400 mt-1.5">
+                <strong className="text-stone-200">{opnSummary.total_final_bulan_ini} Final</strong> bulan ini •{' '}
+                <strong className="text-emerald-400">{opnSummary.shift_closed_hari_ini} Shift</strong> tutup buku hari ini
               </p>
             </div>
 
             <div className="mt-6 pt-4 border-t border-[#241C18] flex items-center justify-between">
               <div className="flex items-center gap-2 text-stone-300">
-                <div className="w-7 h-7 rounded-lg bg-[#221B17] border border-[#2D241E] flex items-center justify-center text-[#EC1F27]">
-                  <AlertCircle size={15} />
+                <div className="w-7 h-7 rounded-lg bg-[#221B17] border border-[#2D241E] flex items-center justify-center text-emerald-400">
+                  <ClipboardCheck size={15} />
                 </div>
-                <span className="text-xs font-semibold text-white">Inspeksi BS</span>
+                <span className="text-xs font-semibold text-white">Stok Opname</span>
               </div>
-              <Link to="/defect" className="text-xs font-semibold text-[#EC1F27] hover:underline">
-                Rekap
+              <Link to="/opname" className="text-xs font-semibold text-emerald-400 hover:underline">
+                {opnSummary.total_draft_aktif > 0 ? 'Validasi' : 'Buka'}
               </Link>
             </div>
           </div>

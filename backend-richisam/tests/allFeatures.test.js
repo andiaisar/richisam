@@ -30,6 +30,9 @@ const AnalyticsService = require('../services/analyticsService');
 const MutationService = require('../services/mutationService');
 const productController = require('../controllers/productController');
 const auditController = require('../controllers/auditController');
+const reportController = require('../controllers/reportController');
+const ReportService = require('../services/reportService');
+const ExcelJS = require('exceljs');
 
 const mockRes = () => {
   const res = {};
@@ -451,6 +454,222 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
           data: expect.arrayContaining([expect.objectContaining({ module: 'MUTASI' })])
         })
       );
+    });
+  });
+
+  describe('11. Dashboard Filter Terpadu, Metrik Operasional Baru, Rekap Bulanan & Ekspor 31 Sheet Excel', () => {
+    it('Dashboard mengembalikan metrik finansial, performa cabang, antrean tiket, aset peralatan, dan audit opname sesuai filter outlet', async () => {
+      pool.query
+        .mockResolvedValueOnce({ rows: [{ count: '1' }] }) // cabangRes
+        .mockResolvedValueOnce({ rows: [{ count: '69' }] }) // produkRes
+        .mockResolvedValueOnce({ rows: [{ count: '4' }] }) // parRes
+        .mockResolvedValueOnce({ rows: [{ total: '2' }] }) // defectRes
+        .mockResolvedValueOnce({
+          rows: [{ total_unit: '250', total_baik: '248', total_rusak: '2', total_jenis_terdata: '25' }]
+        }) // assetRes
+        .mockResolvedValueOnce({
+          rows: [{ total_nilai_persediaan: '85000000', total_unit_stok: '1200' }]
+        }) // stockValRes
+        .mockResolvedValueOnce({
+          rows: [{ total_masuk_bulan_ini: '300', total_keluar_bulan_ini: '180', nilai_pemakaian_bulan_ini: '12500000' }]
+        }) // mutMonthRes
+        .mockResolvedValueOnce({
+          rows: [{ total_aktif: '3', total_diajukan: '2', total_diproses: '1', total_dikirim: '0', total_selesai_bulan_ini: '14' }]
+        }) // reqSummaryRes
+        .mockResolvedValueOnce({
+          rows: [{ total_final_bulan_ini: '2', total_draft_aktif: '1', shift_closed_hari_ini: '2' }]
+        }) // opnameSummaryRes
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 2,
+              nama: 'Outlet Alauddin',
+              tipe: 'CABANG',
+              nilai_stok: '85000000',
+              stok_kritis: '4',
+              masuk_bulan_ini: '300',
+              keluar_bulan_ini: '180',
+              nilai_keluar_bulan_ini: '12500000',
+              defect_bulan_ini: '2'
+            }
+          ]
+        }); // branchPerfRes
+
+      const reqDash = {
+        query: { outlet_id: '2' },
+        user: { id: 1, role: 'OWNER', nama: 'Owner Bos' }
+      };
+      const resDash = mockRes();
+      await reportController.getDashboardStats(reqDash, resDash);
+
+      expect(resDash.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            total_nilai_persediaan: 85000000,
+            nilai_pemakaian_bulan_ini: 12500000,
+            assets: { total_unit: 250, total_baik: 248, total_rusak: 2, total_jenis: 25 },
+            requests_summary: {
+              total_aktif: 3,
+              total_diajukan: 2,
+              total_diproses: 1,
+              total_dikirim: 0,
+              total_selesai_bulan_ini: 14
+            },
+            opname_summary: {
+              total_final_bulan_ini: 2,
+              total_draft_aktif: 1,
+              shift_closed_hari_ini: 2
+            },
+            branch_performance: expect.arrayContaining([
+              expect.objectContaining({ id: 2, nama: 'Outlet Alauddin', nilai_stok: 85000000 })
+            ])
+          })
+        })
+      );
+    });
+
+    it('Rekap Bulanan (getMonthlyRecap) menghitung ringkasan barang dan performa cabang secara akurat', async () => {
+      pool.query
+        .mockResolvedValueOnce({}) // syncOpnameSnapshots: harga_snapshot
+        .mockResolvedValueOnce({}) // syncOpnameSnapshots: qty_sistem/fisik
+        .mockResolvedValueOnce({}) // sync stock_mutations harga_snapshot
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 5,
+              kode: 'PRD-005',
+              nama: 'GULA',
+              kategori: 'Bahan Utama',
+              satuan: 'kg',
+              harga_master: '18000',
+              saw_awal_bulan: '20',
+              total_masuk: '10',
+              total_keluar: '15',
+              sak_akhir_bulan: '15'
+            }
+          ]
+        }) // itemsQuery
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 2,
+              nama: 'Outlet Alauddin',
+              tipe: 'CABANG',
+              total_masuk: '10',
+              total_keluar: '15',
+              nilai_pemakaian: '270000',
+              total_defect: '0',
+              opname_final_count: '1'
+            }
+          ]
+        }); // branchRecapRes
+
+      const recap = await ReportService.getMonthlyRecap(2, 10, 2026);
+      expect(recap.summary.total_unit_masuk).toBe(10);
+      expect(recap.summary.total_unit_keluar).toBe(15);
+      expect(recap.summary.total_nilai_persediaan).toBe(15 * 18000);
+      expect(recap.summary.total_nilai_pemakaian).toBe(15 * 18000);
+      expect(recap.items[0]).toMatchObject({
+        nama: 'GULA',
+        harga: 18000,
+        saw_awal_bulan: 20,
+        sak_akhir_bulan: 15
+      });
+    });
+
+    it('Ekspor Excel 31 Sheet (exportMonthlyExcel) menjaga kesinambungan stok antar shift & menghitung STOK OPNAME dengan benar', async () => {
+      pool.query
+        .mockResolvedValueOnce({}) // syncOpnameSnapshots: harga_snapshot
+        .mockResolvedValueOnce({}) // syncOpnameSnapshots: qty_sistem/fisik
+        .mockResolvedValueOnce({}) // sync stock_mutations harga_snapshot
+        .mockResolvedValueOnce({ rows: [{ nama: 'Outlet Alauddin' }] }) // outletQuery
+        .mockResolvedValueOnce({
+          rows: [
+            { id: 5, nama: 'GULA', satuan: 'kg', harga: '18000', urutan: 1 },
+            { id: 7, nama: 'WIFI', satuan: 'unit', harga: '300', urutan: 2 }
+          ]
+        }) // products
+        .mockResolvedValueOnce({
+          rows: [
+            { product_id: 5, qty_current: 15 },
+            { product_id: 7, qty_current: 15 }
+          ]
+        }) // stocksRes
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              product_id: 5,
+              tanggal: new Date('2026-10-18'),
+              shift: 'PAGI',
+              saw: 20,
+              masuk: 5,
+              keluar: 10,
+              sak: 15,
+              harga_snapshot: 18000
+            }
+          ]
+        }) // mutations
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 10,
+              kode: 'OPN-202610-001',
+              outlet_id: 2,
+              tanggal: new Date('2026-10-18'),
+              status: 'FINAL'
+            }
+          ]
+        }) // opnames
+        .mockResolvedValueOnce({
+          rows: [
+            { product_id: 5, qty_sistem: 100, qty_fisik: 100, selisih: 0, harga_snapshot: 18, alasan: null },
+            { product_id: 7, qty_sistem: 105, qty_fisik: 15, selisih: -90, harga_snapshot: 300, alasan: 'Susut' }
+          ]
+        }); // stock_opname_items
+
+      const buffer = await ReportService.exportMonthlyExcel(2, 10, 2026);
+      expect(Buffer.isBuffer(buffer)).toBe(true);
+
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.load(buffer);
+
+      // Pastikan ada 31 sheet harian + REKAP BULANAN + STOK OPNAME = 33 sheet
+      expect(wb.worksheets.length).toBe(33);
+
+      // Cek TANGGAL 1: GULA tidak punya mutasi di Tanggal 1, SAW harus mulai dari 20 (firstSaw) dan SAK tidak jatuh ke 0
+      const wsDay1 = wb.getWorksheet('TANGGAL 1');
+      expect(wsDay1.getCell('D4').value).toBe(20);
+      expect(wsDay1.getCell('F4').value).toEqual({ formula: 'D4+E4', result: 20 });
+      expect(wsDay1.getCell('G4').value.formula).toBe('D4+E4-F4');
+      expect(wsDay1.getCell('H4').value.formula).toBe('G4*C4');
+
+      // Cek TANGGAL 18: GULA punya mutasi di PAGI (SAW=20, M=5, SAK=15, K=10)
+      const wsDay18 = wb.getWorksheet('TANGGAL 18');
+      expect(wsDay18.getCell('J4').value).toBe(5); // Masuk Pagi
+      expect(wsDay18.getCell('K4').value).toBe(15); // SAK Pagi
+      expect(wsDay18.getCell('L4').value).toEqual({ formula: 'I4+J4-K4', result: 10 }); // Keluar Pagi = 10
+      expect(wsDay18.getCell('M4').value).toEqual({ formula: 'L4*C4', result: 180000 }); // Total Harga Pagi = 10 * 18000
+
+      // Cek Sheet STOK OPNAME:
+      // Baris 4 (GULA): sebelumnya dummy 100 & harga 18 -> sekarang sinkron ke stok aktual 15 & harga master 18000
+      const wsOpn = wb.getWorksheet('STOK OPNAME');
+      expect(wsOpn.getCell('C4').value).toBe(15); // SISTEM
+      expect(wsOpn.getCell('D4').value).toBe(15); // FISIK
+      expect(wsOpn.getCell('E4').value.formula).toBe('D4-C4'); // SELISIH
+      expect(wsOpn.getCell('F4').value).toBe(18000); // HARGA terkalibrasi (bukan 18!)
+      expect(wsOpn.getCell('G4').value.formula).toBe('E4*F4'); // NILAI SELISIH
+
+      // Baris 5 (WIFI): punya selisih tercatat (SISTEM=105, FISIK=15, SELISIH=-90, HARGA=300, NILAI SELISIH=-27000)
+      expect(wsOpn.getCell('C5').value).toBe(105);
+      expect(wsOpn.getCell('D5').value).toBe(15);
+      expect(wsOpn.getCell('E5').value).toEqual({ formula: 'D5-C5', result: -90 });
+      expect(wsOpn.getCell('F5').value).toBe(300);
+      expect(wsOpn.getCell('G5').value).toEqual({ formula: 'E5*F5', result: -27000 });
+
+      // Baris 6 (TOTAL KESELURUHAN)
+      expect(wsOpn.getCell('B6').value).toBe('TOTAL KESELURUHAN');
+      expect(wsOpn.getCell('G6').value).toEqual({ formula: 'SUM(G4:G5)', result: -27000 });
     });
   });
 });

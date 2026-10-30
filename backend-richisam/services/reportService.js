@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const ExcelJS = require('exceljs');
 const OpnameService = require('./opnameService');
+const MutationService = require('./mutationService');
 
 class ReportService {
   static async getMutationsReport(outlet_id, start_date, end_date) {
@@ -55,6 +56,7 @@ class ReportService {
   }
 
   static async getDashboardStats(outlet_id) {
+    await MutationService.healAccidentalMassZeroMutations();
     let cabangCond = outlet_id ? `AND id = ${parseInt(outlet_id)}` : '';
     const cabangRes = await pool.query(`SELECT COUNT(*) FROM outlets WHERE tipe = 'CABANG' AND is_active = true ${cabangCond}`);
     const produkRes = await pool.query(`SELECT COUNT(*) FROM products WHERE is_active = true`);
@@ -250,6 +252,7 @@ class ReportService {
   }
 
   static async getMonthlyRecap(outlet_id, bulan, tahun) {
+    await MutationService.healAccidentalMassZeroMutations();
     await OpnameService.syncOpnameSnapshots();
     try {
       await pool.query(
@@ -444,6 +447,7 @@ class ReportService {
 
   static async exportMonthlyExcel(outlet_id, bulan, tahun) {
     // 1. Sinkronkan snapshot harga & stok opname sebelum ekspor agar seluruh angka akurat
+    await MutationService.healAccidentalMassZeroMutations();
     await OpnameService.syncOpnameSnapshots();
     try {
       await pool.query(

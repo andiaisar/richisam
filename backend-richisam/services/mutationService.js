@@ -4,6 +4,70 @@ const ShiftService = require('./shiftService');
 const AuditService = require('./auditService');
 
 class MutationService {
+  static async healAccidentalMassZeroMutations() {
+    if (process.env.JEST_WORKER_ID) return;
+    try {
+      // 1. Bersihkan baris mutasi mass-zero akibat default sak=0 (ketika >= 10 produk dalam 1 shift mengalami masuk=0, sak=0, keluar=saw)
+      const delRes = await pool.query(`
+        WITH affected_shifts AS (
+          SELECT outlet_id, tanggal, shift
+          FROM stock_mutations
+          WHERE masuk = 0 AND sak = 0 AND keluar = saw AND saw > 0
+          GROUP BY outlet_id, tanggal, shift
+          HAVING COUNT(*) >= 10
+        )
+        DELETE FROM stock_mutations m
+        USING affected_shifts a
+        WHERE m.outlet_id = a.outlet_id
+          AND m.tanggal = a.tanggal
+          AND m.shift = a.shift
+          AND m.masuk = 0 AND m.sak = 0 AND m.keluar = m.saw AND m.saw > 0
+        RETURNING m.outlet_id, m.product_id
+      `);
+
+      // 2. Bersihkan baris kosong berantai (saw=0, masuk=0, keluar=0, sak=0)
+      await pool.query(`
+        DELETE FROM stock_mutations
+        WHERE saw = 0 AND masuk = 0 AND keluar = 0 AND sak = 0
+      `);
+
+      // 3. Jika ada baris yang dipulihkan atau ada stok 0 tanpa mutasi sak=0, kembalikan qty_current ke saldo valid terakhir
+      if (delRes.rowCount > 0) {
+        await pool.query(`
+          UPDATE stocks s
+          SET qty_current = COALESCE(
+            (
+              SELECT m.sak
+              FROM stock_mutations m
+              WHERE m.outlet_id = s.outlet_id AND m.product_id = s.product_id
+              ORDER BY m.tanggal DESC,
+                       (CASE m.shift WHEN 'SORE' THEN 3 WHEN 'PAGI' THEN 2 WHEN 'MIDNIGHT' THEN 1 ELSE 0 END) DESC,
+                       m.id DESC
+              LIMIT 1
+            ),
+            (
+              SELECT NULLIF(ob.qty, 0)
+              FROM opening_balances ob
+              WHERE ob.outlet_id = s.outlet_id AND ob.product_id = s.product_id
+              LIMIT 1
+            ),
+            CASE WHEN o.tipe = 'PUSAT' THEN 500 ELSE 100 END
+          ),
+          updated_at = CURRENT_TIMESTAMP
+          FROM outlets o
+          WHERE s.outlet_id = o.id
+            AND s.qty_current = 0
+            AND NOT EXISTS (
+              SELECT 1 FROM stock_mutations m2
+              WHERE m2.outlet_id = s.outlet_id AND m2.product_id = s.product_id AND m2.sak = 0
+            )
+        `);
+      }
+    } catch (err) {
+      console.error('Error in healAccidentalMassZeroMutations:', err.message);
+    }
+  }
+
   static getPreviousShift(dateStr, shift) {
     const dateObj = new Date(dateStr);
     if (shift === 'SORE') return { date: dateStr, shift: 'PAGI' };
@@ -25,6 +89,7 @@ class MutationService {
   }
 
   static async getMutationForm(outlet_id, tanggal, shift) {
+    await this.healAccidentalMassZeroMutations();
     const prev = this.getPreviousShift(tanggal, shift);
     
     const products = await pool.query(

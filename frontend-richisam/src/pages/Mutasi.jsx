@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axiosClient from '../api/axiosClient';
-import { ArrowLeftRight, Save, RefreshCw, AlertCircle, FileText, Calendar } from 'lucide-react';
+import { ArrowLeftRight, Save, RefreshCw, AlertCircle, FileText, Calendar, RotateCcw } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -48,18 +48,26 @@ const Mutasi = () => {
       });
       const data = res?.data?.data || res?.data || [];
       
-      const formatted = data.map(item => ({
-        product_id: item.product_id,
-        urutan: item.urutan,
-        kode: item.kode,
-        nama: item.nama,
-        satuan: item.satuan,
-        harga: item.harga || 0,
-        par_stock: item.par_stock || 0,
-        saw: item.saw || 0,
-        masuk: item.masuk || 0, // pre-filled if already exists
-        sak: item.sak !== undefined && item.sak !== null ? item.sak : 0, // default 0 or existing
-      }));
+      const formatted = data.map(item => {
+        const hasExistingRecord = item.sak !== undefined && item.sak !== null;
+        const sawVal = item.saw || 0;
+        const masukVal = item.masuk || 0;
+        return {
+          product_id: item.product_id,
+          urutan: item.urutan,
+          kode: item.kode,
+          nama: item.nama,
+          satuan: item.satuan,
+          harga: item.harga || 0,
+          par_stock: item.par_stock || 0,
+          saw: sawVal,
+          masuk: masukVal,
+          // Default SAK ke SAW + Masuk (Keluar = 0) agar barang yang tidak dipakai tidak terkuras ke 0
+          sak: hasExistingRecord ? item.sak : (sawVal + masukVal),
+          sakEdited: hasExistingRecord,
+          alreadySaved: hasExistingRecord
+        };
+      });
       setFormItems(formatted);
     } catch (e) {
       toast.error(e.response?.data?.message || 'Gagal memuat form mutasi');
@@ -70,13 +78,30 @@ const Mutasi = () => {
   };
 
   const handleInputChange = (productId, field, value) => {
-    const num = parseInt(value) || 0;
+    const rawNum = value === '' ? 0 : parseInt(value, 10);
+    const num = !isNaN(rawNum) && rawNum >= 0 ? rawNum : 0;
     setFormItems(prev => prev.map(item => {
       if (item.product_id === productId) {
-        return { ...item, [field]: num >= 0 ? num : 0 };
+        if (field === 'masuk') {
+          const nextSak = item.sakEdited ? item.sak : (item.saw + num);
+          return { ...item, masuk: num, sak: nextSak };
+        }
+        if (field === 'sak') {
+          return { ...item, sak: num, sakEdited: true };
+        }
+        return { ...item, [field]: num };
       }
       return item;
     }));
+  };
+
+  const handleResetSakToSaw = () => {
+    setFormItems(prev => prev.map(item => ({
+      ...item,
+      sak: item.saw + item.masuk,
+      sakEdited: false
+    })));
+    toast.success('Seluruh kolom Fisik (SAK) dikembalikan ke posisi Stok Awal + Masuk (Keluar = 0)');
   };
 
   const handleKeyDown = (e, productId, field, rowIndex) => {
@@ -120,13 +145,31 @@ const Mutasi = () => {
       return toast.error('Terdapat item dengan nilai Keluar (K) negatif. Periksa kembali hitungan fisik Anda.');
     }
 
+    // Hanya kirim item yang benar-benar ada pergerakan (Masuk > 0 atau Keluar > 0) atau sudah pernah disimpan di shift ini
+    const activeItems = formItems.filter(
+      item => item.masuk > 0 || calculateK(item) > 0 || item.alreadySaved || item.sakEdited
+    );
+
+    if (activeItems.length === 0) {
+      return toast.error('Belum ada perubahan Barang Masuk (M) atau Fisik (SAK) yang diinput pada shift ini.');
+    }
+
+    // Pengaman konfirmasi jika banyak barang sekaligus diubah menjadi SAK = 0
+    const zeroedItems = activeItems.filter(item => item.saw > 0 && item.sak === 0);
+    if (zeroedItems.length >= 10) {
+      const ok = window.confirm(
+        `Perhatian: Terdapat ${zeroedItems.length} jenis bahan baku yang dicatat habis total (SAK = 0) sekaligus pada shift ini.\n\nApakah Anda yakin seluruh barang tersebut benar-benar habis terpakai?`
+      );
+      if (!ok) return;
+    }
+
     setSubmitting(true);
     try {
       const payload = {
         outlet_id: parseInt(selectedOutlet),
         tanggal,
         shift,
-        items: formItems.map(item => ({
+        items: activeItems.map(item => ({
           product_id: item.product_id,
           masuk: item.masuk,
           sak: item.sak
@@ -134,8 +177,8 @@ const Mutasi = () => {
       };
 
       await axiosClient.post('/mutations', payload);
-      toast.success('Data mutasi berhasil disimpan');
-      // Optionally fetch again to reflect
+      const usedCount = activeItems.filter(item => calculateK(item) > 0 || item.masuk > 0).length;
+      toast.success(`Mutasi berhasil disimpan (${usedCount} bahan bergerak tercatat)`);
       fetchForm();
     } catch (e) {
       const firstDetailError = e.response?.data?.errors?.[0]?.message;
@@ -151,6 +194,8 @@ const Mutasi = () => {
 
   const totalPersediaan = formItems.reduce((acc, item) => acc + calculateTotalHarga(item), 0);
   const totalKeluar = formItems.reduce((acc, item) => acc + calculateK(item), 0);
+  const totalNilaiPemakaianShift = formItems.reduce((acc, item) => acc + (Math.max(0, calculateK(item)) * (item.harga || 0)), 0);
+  const jumlahBarangBergerak = formItems.filter(item => item.masuk > 0 || calculateK(item) > 0).length;
 
   return (
     <div className="space-y-6 animate-fade-in max-w-[1400px] text-white">
@@ -230,16 +275,39 @@ const Mutasi = () => {
           </div>
         </div>
 
-        {/* Search Bar (Client side filter) */}
+        {/* Search Bar & Real-World Summary Toolbar */}
         {formItems.length > 0 && !loading && (
-          <div className="px-5 py-3 border-b border-[#241C18] bg-[#140F0D]/40">
-            <input 
-              type="text" 
-              placeholder="Cari produk (Filter baris)..." 
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full sm:w-80 px-4 py-2 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#F9610D]"
-            />
+          <div className="px-5 py-3.5 border-b border-[#241C18] bg-[#140F0D]/40 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <input 
+                type="text" 
+                placeholder="Cari produk (Filter baris)..." 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full sm:w-72 px-4 py-2 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#F9610D]"
+              />
+              <button
+                type="button"
+                onClick={handleResetSakToSaw}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#221B17] hover:bg-[#2D241E] border border-[#2D241E] text-xs font-bold text-stone-300 hover:text-white transition-colors cursor-pointer"
+                title="Kembalikan seluruh SAK mengikuti SAW + Masuk (Keluar = 0)"
+              >
+                <RotateCcw size={13} className="text-[#F9610D]" />
+                <span>Reset SAK = Stok Awal</span>
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="px-3 py-1.5 rounded-xl bg-[#1A1412] border border-[#2D241E] text-stone-300 font-semibold">
+                Bahan Bergerak: <strong className="text-[#FFCE00]">{jumlahBarangBergerak}</strong> / {formItems.length} Item
+              </span>
+              <span className="px-3 py-1.5 rounded-xl bg-[#1A1412] border border-[#2D241E] text-stone-300 font-semibold">
+                Total Unit Keluar: <strong className="text-[#F9610D]">{totalKeluar}</strong>
+              </span>
+              <span className="px-3 py-1.5 rounded-xl bg-[#1A1412] border border-[#2D241E] text-stone-300 font-semibold">
+                Nilai Pemakaian Shift: <strong className="text-white">{formatRupiah(totalNilaiPemakaianShift)}</strong>
+              </span>
+            </div>
           </div>
         )}
 

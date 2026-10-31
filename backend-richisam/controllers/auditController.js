@@ -38,7 +38,21 @@ exports.getLogs = async (req, res) => {
 
 exports.getStats = async (req, res) => {
   try {
-    const stats = await AuditService.getAuditStats();
+    const { module, action, user_id, outlet_id, start_date, end_date, search } = req.query || {};
+    let targetOutletId = outlet_id;
+    if (req.user?.role === 'STAF_CABANG') {
+      targetOutletId = req.user.outlet_id;
+    }
+
+    const stats = await AuditService.getAuditStats({
+      module,
+      action,
+      userId: user_id,
+      outletId: targetOutletId,
+      startDate: start_date,
+      endDate: end_date,
+      search: search || ''
+    });
     res.json({
       success: true,
       message: 'Statistik aktivitas audit',

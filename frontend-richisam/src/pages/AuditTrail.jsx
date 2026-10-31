@@ -26,34 +26,83 @@ import {
 
 const MODULE_OPTIONS = [
   { value: '', label: 'Semua Modul' },
-  { value: 'MUTASI', label: 'Mutasi Stok' },
-  { value: 'TRANSFER', label: 'Transfer Cabang' },
-  { value: 'OPNAME', label: 'Stok Opname' },
-  { value: 'SHIFT', label: 'Tutup Shift' },
-  { value: 'KADALUARSA', label: 'Batch & Expired' },
-  { value: 'DEFECT', label: 'Defect & Retur' },
+  { value: 'MUTASI', label: 'Mutasi Stok Harian' },
+  { value: 'OPNAME', label: 'Stok Opname & Valuasi' },
+  { value: 'PERMINTAAN', label: 'Tiket Permintaan & Cito' },
+  { value: 'TRANSFER', label: 'Transfer Antar Cabang' },
+  { value: 'SHIFT', label: 'Tutup Buku Shift' },
+  { value: 'DEFECT', label: 'Defect & Barang Rusak' },
+  { value: 'KADALUARSA', label: 'Batch & Expired (FEFO)' },
   { value: 'SISTEM', label: 'Sistem & Autentikasi' },
 ];
 
 const ACTION_OPTIONS = [
   { value: '', label: 'Semua Tipe Aksi' },
-  { value: 'CREATE', label: 'CREATE (Pembuatan Baru)' },
+  { value: 'CREATE', label: 'CREATE (Pencatatan Baru)' },
   { value: 'UPDATE', label: 'UPDATE (Modifikasi / Edit)' },
-  { value: 'DELETE', label: 'DELETE (Penghapusan)' },
-  { value: 'APPROVE', label: 'APPROVE (Persetujuan)' },
-  { value: 'CANCEL', label: 'CANCEL (Pembatalan)' },
+  { value: 'APPROVE', label: 'APPROVE (Persetujuan / Kirim)' },
+  { value: 'FINALIZE', label: 'FINALIZE (Finalisasi Opname)' },
+  { value: 'CITO', label: 'CITO (Pengambilan Darurat)' },
   { value: 'SHIFT_CLOSE', label: 'SHIFT_CLOSE (Kunci Shift)' },
-  { value: 'SHIFT_UNLOCK', label: 'SHIFT_UNLOCK (Buka Kunci)' },
+  { value: 'SHIFT_UNLOCK', label: 'SHIFT_UNLOCK (Buka Kunci Shift)' },
+  { value: 'REJECT', label: 'REJECT (Penolakan)' },
+  { value: 'DELETE', label: 'DELETE (Penghapusan)' },
+  { value: 'CANCEL', label: 'CANCEL (Pembatalan)' },
 ];
+
+const DETAIL_KEY_LABELS = {
+  tanggal: 'Tanggal Operasional',
+  shift: 'Shift Operasional',
+  items_count: 'Jumlah Bahan Bergerak',
+  total_masuk: 'Total Unit Masuk',
+  total_keluar: 'Total Unit Keluar',
+  rincian_bahan: 'Rincian Pergerakan Bahan',
+  kode_opname: 'Kode Dokumen Opname',
+  opname_id: 'ID Opname',
+  status: 'Status Dokumen',
+  total_produk_diaudit: 'Total Bahan Diaudit',
+  produk_berselisih: 'Bahan Berselisih Fisik',
+  penyesuaian_stok_diterapkan: 'Penyesuaian Stok Fisik',
+  defect_id: 'ID Laporan Defect',
+  produk: 'Nama Bahan Baku',
+  jumlah: 'Kuantitas',
+  status_keputusan: 'Keputusan Otorisasi',
+  alasan_kerusakan: 'Keterangan / Alasan',
+  kode_tiket: 'Nomor Tiket / Surat Jalan',
+  cabang_pemohon: 'Cabang Tujuan / Pemohon',
+  status_tiket: 'Status Tiket',
+  status_baru: 'Status Baru',
+  tipe_permintaan: 'Tipe Distribusi',
+  jumlah_jenis_barang: 'Jumlah Jenis Bahan',
+  total_unit: 'Total Kuantitas Unit',
+  jumlah_diminta: 'Jumlah Diminta',
+  qty_disetujui: 'Jumlah Disetujui',
+  nomor_batch: 'Nomor Batch FEFO',
+  tanggal_masuk: 'Tanggal Masuk Batch',
+  tanggal_kadaluarsa: 'Tanggal Kadaluarsa',
+  catatan: 'Catatan',
+  total_in: 'Total Masuk Shift',
+  total_out: 'Total Keluar Shift',
+  closing_notes: 'Catatan Tutup Shift',
+  alasan_unlock: 'Alasan Buka Kunci Shift'
+};
+
+const formatDetailValue = (val) => {
+  if (val === null || val === undefined || val === '') return '-';
+  if (typeof val === 'boolean') return val ? 'Ya (Diterapkan)' : 'Tidak';
+  return String(val);
+};
 
 const AuditTrail = () => {
   const [logs, setLogs] = useState([]);
   const [stats, setStats] = useState(null);
+  const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ page: 1, limit: 15, total: 0, totalPages: 1 });
 
   // Filters
   const [search, setSearch] = useState('');
+  const [selectedOutlet, setSelectedOutlet] = useState('');
   const [selectedModule, setSelectedModule] = useState('');
   const [selectedAction, setSelectedAction] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -61,11 +110,31 @@ const AuditTrail = () => {
 
   // Detail Modal
   const [selectedLog, setSelectedLog] = useState(null);
+  const [showRawJson, setShowRawJson] = useState(false);
 
-  // 1. Fetch Stats
-  const fetchStats = async () => {
+  useEffect(() => {
+    axiosClient
+      .get('/outlets')
+      .then((res) => {
+        const list = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
+        setOutlets(list);
+      })
+      .catch(() => {});
+  }, []);
+
+  // 1. Fetch Stats (mengikuti filter aktif)
+  const fetchStats = async (overrideParams = {}) => {
     try {
-      const res = await axiosClient.get('/audit/stats');
+      const res = await axiosClient.get('/audit/stats', {
+        params: {
+          outlet_id: ('outlet_id' in overrideParams ? overrideParams.outlet_id : selectedOutlet) || undefined,
+          module: ('module' in overrideParams ? overrideParams.module : selectedModule) || undefined,
+          action: ('action' in overrideParams ? overrideParams.action : selectedAction) || undefined,
+          start_date: ('start_date' in overrideParams ? overrideParams.start_date : startDate) || undefined,
+          end_date: ('end_date' in overrideParams ? overrideParams.end_date : endDate) || undefined,
+          search: ('search' in overrideParams ? overrideParams.search : search) || undefined
+        }
+      });
       setStats(res?.data || res || null);
     } catch (e) {
       console.error('Error fetching audit stats', e);
@@ -73,18 +142,19 @@ const AuditTrail = () => {
   };
 
   // 2. Fetch Logs
-  const fetchLogs = async (page = 1) => {
+  const fetchLogs = async (page = 1, overrideParams = {}) => {
     try {
       setLoading(true);
       const res = await axiosClient.get('/audit/logs', {
         params: {
           page,
           limit: pagination.limit,
-          module: selectedModule || undefined,
-          action: selectedAction || undefined,
-          start_date: startDate || undefined,
-          end_date: endDate || undefined,
-          search: search || undefined
+          outlet_id: ('outlet_id' in overrideParams ? overrideParams.outlet_id : selectedOutlet) || undefined,
+          module: ('module' in overrideParams ? overrideParams.module : selectedModule) || undefined,
+          action: ('action' in overrideParams ? overrideParams.action : selectedAction) || undefined,
+          start_date: ('start_date' in overrideParams ? overrideParams.start_date : startDate) || undefined,
+          end_date: ('end_date' in overrideParams ? overrideParams.end_date : endDate) || undefined,
+          search: ('search' in overrideParams ? overrideParams.search : search) || undefined
         }
       });
       const logList = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : (res?.data?.data || []));
@@ -103,20 +173,24 @@ const AuditTrail = () => {
   useEffect(() => {
     fetchStats();
     fetchLogs(1);
-  }, [selectedModule, selectedAction, startDate, endDate]);
+  }, [selectedOutlet, selectedModule, selectedAction, startDate, endDate]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    fetchStats();
     fetchLogs(1);
   };
 
   const resetFilters = () => {
     setSearch('');
+    setSelectedOutlet('');
     setSelectedModule('');
     setSelectedAction('');
     setStartDate('');
     setEndDate('');
-    fetchLogs(1);
+    const cleared = { outlet_id: '', module: '', action: '', start_date: '', end_date: '', search: '' };
+    fetchStats(cleared);
+    fetchLogs(1, cleared);
   };
 
   // Helper badge warna aksi
@@ -125,8 +199,12 @@ const AuditTrail = () => {
       case 'CREATE':
       case 'APPROVE':
         return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+      case 'FINALIZE':
+        return 'bg-sky-500/15 text-sky-300 border-sky-500/30';
       case 'UPDATE':
         return 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+      case 'CITO':
+        return 'bg-rose-500/20 text-rose-300 border-rose-500/40';
       case 'DELETE':
       case 'CANCEL':
       case 'REJECT':
@@ -167,24 +245,31 @@ const AuditTrail = () => {
 
       {/* ── STATS CARDS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Aktivitas Hari Ini */}
+        {/* 1. Total Jejak Audit & Aktivitas Hari Ini */}
         <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-stone-400">Aktivitas Hari Ini</span>
+            <span className="text-xs font-semibold text-stone-400">Total Jejak Audit</span>
             <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
               <Activity size={16} />
             </div>
           </div>
-          <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3">
-            {stats?.total_today || 0}
+          <div className="mt-3 flex items-baseline gap-2 flex-wrap">
+            <p className="text-2xl sm:text-3xl font-extrabold text-white">
+              {stats?.total_records ?? pagination.total ?? 0}
+            </p>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              +{stats?.total_today || 0} Hari Ini
+            </span>
+          </div>
+          <p className="text-[11px] text-stone-400 mt-1">
+            {stats?.shift_close_count || 0} tutup buku shift terekam
           </p>
-          <p className="text-[11px] text-stone-400 mt-1">Transaksi & aksi sistem tercatat</p>
         </div>
 
-        {/* Aksi Kritis */}
+        {/* 2. Aksi Kritis & Otorisasi Khusus */}
         <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-stone-400">Aksi Kritis / Sensitif</span>
+            <span className="text-xs font-semibold text-stone-400">Aksi Kritis & Otorisasi</span>
             <div className="w-7 h-7 rounded-lg bg-[#EC1F27]/10 border border-[#EC1F27]/20 flex items-center justify-center text-[#EC1F27]">
               <AlertCircle size={16} />
             </div>
@@ -192,27 +277,31 @@ const AuditTrail = () => {
           <p className={`text-2xl sm:text-3xl font-extrabold mt-3 ${(stats?.critical_actions || 0) > 0 ? 'text-[#EC1F27]' : 'text-stone-300'}`}>
             {stats?.critical_actions || 0} Aksi
           </p>
-          <p className="text-[11px] text-stone-400 mt-1">Delete, Cancel, atau Unlock</p>
+          <p className="text-[11px] text-stone-400 mt-1">
+            Unlock Shift, Cito, Finalize, Reject / Hapus
+          </p>
         </div>
 
-        {/* Modul Teraktif */}
+        {/* 3. Koreksi Stok & Insiden (Menggantikan Modul Teraktif) */}
         <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-stone-400">Modul Teraktif</span>
+            <span className="text-xs font-semibold text-stone-400">Koreksi Stok & Insiden</span>
             <div className="w-7 h-7 rounded-lg bg-[#FFCE00]/10 border border-[#FFCE00]/20 flex items-center justify-center text-[#FFCE00]">
               <Layers size={16} />
             </div>
           </div>
-          <p className="text-xl sm:text-2xl font-black text-white mt-3 uppercase tracking-tight">
-            {stats?.top_module || 'OPERASIONAL'}
+          <p className="text-2xl sm:text-3xl font-extrabold text-[#FFCE00] mt-3">
+            {stats?.stock_adjustments || 0} Kejadian
           </p>
-          <p className="text-[11px] text-stone-400 mt-1">Frekuensi mutasi tertinggi</p>
+          <p className="text-[11px] text-stone-400 mt-1">
+            {stats?.opname_count || 0} Stok Opname • {stats?.defect_count || 0} Defect & FEFO
+          </p>
         </div>
 
-        {/* Pengguna Terlibat */}
+        {/* 4. Staf & Cabang Terlibat */}
         <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-stone-400">Pengguna Aktif</span>
+            <span className="text-xs font-semibold text-stone-400">Staf & Unit Terlibat</span>
             <div className="w-7 h-7 rounded-lg bg-[#F9610D]/10 border border-[#F9610D]/20 flex items-center justify-center text-[#F9610D]">
               <User size={16} />
             </div>
@@ -220,13 +309,15 @@ const AuditTrail = () => {
           <p className="text-2xl sm:text-3xl font-extrabold text-[#F9610D] mt-3">
             {stats?.active_users || 0} Akun
           </p>
-          <p className="text-[11px] text-stone-400 mt-1">Berinteraksi dalam sistem</p>
+          <p className="text-[11px] text-stone-400 mt-1">
+            Beraktivitas pada {stats?.active_outlets || 0} cabang / unit
+          </p>
         </div>
       </div>
 
       {/* ── FILTER & SEARCH PANEL ── */}
       <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-5 sm:p-6 shadow-xl space-y-4">
-        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <form onSubmit={handleSearchSubmit} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
           {/* Search Input */}
           <div className="lg:col-span-2 relative">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400" />
@@ -234,9 +325,25 @@ const AuditTrail = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari nama staf, deskripsi, atau cabang..."
+              placeholder="Cari nama staf, kode tiket/opname, atau deskripsi..."
               className="w-full bg-[#120E0C] border border-[#2D241E] rounded-xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-white placeholder-stone-500 focus:outline-none focus:border-[#F9610D]"
             />
+          </div>
+
+          {/* Cabang / Outlet */}
+          <div>
+            <select
+              value={selectedOutlet}
+              onChange={(e) => setSelectedOutlet(e.target.value)}
+              className="w-full bg-[#120E0C] border border-[#2D241E] rounded-xl px-3 py-2.5 text-xs sm:text-sm text-white focus:outline-none focus:border-[#F9610D]"
+            >
+              <option value="">Semua Cabang / Unit</option>
+              {outlets.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.nama}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Modul */}
@@ -273,14 +380,14 @@ const AuditTrail = () => {
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              className="flex-1 px-4 py-2.5 bg-[#F9610D] hover:bg-[#d9530a] text-white text-xs font-bold rounded-xl transition-all shadow-md"
+              className="flex-1 px-4 py-2.5 bg-[#F9610D] hover:bg-[#d9530a] text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer"
             >
               Cari
             </button>
             <button
               type="button"
               onClick={resetFilters}
-              className="px-3 py-2.5 bg-[#120E0C] hover:bg-white/5 border border-[#2D241E] text-stone-400 hover:text-white text-xs font-bold rounded-xl transition-all"
+              className="px-3 py-2.5 bg-[#120E0C] hover:bg-white/5 border border-[#2D241E] text-stone-400 hover:text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
             >
               Reset
             </button>
@@ -398,18 +505,17 @@ const AuditTrail = () => {
 
                     {/* Detail Payload Modal Button */}
                     <td className="py-3.5 px-3 text-center">
-                      {log.details ? (
-                        <button
-                          onClick={() => setSelectedLog(log)}
-                          className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-[#2D241E] text-stone-300 hover:text-white text-[11px] font-semibold transition-all inline-flex items-center gap-1"
-                          title="Lihat Data JSON"
-                        >
-                          <Eye size={12} />
-                          Data
-                        </button>
-                      ) : (
-                        <span className="text-stone-500 text-[11px]">-</span>
-                      )}
+                      <button
+                        onClick={() => {
+                          setShowRawJson(false);
+                          setSelectedLog(log);
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-[#2D241E] text-stone-300 hover:text-white text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                        title="Lihat Rincian Audit"
+                      >
+                        <Eye size={12} />
+                        Rincian
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -447,62 +553,147 @@ const AuditTrail = () => {
         )}
       </div>
 
-      {/* ── MODAL DETAIL JSON PAYLOAD ── */}
-      {selectedLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-          <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-4 shadow-2xl relative">
-            <div className="flex items-center justify-between pb-3 border-b border-[#241C18]">
-              <div className="flex items-center gap-2">
-                <FileText size={18} className="text-[#F9610D]" />
-                <h3 className="text-base sm:text-lg font-black text-white">
-                  Detail Rincian Payload Audit #{selectedLog.id}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-stone-400 hover:text-white flex items-center justify-center text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
+      {/* ── MODAL DETAIL RINCIAN AUDIT ── */}
+      {selectedLog && (() => {
+        let parsedDetails = null;
+        try {
+          parsedDetails = typeof selectedLog.details === 'string'
+            ? JSON.parse(selectedLog.details)
+            : selectedLog.details;
+        } catch {
+          parsedDetails = null;
+        }
+        const detailEntries = parsedDetails && typeof parsedDetails === 'object'
+          ? Object.entries(parsedDetails)
+          : [];
 
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#120E0C] border border-[#2D241E]">
-                <span className="text-stone-400">Pengguna:</span>
-                <span className="font-bold text-white">{selectedLog.user_name} ({selectedLog.role})</span>
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+            <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-7 max-w-xl w-full space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-[#241C18]">
+                <div className="flex items-center gap-2">
+                  <FileText size={18} className="text-[#F9610D]" />
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-white">
+                      Dokumen Rincian Audit #{selectedLog.id}
+                    </h3>
+                    <p className="text-[11px] text-stone-400">
+                      {new Date(selectedLog.created_at).toLocaleString('id-ID', {
+                        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedLog(null)}
+                  className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-stone-400 hover:text-white flex items-center justify-center text-sm font-bold cursor-pointer"
+                >
+                  ✕
+                </button>
               </div>
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#120E0C] border border-[#2D241E]">
-                <span className="text-stone-400">Aksi & Modul:</span>
-                <span className="font-bold text-[#F9610D]">{selectedLog.action} pada modul {selectedLog.module}</span>
+
+              {/* Kartu Identitas Aktivitas */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+                <div className="p-3 rounded-xl bg-[#120E0C] border border-[#2D241E]">
+                  <span className="text-[10px] uppercase tracking-wider text-stone-400 block">Pelaku & Otoritas</span>
+                  <span className="font-bold text-white block mt-0.5">{selectedLog.user_name || 'Sistem'}</span>
+                  <span className="text-[10px] text-[#F9610D] font-bold">{selectedLog.role || 'SYSTEM'}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#120E0C] border border-[#2D241E]">
+                  <span className="text-[10px] uppercase tracking-wider text-stone-400 block">Lokasi / Unit</span>
+                  <span className="font-bold text-white block mt-0.5">{selectedLog.outlet_name || 'Pusat / Konsolidasi'}</span>
+                </div>
+                <div className="p-3 rounded-xl bg-[#120E0C] border border-[#2D241E]">
+                  <span className="text-[10px] uppercase tracking-wider text-stone-400 block">Modul & Aksi</span>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className="px-2 py-0.5 rounded bg-white/5 text-stone-200 font-bold text-[10px]">
+                      {selectedLog.module}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getActionBadge(selectedLog.action)}`}>
+                      {selectedLog.action}
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-bold text-stone-400 mb-2">
-                Struktur Data (JSON Payload):
-              </label>
-              <pre className="p-4 rounded-2xl bg-[#0E0B0A] border border-[#2D241E] text-xs font-mono text-emerald-400 overflow-x-auto max-h-64 leading-relaxed">
-                {JSON.stringify(
-                  typeof selectedLog.details === 'string'
-                    ? JSON.parse(selectedLog.details)
-                    : selectedLog.details,
-                  null,
-                  2
-                )}
-              </pre>
-            </div>
+              {/* Ringkasan Aktivitas */}
+              <div className="p-3.5 rounded-2xl bg-[#120E0C] border border-[#2D241E] text-xs">
+                <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold block mb-1">
+                  Ringkasan Aktivitas Tercatat
+                </span>
+                <p className="text-stone-200 leading-relaxed font-medium">
+                  {selectedLog.description}
+                </p>
+              </div>
 
-            <div className="flex justify-end pt-2">
-              <button
-                onClick={() => setSelectedLog(null)}
-                className="px-5 py-2.5 rounded-xl bg-[#F9610D] hover:bg-[#d9530a] text-white text-xs font-bold transition-all shadow-md"
-              >
-                Tutup
-              </button>
+              {/* Tabel Rincian Parameter Terformat */}
+              {detailEntries.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-stone-300">
+                      Rincian Parameter Transaksi
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setShowRawJson(!showRawJson)}
+                      className="text-[11px] font-semibold text-[#F9610D] hover:underline cursor-pointer"
+                    >
+                      {showRawJson ? 'Tampilkan Format Tabel' : 'Lihat Raw JSON Teknis'}
+                    </button>
+                  </div>
+
+                  {!showRawJson ? (
+                    <div className="rounded-2xl bg-[#120E0C] border border-[#2D241E] divide-y divide-[#241C18] overflow-hidden text-xs">
+                      {detailEntries.map(([key, val]) => {
+                        const label = DETAIL_KEY_LABELS[key] || key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                        if (Array.isArray(val)) {
+                          return (
+                            <div key={key} className="p-3 space-y-1.5">
+                              <span className="text-stone-400 font-semibold block">{label} ({val.length}):</span>
+                              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pt-1">
+                                {val.map((item, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="px-2.5 py-1 rounded-lg bg-[#1A1412] border border-[#2D241E] text-[11px] text-stone-200 font-medium"
+                                  >
+                                    {typeof item === 'object' ? JSON.stringify(item) : String(item)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div key={key} className="px-3.5 py-2.5 flex items-center justify-between gap-4">
+                            <span className="text-stone-400">{label}</span>
+                            <span className="font-bold text-white text-right">
+                              {formatDetailValue(val)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <pre className="p-4 rounded-2xl bg-[#0E0B0A] border border-[#2D241E] text-xs font-mono text-emerald-400 overflow-x-auto max-h-60 leading-relaxed">
+                      {JSON.stringify(parsedDetails, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={() => setSelectedLog(null)}
+                  className="px-5 py-2.5 rounded-xl bg-[#F9610D] hover:bg-[#d9530a] text-white text-xs font-bold transition-all shadow-md cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

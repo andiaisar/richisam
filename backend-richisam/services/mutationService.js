@@ -320,13 +320,14 @@ class MutationService {
       }
 
       // Rekam jejak ke AUDIT TRAIL
+      const totalMasuk = items.reduce((acc, it) => acc + (Number(it.masuk) || 0), 0);
       AuditService.logAction({
         userId: user_id,
         outletId: outlet_id,
         module: 'MUTASI',
         action: 'CREATE',
-        description: `Mencatat mutasi harian ${shift} tanggal ${tanggal} (${items.length} item).`,
-        details: { items_count: items.length, tanggal, shift }
+        description: `Mencatat mutasi Shift ${shift} (${tanggal}): ${items.length} bahan bergerak (Total Masuk: +${totalMasuk} unit).`,
+        details: { items_count: items.length, total_masuk: totalMasuk, tanggal, shift }
       });
       
     } catch (e) {

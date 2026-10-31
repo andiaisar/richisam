@@ -1,4 +1,5 @@
 const OpnameService = require('../services/opnameService');
+const AuditService = require('../services/auditService');
 
 exports.createOpname = async (req, res) => {
   try {
@@ -7,6 +8,16 @@ exports.createOpname = async (req, res) => {
        return res.status(400).json({ success: false, message: 'outlet_id dan tanggal diperlukan' });
     }
     const result = await OpnameService.createOpname(outlet_id, tanggal, req.user.id);
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: outlet_id,
+      module: 'OPNAME',
+      action: 'CREATE',
+      description: `Membuat draf Stok Opname ${result?.kode || ''} untuk tanggal ${tanggal}.`,
+      details: { kode_opname: result?.kode, tanggal, status: 'DRAFT' }
+    });
     res.status(201).json({ success: true, message: 'Opname DRAFT dibuat', data: result });
   } catch (e) {
     res.status(500).json({ success: false, message: e.message });
@@ -39,6 +50,16 @@ exports.finalizeOpname = async (req, res) => {
     const { id } = req.params;
     const { apply_adjustment } = req.body;
     await OpnameService.finalizeOpname(id, apply_adjustment, req.user.id);
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: req.user?.outlet_id,
+      module: 'OPNAME',
+      action: 'FINALIZE',
+      description: `Finalisasi Stok Opname ID #${id} (Penyesuaian fisik: ${apply_adjustment ? 'Diterapkan' : 'Tanpa penyesuaian'}).`,
+      details: { opname_id: id, status: 'FINAL', penyesuaian_stok_diterapkan: Boolean(apply_adjustment) }
+    });
     res.json({ success: true, message: 'Opname difinalisasi' });
   } catch (e) {
     res.status(400).json({ success: false, message: e.message });

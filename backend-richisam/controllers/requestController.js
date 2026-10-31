@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const RequestService = require('../services/requestService');
+const AuditService = require('../services/auditService');
 
 const requestSchema = z.object({
   product_id: z.number(),
@@ -40,6 +41,16 @@ exports.createRequest = async (req, res) => {
     if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
 
     const tiket = await RequestService.createRequest(outlet_id, parsed.data.product_id, parsed.data.qty_requested, req.user.id);
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: outlet_id,
+      module: 'PERMINTAAN',
+      action: 'CREATE',
+      description: `Mengajukan Tiket Permintaan Stok ${tiket?.kode_tiket || ''} (${parsed.data.qty_requested} unit).`,
+      details: { kode_tiket: tiket?.kode_tiket, product_id: parsed.data.product_id, jumlah_diminta: parsed.data.qty_requested }
+    });
     res.status(201).json({ success: true, message: 'Tiket berhasil dibuat', data: tiket });
   } catch (e) {
     res.status(400).json({ success: false, message: e.message });
@@ -80,6 +91,16 @@ exports.emergencyRequest = async (req, res) => {
     if (!valid) throw new Error('PIN/Password salah! Pengambilan dibatalkan.');
 
     const result = await RequestService.createEmergencyRequest(parsed.data.outlet_id, parsed.data.items, req.user);
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: parsed.data.outlet_id,
+      module: 'PERMINTAAN',
+      action: 'CITO',
+      description: `Otorisasi Pengambilan Darurat (CITO) ${result?.kode_tiket || ''} (${parsed.data.items.length} jenis bahan).`,
+      details: { kode_tiket: result?.kode_tiket, tipe_permintaan: 'DARURAT (CITO)', jumlah_jenis_barang: parsed.data.items.length }
+    });
     res.status(201).json({ success: true, message: 'Pengambilan Darurat Berhasil', data: result });
   } catch (e) {
     console.error('Emergency Request Error:', e);
@@ -100,6 +121,16 @@ exports.updateStatus = async (req, res) => {
 
     // Delegasikan validasi RBAC lengkap ke RequestService (isCK, isPusatOrOwner, isBranchStaff)
     const tiket = await RequestService.updateStatus(id, status, qty_approved, req.user);
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: tiket?.outlet_id || req.user?.outlet_id,
+      module: 'PERMINTAAN',
+      action: status === 'DIKIRIM' || status === 'SELESAI' ? 'APPROVE' : 'UPDATE',
+      description: `Memperbarui status Tiket Permintaan ${tiket?.kode_tiket || `#${id}`} menjadi ${status}.`,
+      details: { ticket_id: id, kode_tiket: tiket?.kode_tiket, status_baru: status, qty_disetujui: qty_approved }
+    });
     res.json({ success: true, message: `Status diubah ke ${status}`, data: tiket });
   } catch (e) {
     console.error(`[updateStatus ERROR] ID: ${req.params.id}, User: ${req.user?.username} (${req.user?.role}, outlet: ${req.user?.outlet_id}), Body:`, req.body, 'Error:', e.message);

@@ -1,5 +1,6 @@
 const { z } = require('zod');
 const DefectService = require('../services/defectService');
+const AuditService = require('../services/auditService');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
@@ -80,6 +81,16 @@ exports.reportDefect = async (req, res) => {
       foto_url, 
       req.user.id
     );
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: outlet_id,
+      module: 'DEFECT',
+      action: 'CREATE',
+      description: `Melaporkan barang defect/rusak [DEF-#${defect?.id || ''}] sebanyak ${parsed.data.qty} unit (${deskripsi || 'Tanpa keterangan'}).`,
+      details: { defect_id: defect?.id, product_id: parsed.data.product_id, jumlah: parsed.data.qty, alasan_kerusakan: deskripsi || '-' }
+    });
     res.status(201).json({ success: true, message: 'Laporan defect berhasil dikirim', data: defect });
   } catch (e) {
     res.status(400).json({ success: false, message: e.message });
@@ -93,6 +104,17 @@ exports.processDefect = async (req, res) => {
     if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
 
     const defect = await DefectService.processDefect(id, parsed.data.status, req.user);
+    const actionType = parsed.data.status === 'DISETUJUI' ? 'APPROVE' : parsed.data.status === 'DITOLAK' ? 'REJECT' : 'UPDATE';
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: defect?.outlet_id || req.user?.outlet_id,
+      module: 'DEFECT',
+      action: actionType,
+      description: `Memproses laporan defect [DEF-#${id}] menjadi status ${parsed.data.status}.`,
+      details: { defect_id: id, status_keputusan: parsed.data.status, qty: defect?.qty }
+    });
     res.json({ success: true, message: `Laporan defect diubah ke ${parsed.data.status}`, data: defect });
   } catch (e) {
     res.status(400).json({ success: false, message: e.message });

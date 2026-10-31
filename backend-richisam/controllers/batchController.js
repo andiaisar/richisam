@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const AuditService = require('../services/auditService');
 
 exports.getBatches = async (req, res) => {
   try {
@@ -97,6 +98,17 @@ exports.createBatch = async (req, res) => {
       [product_id, finalOutletId, batch_no.trim(), parseInt(qty), tglMasuk, expired_date, catatan || '', req.user.id]
     );
 
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: finalOutletId,
+      module: 'KADALUARSA',
+      action: 'CREATE',
+      description: `Mencatat Batch FEFO ${batch_no.trim()} (${qty} unit), tanggal kadaluarsa: ${expired_date}.`,
+      details: { nomor_batch: batch_no.trim(), product_id, jumlah: parseInt(qty), tanggal_masuk: tglMasuk, tanggal_kadaluarsa: expired_date }
+    });
+
     res.status(201).json({ success: true, message: 'Pencatatan batch kadaluarsa berhasil disimpan', data: result.rows[0] });
   } catch (e) {
     console.error('createBatch error:', e);
@@ -115,6 +127,16 @@ exports.deleteBatch = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Akses ditolak: Anda hanya dapat menghapus batch milik cabang Anda sendiri' });
     }
     await pool.query('DELETE FROM product_batches WHERE id = $1', [id]);
+    AuditService.logAction({
+      userId: req.user?.id,
+      userName: req.user?.nama || req.user?.username,
+      role: req.user?.role,
+      outletId: check.rows[0].outlet_id,
+      module: 'KADALUARSA',
+      action: 'DELETE',
+      description: `Menarik / menyelesaikan Batch Kadaluarsa ID #${id}.`,
+      details: { batch_id: id }
+    });
     res.json({ success: true, message: 'Batch berhasil dihapus / selesai digunakan' });
   } catch (e) {
     console.error('deleteBatch error:', e);

@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const MutationService = require('./mutationService');
 
 class AnalyticsService {
   /**
@@ -141,10 +142,17 @@ class AnalyticsService {
   /**
    * Mengambil Data Grafik Visual Analytics (Line, Bar, Donut, Stacked)
    */
-  static async getVisualCharts(outlet_id = null) {
+  static async getVisualCharts(outlet_id = null, bulan = null, tahun = null) {
+    await MutationService.healAccidentalMassZeroMutations();
     const parsedOutletId = outlet_id ? parseInt(outlet_id, 10) : null;
     const hasOutlet = Number.isInteger(parsedOutletId) && parsedOutletId > 0;
-    const outletCondition = hasOutlet ? `AND m.outlet_id = ${parsedOutletId}` : '';
+    const hasExplicitPeriod =
+      bulan !== null && bulan !== undefined && bulan !== '' &&
+      tahun !== null && tahun !== undefined && tahun !== '';
+    const periodCondition = hasExplicitPeriod
+      ? `AND EXTRACT(MONTH FROM m.tanggal) = ${parseInt(bulan, 10)} AND EXTRACT(YEAR FROM m.tanggal) = ${parseInt(tahun, 10)}`
+      : '';
+    const outletCondition = `${hasOutlet ? `AND m.outlet_id = ${parsedOutletId}` : ''} ${periodCondition}`;
     const outletStockCondition = hasOutlet ? `AND s.outlet_id = ${parsedOutletId}` : '';
 
     // 1. Top 5 Fast Moving Products (Konsumsi Tertinggi)
@@ -162,20 +170,29 @@ class AnalyticsService {
     `;
     const fastMovingRes = await pool.query(fastMovingQuery);
 
-    // 2. Daily Usage Trend for Top 3 Key Items
+    // 2. Daily Usage Trend for Top 3 Key Items (gunakan nama unik per product_id agar tidak saling menimpa)
     const top3Rows = fastMovingRes.rows.slice(0, 3);
     const top3Ids = top3Rows.map(r => r.id);
-    const top3ShortNames = top3Rows.map(r =>
-      r.nama.length > 15 ? r.nama.substring(0, 14) + '..' : r.nama
-    );
+    const idToLabelMap = new Map();
+    const usedLabels = new Set();
+    for (const r of top3Rows) {
+      let label = String(r.nama || '').trim();
+      if (usedLabels.has(label)) {
+        label = `${label} (#${r.id})`;
+      }
+      usedLabels.add(label);
+      idToLabelMap.set(r.id, label);
+    }
+    const top3Labels = Array.from(idToLabelMap.values());
+
     let dailyTrends = [];
     if (top3Ids.length > 0) {
       const trendQuery = `
-        SELECT m.tanggal, p.nama, SUM(m.keluar) as qty
+        SELECT m.tanggal, p.id as product_id, p.nama, SUM(m.keluar) as qty
         FROM stock_mutations m
         JOIN products p ON m.product_id = p.id
         WHERE p.id = ANY($1) ${outletCondition}
-        GROUP BY m.tanggal, p.nama
+        GROUP BY m.tanggal, p.id, p.nama
         ORDER BY m.tanggal ASC
       `;
       const trendRes = await pool.query(trendQuery, [top3Ids]);
@@ -185,35 +202,55 @@ class AnalyticsService {
         const dStr = row.tanggal instanceof Date
           ? row.tanggal.toISOString().split('T')[0]
           : String(row.tanggal).split('T')[0];
-        const dateObj = new Date(row.tanggal);
+        const dateObj = new Date(dStr + 'T00:00:00');
         const label = dateObj.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         
         if (!dateMap.has(dStr)) {
           const initialEntry = { tanggal: label, rawDate: dStr };
-          for (const sName of top3ShortNames) {
+          for (const sName of top3Labels) {
             initialEntry[sName] = 0;
           }
           dateMap.set(dStr, initialEntry);
         }
         const entry = dateMap.get(dStr);
-        const shortName = row.nama.length > 15 ? row.nama.substring(0, 14) + '..' : row.nama;
-        entry[shortName] = parseInt(row.qty, 10) || 0;
+        const itemLabel = idToLabelMap.get(row.product_id) || String(row.nama || '').trim();
+        entry[itemLabel] = (entry[itemLabel] || 0) + (parseInt(row.qty, 10) || 0);
       }
       dailyTrends = Array.from(dateMap.values());
+
+      // Jika baru ada 1 tanggal mutasi, tambahkan titik baseline H-1 (nilai 0) agar AreaChart tetap membentuk garis & area visual
+      if (dailyTrends.length === 1 && dailyTrends[0].rawDate) {
+        const firstDate = new Date(dailyTrends[0].rawDate + 'T00:00:00');
+        firstDate.setDate(firstDate.getDate() - 1);
+        const prevRaw = firstDate.toISOString().split('T')[0];
+        const prevLabel = firstDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        const baselineEntry = { tanggal: prevLabel, rawDate: prevRaw };
+        for (const sName of top3Labels) {
+          baselineEntry[sName] = 0;
+        }
+        dailyTrends.unshift(baselineEntry);
+      }
     }
 
-    // 3. Category Distribution (Item count & Total current stock per outlet)
+    // 3. Category Distribution (Item count, Normalized Stock in main unit, Raw Stock & Total Value per outlet)
     const categoryQuery = `
       SELECT 
         COALESCE(p.kategori, 'Bahan Umum') as kategori,
         COUNT(DISTINCT p.id) as total_item,
-        COALESCE(SUM(s.qty_current), 0) as total_stok,
-        COALESCE(SUM(s.qty_current * p.harga), 0) as total_nilai
+        COALESCE(SUM(
+          CASE 
+            WHEN LOWER(p.satuan) IN ('gram', 'gr', 'ml') AND COALESCE(p.konversi, 1) >= 100
+              THEN ROUND(s.qty_current::numeric / p.konversi::numeric, 1)
+            ELSE COALESCE(s.qty_current, 0)::numeric
+          END
+        ), 0) as total_stok,
+        COALESCE(SUM(s.qty_current), 0) as total_stok_raw,
+        COALESCE(SUM(s.qty_current * COALESCE(p.harga, 0)), 0) as total_nilai
       FROM products p
       LEFT JOIN stocks s ON p.id = s.product_id ${outletStockCondition}
       WHERE p.is_active = true
       GROUP BY p.kategori
-      ORDER BY total_stok DESC, total_item DESC
+      ORDER BY total_stok DESC, total_nilai DESC, total_item DESC
     `;
     const catRes = await pool.query(categoryQuery);
     
@@ -221,19 +258,23 @@ class AnalyticsService {
     const categoryDistribution = catRes.rows.map((row, idx) => ({
       name: row.kategori,
       total_item: parseInt(row.total_item, 10) || 0,
-      total_stok: parseInt(row.total_stok, 10) || 0,
+      total_stok: Math.round(parseFloat(row.total_stok) || 0),
+      total_stok_raw: parseInt(row.total_stok_raw, 10) || 0,
       total_nilai: parseFloat(row.total_nilai) || 0,
       color: colors[idx % colors.length]
     }));
 
-    // 4. In vs Out Logistics Ratio per Outlet (respects outlet_id filter if provided)
+    // 4. In vs Out Logistics Ratio per Outlet (respects outlet_id & period filter if provided)
     const branchWhere = hasOutlet ? `WHERE o.is_active = true AND o.id = ${parsedOutletId}` : `WHERE o.is_active = true`;
+    const inOutJoinCond = hasExplicitPeriod
+      ? `ON o.id = m.outlet_id AND EXTRACT(MONTH FROM m.tanggal) = ${parseInt(bulan, 10)} AND EXTRACT(YEAR FROM m.tanggal) = ${parseInt(tahun, 10)}`
+      : `ON o.id = m.outlet_id`;
     const inOutQuery = `
       SELECT o.nama as branch_name,
              COALESCE(SUM(m.masuk), 0) as total_masuk,
              COALESCE(SUM(m.keluar), 0) as total_keluar
       FROM outlets o
-      LEFT JOIN stock_mutations m ON o.id = m.outlet_id
+      LEFT JOIN stock_mutations m ${inOutJoinCond}
       ${branchWhere}
       GROUP BY o.id, o.nama, o.tipe
       ORDER BY o.tipe DESC, o.id ASC

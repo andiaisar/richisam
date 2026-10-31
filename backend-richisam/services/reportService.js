@@ -55,8 +55,21 @@ class ReportService {
     return res.rows;
   }
 
-  static async getDashboardStats(outlet_id) {
+  static async getDashboardStats(outlet_id, bulan = null, tahun = null) {
     await MutationService.healAccidentalMassZeroMutations();
+    const hasExplicitPeriod =
+      bulan !== null && bulan !== undefined && bulan !== '' &&
+      tahun !== null && tahun !== undefined && tahun !== '';
+    const parsedBulan = hasExplicitPeriod ? parseInt(bulan, 10) : null;
+    const parsedTahun = hasExplicitPeriod ? parseInt(tahun, 10) : null;
+
+    const targetMonthExpr = parsedBulan
+      ? `${parsedBulan}`
+      : `EXTRACT(MONTH FROM COALESCE((SELECT MAX(tanggal) FROM stock_mutations), CURRENT_DATE))`;
+    const targetYearExpr = parsedTahun
+      ? `${parsedTahun}`
+      : `EXTRACT(YEAR FROM COALESCE((SELECT MAX(tanggal) FROM stock_mutations), CURRENT_DATE))`;
+
     let cabangCond = outlet_id ? `AND id = ${parseInt(outlet_id)}` : '';
     const cabangRes = await pool.query(`SELECT COUNT(*) FROM outlets WHERE tipe = 'CABANG' AND is_active = true ${cabangCond}`);
     const produkRes = await pool.query(`SELECT COUNT(*) FROM products WHERE is_active = true`);
@@ -65,15 +78,16 @@ class ReportService {
     const parRes = await pool.query(`
       SELECT COUNT(*) FROM stocks s
       JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
-      WHERE s.qty_current <= ps.min_qty ${parCond}
+      JOIN products p ON s.product_id = p.id
+      WHERE s.qty_current <= ps.min_qty AND p.is_active = true ${parCond}
     `);
 
     let defCond = outlet_id ? `AND outlet_id = ${parseInt(outlet_id)}` : '';
     const defectRes = await pool.query(`
       SELECT COALESCE(SUM(qty), 0) as total FROM defect_reports
       WHERE status = 'DISETUJUI' 
-      AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
-      AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+      AND EXTRACT(MONTH FROM created_at) = ${targetMonthExpr}
+      AND EXTRACT(YEAR FROM created_at) = ${targetYearExpr}
       ${defCond}
     `);
 
@@ -105,11 +119,13 @@ class ReportService {
       SELECT 
         COALESCE(SUM(m.masuk), 0) as total_masuk_bulan_ini,
         COALESCE(SUM(m.keluar), 0) as total_keluar_bulan_ini,
-        COALESCE(SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0)), 0) as nilai_pemakaian_bulan_ini
+        COALESCE(SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0)), 0) as nilai_pemakaian_bulan_ini,
+        (${targetMonthExpr})::int as active_month,
+        (${targetYearExpr})::int as active_year
       FROM stock_mutations m
       JOIN products p ON m.product_id = p.id
-      WHERE EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-        AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+      WHERE EXTRACT(MONTH FROM m.tanggal) = ${targetMonthExpr}
+        AND EXTRACT(YEAR FROM m.tanggal) = ${targetYearExpr}
         ${mutMonthCond}
     `);
     const mutMonthRow = mutMonthRes.rows[0] || {};
@@ -125,8 +141,8 @@ class ReportService {
           COUNT(*) FILTER (WHERE status = 'DIKIRIM') as total_dikirim,
           COUNT(*) FILTER (
             WHERE status = 'SELESAI'
-            AND EXTRACT(MONTH FROM created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(YEAR FROM created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM created_at) = ${targetMonthExpr}
+            AND EXTRACT(YEAR FROM created_at) = ${targetYearExpr}
           ) as total_selesai_bulan_ini
         FROM restock_tickets
         ${reqCond}
@@ -142,14 +158,15 @@ class ReportService {
         SELECT 
           COUNT(*) FILTER (
             WHERE status = 'FINAL'
-            AND EXTRACT(MONTH FROM tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(YEAR FROM tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM tanggal) = ${targetMonthExpr}
+            AND EXTRACT(YEAR FROM tanggal) = ${targetYearExpr}
           ) as total_final_bulan_ini,
           COUNT(*) FILTER (WHERE status = 'DRAFT') as total_draft_aktif,
           (
             SELECT COUNT(*) FROM shift_closings sc
-            WHERE sc.shift_date = CURRENT_DATE AND sc.status = 'CLOSED'
-            ${shiftCond}
+            WHERE sc.shift_date = COALESCE((SELECT MAX(shift_date) FROM shift_closings WHERE status = 'CLOSED'), CURRENT_DATE)
+              AND sc.status = 'CLOSED'
+              ${shiftCond}
           ) as shift_closed_hari_ini
         FROM stock_opnames
         ${opnCond}
@@ -172,36 +189,37 @@ class ReportService {
           SELECT COUNT(*)
           FROM stocks s
           JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
-          WHERE s.outlet_id = o.id AND s.qty_current <= ps.min_qty
+          JOIN products p ON s.product_id = p.id
+          WHERE s.outlet_id = o.id AND s.qty_current <= ps.min_qty AND p.is_active = true
         ), 0) as stok_kritis,
         COALESCE((
           SELECT SUM(m.masuk)
           FROM stock_mutations m
           WHERE m.outlet_id = o.id
-            AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM m.tanggal) = ${targetMonthExpr}
+            AND EXTRACT(YEAR FROM m.tanggal) = ${targetYearExpr}
         ), 0) as masuk_bulan_ini,
         COALESCE((
           SELECT SUM(m.keluar)
           FROM stock_mutations m
           WHERE m.outlet_id = o.id
-            AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM m.tanggal) = ${targetMonthExpr}
+            AND EXTRACT(YEAR FROM m.tanggal) = ${targetYearExpr}
         ), 0) as keluar_bulan_ini,
         COALESCE((
           SELECT SUM(m.keluar * COALESCE(m.harga_snapshot, p.harga, 0))
           FROM stock_mutations m
           JOIN products p ON m.product_id = p.id
           WHERE m.outlet_id = o.id
-            AND EXTRACT(MONTH FROM m.tanggal) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(YEAR FROM m.tanggal) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM m.tanggal) = ${targetMonthExpr}
+            AND EXTRACT(YEAR FROM m.tanggal) = ${targetYearExpr}
         ), 0) as nilai_keluar_bulan_ini,
         COALESCE((
           SELECT SUM(d.qty)
           FROM defect_reports d
           WHERE d.outlet_id = o.id AND d.status = 'DISETUJUI'
-            AND EXTRACT(MONTH FROM d.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(YEAR FROM d.created_at) = EXTRACT(YEAR FROM CURRENT_DATE)
+            AND EXTRACT(MONTH FROM d.created_at) = ${targetMonthExpr}
+            AND EXTRACT(YEAR FROM d.created_at) = ${targetYearExpr}
         ), 0) as defect_bulan_ini
       FROM outlets o
       WHERE o.is_active = true
@@ -229,6 +247,10 @@ class ReportService {
       total_masuk_bulan_ini: parseInt(mutMonthRow.total_masuk_bulan_ini || 0),
       total_keluar_bulan_ini: parseInt(mutMonthRow.total_keluar_bulan_ini || 0),
       nilai_pemakaian_bulan_ini: parseFloat(mutMonthRow.nilai_pemakaian_bulan_ini || 0),
+      active_period: {
+        bulan: parseInt(mutMonthRow.active_month || parsedBulan || (new Date().getMonth() + 1)),
+        tahun: parseInt(mutMonthRow.active_year || parsedTahun || new Date().getFullYear())
+      },
       branch_performance: branchPerfRows,
       assets: {
         total_unit: parseInt(assetRow.total_unit || 0),

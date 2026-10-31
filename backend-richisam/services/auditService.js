@@ -238,15 +238,15 @@ class AuditService {
 
       // 4. Backfill Tiket Permintaan & Pengambilan Cito yang belum tercatat di audit_logs
       const reqsRes = await pool.query(`
-        SELECT rt.id, rt.kode_tiket, rt.outlet_id, rt.status, rt.created_by, rt.created_at,
+        SELECT rt.id, rt.kode_tiket, rt.outlet_id, rt.status, rt.requested_by AS created_by, rt.created_at,
                o.nama AS outlet_name, u.nama AS user_name, u.role AS user_role,
                COUNT(rti.id)::int AS item_count,
                COALESCE(SUM(rti.qty_diminta), 0)::int AS total_diminta,
                COALESCE(SUM(rti.qty_dikirim), 0)::int AS total_dikirim
-        FROM request_tickets rt
+        FROM restock_tickets rt
         JOIN outlets o ON rt.outlet_id = o.id
-        LEFT JOIN users u ON rt.created_by = u.id
-        LEFT JOIN request_ticket_items rti ON rti.ticket_id = rt.id
+        LEFT JOIN users u ON rt.requested_by = u.id
+        LEFT JOIN restock_ticket_items rti ON rti.ticket_id = rt.id
         GROUP BY rt.id, o.nama, u.nama, u.role
       `);
 

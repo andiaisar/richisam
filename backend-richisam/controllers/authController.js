@@ -23,7 +23,13 @@ const login = async (req, res) => {
 
     const { username, password } = parsed.data;
 
-    const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
+    const result = await pool.query(
+      `SELECT u.*, o.nama AS outlet_name, o.tipe AS outlet_tipe
+       FROM users u
+       LEFT JOIN outlets o ON u.outlet_id = o.id
+       WHERE u.username = $1`,
+      [username]
+    );
     if (result.rows.length === 0) {
       return res.status(401).json({ success: false, message: 'Username atau password salah' });
     }
@@ -40,7 +46,14 @@ const login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, username: user.username, nama: user.nama, role: user.role, outlet_id: user.outlet_id },
+      {
+        id: user.id,
+        username: user.username,
+        nama: user.nama,
+        role: user.role,
+        outlet_id: user.outlet_id,
+        outlet_name: user.outlet_name
+      },
       process.env.JWT_SECRET || 'secret123',
       { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
     );
@@ -56,7 +69,14 @@ const login = async (req, res) => {
 
 const me = async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, nama, username, role, outlet_id, is_active FROM users WHERE id = $1', [req.user.id]);
+    const result = await pool.query(
+      `SELECT u.id, u.nama, u.username, u.role, u.outlet_id, u.is_active,
+              o.nama AS outlet_name, o.tipe AS outlet_tipe
+       FROM users u
+       LEFT JOIN outlets o ON u.outlet_id = o.id
+       WHERE u.id = $1`,
+      [req.user.id]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'User tidak ditemukan' });
     }

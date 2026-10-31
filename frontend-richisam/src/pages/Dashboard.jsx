@@ -27,8 +27,24 @@ import useThemeStore from '../store/useThemeStore';
 import { Link, useNavigate } from 'react-router-dom';
 import VisualChartsSection from '../components/VisualChartsSection';
 
+const MONTH_NAMES_ID = [
+  '',
+  'Januari',
+  'Februari',
+  'Maret',
+  'April',
+  'Mei',
+  'Juni',
+  'Juli',
+  'Agustus',
+  'September',
+  'Oktober',
+  'November',
+  'Desember'
+];
+
 const Dashboard = () => {
-  const { user } = useAuthStore();
+  const { user, updateUser } = useAuthStore();
   const { theme } = useThemeStore();
   const isLight = theme === 'light';
   const navigate = useNavigate();
@@ -36,6 +52,7 @@ const Dashboard = () => {
 
   const [outlets, setOutlets] = useState([]);
   const [selectedOutletId, setSelectedOutletId] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState(''); // '' = otomatis periode transaksi aktif, atau 'YYYY-MM'
   const [stats, setStats] = useState(null);
   const [lowStocks, setLowStocks] = useState([]);
   const [allLowStocks, setAllLowStocks] = useState([]);
@@ -47,26 +64,42 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isExecutive) {
-      axiosClient
-        .get('/outlets')
-        .then((res) => {
-          const list = res?.data?.data || res?.data || [];
-          setOutlets(Array.isArray(list) ? list : []);
-        })
-        .catch(() => {});
-    }
-  }, [isExecutive]);
+    axiosClient
+      .get('/outlets')
+      .then((res) => {
+        const list = res?.data?.data || res?.data || [];
+        const arr = Array.isArray(list) ? list : [];
+        setOutlets(arr);
+        if (user?.outlet_id && !user?.outlet_name) {
+          const matched = arr.find((o) => Number(o.id) === Number(user.outlet_id));
+          if (matched?.nama) {
+            updateUser({ outlet_name: matched.nama });
+          }
+        }
+      })
+      .catch(() => {});
+  }, [user?.outlet_id, user?.outlet_name, updateUser]);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        const queryParts = [];
+        if (isExecutive && selectedOutletId) {
+          queryParts.push(`outlet_id=${selectedOutletId}`);
+        }
+        if (selectedPeriod) {
+          const [y, m] = selectedPeriod.split('-');
+          if (m && y) {
+            queryParts.push(`bulan=${parseInt(m, 10)}&tahun=${parseInt(y, 10)}`);
+          }
+        }
+        const dashQuery = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
         const outletQuery = isExecutive && selectedOutletId ? `?outlet_id=${selectedOutletId}` : '';
         const reqQuery = isExecutive && selectedOutletId ? `?limit=15&outlet_id=${selectedOutletId}` : '?limit=15';
 
         const [statsRes, lowRes, reqRes, batchRes] = await Promise.all([
-          axiosClient.get(`/reports/dashboard${outletQuery}`).catch(() => null),
+          axiosClient.get(`/reports/dashboard${dashQuery}`).catch(() => null),
           axiosClient.get(`/stocks/low${outletQuery}`).catch(() => ({ data: [] })),
           axiosClient.get(`/requests${reqQuery}`).catch(() => ({ data: [] })),
           axiosClient.get(`/batches/summary${outletQuery}`).catch(() => ({ data: { data: null } }))
@@ -101,7 +134,7 @@ const Dashboard = () => {
     };
 
     fetchDashboardData();
-  }, [isExecutive, selectedOutletId]);
+  }, [isExecutive, selectedOutletId, selectedPeriod]);
 
   if (loading && !stats) {
     return (
@@ -114,12 +147,18 @@ const Dashboard = () => {
     );
   }
 
+  const branchPerformance = stats?.branch_performance || [];
+  const matchedUserOutlet =
+    outlets.find((o) => Number(o.id) === Number(user?.outlet_id)) ||
+    branchPerformance.find((b) => Number(b.id) === Number(user?.outlet_id));
+  const resolvedUserOutletName = user?.outlet_name || matchedUserOutlet?.nama || 'Outlet Cabang';
+
   const isCKAccount =
     user?.role === 'ADMIN_GUDANG' ||
     (user?.role === 'STAF_CABANG' &&
       (Number(user?.outlet_id) === 1 ||
-        user?.outlet_name?.toLowerCase().includes('central kitchen') ||
-        user?.outlet_name?.toLowerCase().includes('ck')));
+        resolvedUserOutletName.toLowerCase().includes('central kitchen') ||
+        resolvedUserOutletName.toLowerCase().includes('ck')));
 
   const roleDisplay =
     user?.role === 'ADMIN_PUSAT'
@@ -127,7 +166,7 @@ const Dashboard = () => {
       : isCKAccount
       ? 'Central Kitchen (CK)'
       : user?.role === 'STAF_CABANG'
-      ? user?.outlet_name || 'Outlet Cabang'
+      ? resolvedUserOutletName
       : 'Owner';
 
   const dashboardTitle =
@@ -137,14 +176,18 @@ const Dashboard = () => {
       ? `Dashboard Admin Pusat — ${user?.nama || 'Admin Pusat'}`
       : isCKAccount
       ? `Dashboard Central Kitchen — ${user?.nama || 'Staf CK'}`
-      : `Dashboard ${user?.outlet_name || 'Outlet Cabang'} — ${user?.nama || 'Staf Cabang'}`;
+      : `Dashboard ${resolvedUserOutletName} — ${user?.nama || 'Staf Cabang'}`;
 
   const selectedOutletObj = outlets.find((o) => String(o.id) === String(selectedOutletId));
   const activeScopeLabel = selectedOutletObj
     ? selectedOutletObj.nama
     : isExecutive
     ? 'Semua Unit (Konsolidasi Pusat & Cabang)'
-    : user?.outlet_name || roleDisplay;
+    : resolvedUserOutletName || roleDisplay;
+
+  const activeMonthNum = stats?.active_period?.bulan || (new Date().getMonth() + 1);
+  const activeYearNum = stats?.active_period?.tahun || new Date().getFullYear();
+  const activePeriodLabel = `${MONTH_NAMES_ID[activeMonthNum] || 'Bulan Ini'} ${activeYearNum}`;
 
   const totalProduk = stats?.total_produk || 0;
   const totalCabang = stats?.total_cabang || 0;
@@ -154,7 +197,6 @@ const Dashboard = () => {
   const nilaiPemakaianBulanIni = stats?.nilai_pemakaian_bulan_ini || 0;
   const totalMasukBulanIni = stats?.total_masuk_bulan_ini || 0;
   const totalKeluarBulanIni = stats?.total_keluar_bulan_ini || 0;
-  const branchPerformance = stats?.branch_performance || [];
   const assetStats = stats?.assets || { total_unit: 0, total_baik: 0, total_rusak: 0, total_jenis: 0 };
   const reqSummary = stats?.requests_summary || {
     total_aktif: recentRequests.filter((r) => ['DIAJUKAN', 'DIPROSES', 'DIKIRIM'].includes(r.status)).length,
@@ -185,16 +227,38 @@ const Dashboard = () => {
                 <Store size={12} className="text-[#FFCE00]" />
                 <span>Cakupan Data: {activeScopeLabel}</span>
               </span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
+                <CalendarClock size={12} />
+                <span>Periode: {activePeriodLabel}</span>
+              </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               {dashboardTitle}
             </h1>
             <p className="text-xs sm:text-sm text-stone-400 mt-1">
-              Portal {roleDisplay} • Ringkasan valuasi persediaan, distribusi logistik, dan performa {selectedOutletObj ? selectedOutletObj.nama : 'cabang'}
+              Portal {roleDisplay} • Ringkasan valuasi persediaan, distribusi logistik, dan performa {selectedOutletObj ? selectedOutletObj.nama : (isExecutive ? 'cabang' : resolvedUserOutletName)}
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* Filter Periode Bulan */}
+            <div className="flex items-center gap-2 bg-[#140F0D] border border-[#2D241E] px-3 py-2 rounded-xl">
+              <CalendarClock size={14} className="text-[#FFCE00] shrink-0" />
+              <select
+                value={selectedPeriod}
+                onChange={(e) => setSelectedPeriod(e.target.value)}
+                className="bg-transparent text-xs font-bold text-white focus:outline-none cursor-pointer pr-1"
+                aria-label="Filter Periode Bulan di Dashboard"
+              >
+                <option value="" className="bg-[#1A1412] text-white">
+                  Periode Aktif ({activePeriodLabel})
+                </option>
+                <option value="2026-11" className="bg-[#1A1412] text-white">November 2026</option>
+                <option value="2026-10" className="bg-[#1A1412] text-white">Oktober 2026</option>
+                <option value="2026-09" className="bg-[#1A1412] text-white">September 2026</option>
+              </select>
+            </div>
+
             {isExecutive && (
               <div className="flex items-center gap-2 bg-[#140F0D] border border-[#2D241E] px-3 py-2 rounded-xl">
                 <Filter size={14} className="text-[#F9610D] shrink-0" />
@@ -255,7 +319,7 @@ const Dashboard = () => {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-stone-400">Nilai Pemakaian Bulan Ini</p>
+            <p className="text-xs font-semibold text-stone-400">Nilai Pemakaian ({activePeriodLabel})</p>
             <p className="text-xl sm:text-2xl font-extrabold text-white mt-1.5 tracking-tight">
               Rp {nilaiPemakaianBulanIni.toLocaleString('id-ID')}
             </p>
@@ -276,7 +340,7 @@ const Dashboard = () => {
           </div>
 
           <div>
-            <p className="text-xs font-semibold text-stone-400">Defect Bulan Ini</p>
+            <p className="text-xs font-semibold text-stone-400">Defect ({activePeriodLabel})</p>
             <p className={`text-2xl sm:text-3xl font-extrabold mt-1.5 tracking-tight ${defectBulanIni > 0 ? 'text-[#F9610D]' : 'text-stone-300'}`}>
               {defectBulanIni}{' '}
               <span className="text-xs font-normal text-stone-500">Unit</span>
@@ -611,6 +675,7 @@ const Dashboard = () => {
 
       <VisualChartsSection
         initialOutletId={selectedOutletId}
+        selectedPeriod={selectedPeriod}
         onOutletChange={(val) => setSelectedOutletId(val)}
       />
 

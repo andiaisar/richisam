@@ -54,7 +54,8 @@ const getDemandForecast = async (req, res) => {
 const getVisualCharts = async (req, res) => {
   try {
     const outlet_id = getTargetOutletId(req, req.query.outlet_id);
-    const result = await AnalyticsService.getVisualCharts(outlet_id);
+    const { bulan, tahun } = req.query || {};
+    const result = await AnalyticsService.getVisualCharts(outlet_id, bulan, tahun);
     res.json({ success: true, data: result });
   } catch (error) {
     console.error('getVisualCharts error:', error);

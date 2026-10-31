@@ -35,6 +35,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const VisualChartsSection = ({
   initialOutletId = null,
+  selectedPeriod = '',
   onOutletChange = null,
   title = "Visual Analytics & Tren Inventaris",
   subtitle = "Grafik interaktif analisis pemakaian harian, perputaran stok, dan arus logistik cabang"
@@ -50,6 +51,7 @@ const VisualChartsSection = ({
       ? String(initialOutletId)
       : (isBranchLocked ? lockedOutletId : '')
   );
+  const [categoryMode, setCategoryMode] = useState('STOK'); // 'STOK' | 'NILAI' | 'ITEM'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,7 +68,7 @@ const VisualChartsSection = ({
 
   useEffect(() => {
     fetchChartData();
-  }, [selectedOutlet]);
+  }, [selectedOutlet, selectedPeriod]);
 
   const fetchOutlets = async () => {
     try {
@@ -82,7 +84,15 @@ const VisualChartsSection = ({
       setLoading(true);
       let url = '/analytics/visual-charts';
       const targetOutlet = isBranchLocked ? lockedOutletId : selectedOutlet;
-      if (targetOutlet) url += `?outlet_id=${targetOutlet}`;
+      const params = [];
+      if (targetOutlet) params.push(`outlet_id=${targetOutlet}`);
+      if (selectedPeriod) {
+        const [y, m] = selectedPeriod.split('-');
+        if (m && y) {
+          params.push(`bulan=${parseInt(m, 10)}&tahun=${parseInt(y, 10)}`);
+        }
+      }
+      if (params.length > 0) url += `?${params.join('&')}`;
       const res = await axiosClient.get(url);
       setData(res?.data?.data || res?.data || null);
     } catch (e) {
@@ -112,8 +122,15 @@ const VisualChartsSection = ({
   );
 
   const totalStokKategori = categoryDist.reduce((acc, c) => acc + (c.total_stok || 0), 0);
+  const totalNilaiKategori = categoryDist.reduce((acc, c) => acc + (c.total_nilai || 0), 0);
   const totalItemKategori = categoryDist.reduce((acc, c) => acc + (c.total_item || 0), 0);
-  const donutDataKey = totalStokKategori > 0 ? 'total_stok' : 'total_item';
+  const donutDataKey =
+    categoryMode === 'NILAI' && totalNilaiKategori > 0
+      ? 'total_nilai'
+      : categoryMode === 'ITEM' || totalStokKategori === 0
+      ? 'total_item'
+      : 'total_stok';
+  const sortedCategoryDist = [...categoryDist].sort((a, b) => (b[donutDataKey] || 0) - (a[donutDataKey] || 0));
 
   const currentOutletObj = outlets.find(o => String(o.id) === String(selectedOutlet));
   const lockedOutletLabel = currentOutletObj?.nama || user?.outlet_name || (user?.role === 'ADMIN_GUDANG' ? 'Central Kitchen' : 'Cabang Aktif');
@@ -191,7 +208,7 @@ const VisualChartsSection = ({
                 </div>
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#130E0C] border border-[#2D241E] text-[10px] font-bold text-stone-300">
                   <Calendar size={11} className="text-[#FFCE00]" />
-                  <span>Harian</span>
+                  <span>{trendKeys.length > 0 ? `Top ${trendKeys.length} Bahan Baku` : 'Harian'}</span>
                 </div>
               </div>
 
@@ -199,13 +216,13 @@ const VisualChartsSection = ({
               <div className="h-72 w-full mt-4">
                 {dailyTrends.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={dailyTrends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <AreaChart data={dailyTrends} margin={{ top: 10, right: 12, left: -20, bottom: 0 }}>
                       <defs>
                         {trendKeys.map((key, idx) => {
                           const col = trendColors[idx % trendColors.length];
                           return (
-                            <linearGradient key={`grad-${key}`} id={`grad-${key}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor={col} stopOpacity={0.4} />
+                            <linearGradient key={`grad-trend-${idx}`} id={`grad-trend-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor={col} stopOpacity={0.42} />
                               <stop offset="95%" stopColor={col} stopOpacity={0.0} />
                             </linearGradient>
                           );
@@ -227,7 +244,7 @@ const VisualChartsSection = ({
                       />
                       <Tooltip content={<CustomTooltip />} />
                       <Legend 
-                        wrapperStyle={{ paddingTop: '10px', fontSize: '11px', textTransform: 'capitalize' }} 
+                        wrapperStyle={{ paddingTop: '10px', fontSize: '11px' }} 
                         formatter={(val) => <span className="text-stone-300 font-semibold">{val}</span>}
                       />
                       {trendKeys.map((key, idx) => {
@@ -240,7 +257,9 @@ const VisualChartsSection = ({
                             stroke={col}
                             strokeWidth={2.5}
                             fillOpacity={1}
-                            fill={`url(#grad-${key})`}
+                            fill={`url(#grad-trend-${idx})`}
+                            dot={{ r: 4, fill: col, stroke: '#1A1412', strokeWidth: 2 }}
+                            activeDot={{ r: 6, fill: col, stroke: '#FFFFFF', strokeWidth: 2 }}
                           />
                         );
                       })}
@@ -263,27 +282,53 @@ const VisualChartsSection = ({
           {/* ── GRAFIK 2: Komposisi Kategori Persediaan (Donut Chart) ── */}
           <div className="rounded-3xl bg-[#1A1412] border border-[#2D241E] p-6 shadow-xl flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between pb-4 border-b border-[#241C18]">
+              <div className="flex items-start justify-between gap-2 pb-4 border-b border-[#241C18]">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-[#FFCE00]/15 flex items-center justify-center text-[#FFCE00] border border-[#FFCE00]/30">
+                  <div className="w-8 h-8 rounded-xl bg-[#FFCE00]/15 flex items-center justify-center text-[#FFCE00] border border-[#FFCE00]/30 shrink-0">
                     <PieChartIcon size={16} />
                   </div>
                   <div>
                     <h3 className="font-bold text-sm sm:text-base text-white">Komposisi Kategori</h3>
                     <p className="text-[11px] text-stone-400">
-                      {totalStokKategori > 0 ? 'Distribusi volume stok aktif per kategori' : 'Distribusi varian katalog bahan'}
+                      {donutDataKey === 'total_nilai'
+                        ? 'Distribusi nilai valuasi (Rp) per kategori'
+                        : donutDataKey === 'total_stok'
+                        ? 'Volume stok terkonversi (Kg/Pack/Pcs)'
+                        : 'Distribusi jenis bahan katalog'}
                     </p>
                   </div>
+                </div>
+
+                {/* Toggle Mode Tampilan Kategori */}
+                <div className="flex items-center bg-[#130E0C] border border-[#2D241E] rounded-xl p-0.5 shrink-0">
+                  {[
+                    { id: 'STOK', label: 'Stok' },
+                    { id: 'NILAI', label: 'Rp' },
+                    { id: 'ITEM', label: 'Item' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setCategoryMode(tab.id)}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                        categoryMode === tab.id
+                          ? 'bg-[#F9610D] text-white shadow-sm'
+                          : 'text-stone-400 hover:text-white'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 
               {/* Donut Chart */}
               <div className="h-60 w-full mt-3 relative">
-                {categoryDist.length > 0 ? (
+                {sortedCategoryDist.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={categoryDist}
+                        data={sortedCategoryDist}
                         cx="50%"
                         cy="50%"
                         innerRadius={55}
@@ -291,7 +336,7 @@ const VisualChartsSection = ({
                         paddingAngle={4}
                         dataKey={donutDataKey}
                       >
-                        {categoryDist.map((entry, index) => (
+                        {sortedCategoryDist.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} stroke="#1A1412" strokeWidth={2} />
                         ))}
                       </Pie>
@@ -300,10 +345,15 @@ const VisualChartsSection = ({
                           if (active && payload && payload.length) {
                             const d = payload[0].payload;
                             return (
-                              <div className="bg-[#140F0D] border border-[#2D241E] p-2.5 rounded-xl shadow-xl text-xs space-y-1">
-                                <p className="font-bold text-white">{d.name}</p>
-                                <p className="text-[#FFCE00] font-semibold">{(d.total_stok || 0).toLocaleString('id-ID')} Unit Stok</p>
-                                <p className="text-stone-400">{d.total_item} Varian Produk</p>
+                              <div className="bg-[#140F0D] border border-[#2D241E] p-3 rounded-xl shadow-xl text-xs space-y-1 z-30">
+                                <p className="font-bold text-white border-b border-[#241C18] pb-1">{d.name}</p>
+                                <p className="text-[#FFCE00] font-bold">
+                                  Rp {Math.round(d.total_nilai || 0).toLocaleString('id-ID')}
+                                </p>
+                                <p className="text-emerald-400 font-semibold">
+                                  {(d.total_stok || 0).toLocaleString('id-ID')} Unit (Konversi Kg/Pcs)
+                                </p>
+                                <p className="text-stone-400">{d.total_item} Jenis Bahan Baku</p>
                               </div>
                             );
                           }
@@ -318,29 +368,50 @@ const VisualChartsSection = ({
                   </div>
                 )}
                 {/* Center Badge */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-xs text-stone-400 font-semibold">
-                    {totalStokKategori > 0 ? 'Total Stok' : 'Total Item'}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none px-4 text-center">
+                  <span className="text-[10px] uppercase tracking-wider text-stone-400 font-bold">
+                    {donutDataKey === 'total_nilai'
+                      ? 'Total Valuasi'
+                      : donutDataKey === 'total_stok'
+                      ? 'Total Stok'
+                      : 'Total Bahan'}
                   </span>
-                  <span className="text-xl font-black text-white">
-                    {(totalStokKategori > 0 ? totalStokKategori : totalItemKategori).toLocaleString('id-ID')}
+                  <span className={`${donutDataKey === 'total_nilai' ? 'text-sm sm:text-base' : 'text-xl'} font-black text-white mt-0.5`}>
+                    {donutDataKey === 'total_nilai'
+                      ? `Rp ${Math.round(totalNilaiKategori).toLocaleString('id-ID')}`
+                      : (donutDataKey === 'total_stok' ? totalStokKategori : totalItemKategori).toLocaleString('id-ID')}
                   </span>
                 </div>
               </div>
 
-              {/* Custom Legend Pill List */}
-              <div className="mt-3 space-y-1.5 max-h-32 overflow-y-auto pr-1">
-                {categoryDist.slice(0, 5).map((cat, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs p-1.5 rounded-lg hover:bg-[#140F0D]">
-                    <div className="flex items-center gap-2 truncate">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
-                      <span className="text-stone-300 truncate">{cat.name}</span>
+              {/* Custom Legend Pill List (Menampilkan Seluruh Kategori + Persentase) */}
+              <div className="mt-3 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                {sortedCategoryDist.map((cat, idx) => {
+                  const baseTotal =
+                    donutDataKey === 'total_nilai'
+                      ? totalNilaiKategori
+                      : donutDataKey === 'total_stok'
+                      ? totalStokKategori
+                      : totalItemKategori;
+                  const val = cat[donutDataKey] || 0;
+                  const pct = baseTotal > 0 ? Math.round((val / baseTotal) * 100) : 0;
+                  return (
+                    <div key={idx} className="flex items-center justify-between text-xs p-1.5 rounded-lg hover:bg-[#140F0D]">
+                      <div className="flex items-center gap-2 truncate pr-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
+                        <span className="text-stone-300 truncate">{cat.name}</span>
+                        <span className="text-[10px] text-stone-500 font-semibold">({pct}%)</span>
+                      </div>
+                      <span className="font-bold text-white font-mono shrink-0">
+                        {donutDataKey === 'total_nilai'
+                          ? `Rp ${Math.round(cat.total_nilai || 0).toLocaleString('id-ID')}`
+                          : donutDataKey === 'total_stok'
+                          ? `${(cat.total_stok || 0).toLocaleString('id-ID')} Stok`
+                          : `${cat.total_item} Item`}
+                      </span>
                     </div>
-                    <span className="font-bold text-white font-mono">
-                      {totalStokKategori > 0 ? `${(cat.total_stok || 0).toLocaleString('id-ID')} Stok` : `${cat.total_item} Item`}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

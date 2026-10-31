@@ -95,8 +95,50 @@ class NotificationService {
     }
   }
 
+  static _syncPromise = null;
+
+  static async syncScheduledNotifications() {
+    if (this._syncPromise) {
+      return this._syncPromise;
+    }
+    this._syncPromise = (async () => {
+      try {
+        await this.checkExpiringBatches();
+        await this.checkAllParStocks();
+      } finally {
+        this._syncPromise = null;
+      }
+    })();
+    return this._syncPromise;
+  }
+
   static async checkAllParStocks() {
     try {
+      // 1. Bersihkan notifikasi PAR_STOCK belum dibaca yang stok aktualnya kini sudah aman (> min_qty)
+      await pool.query(`
+        DELETE FROM notifications n
+        USING stocks s
+        JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
+        JOIN outlets o ON s.outlet_id = o.id
+        WHERE n.tipe = 'PAR_STOCK'
+          AND n.is_read = false
+          AND n.product_id = s.product_id
+          AND s.qty_current > ps.min_qty
+          AND (n.outlet_id = s.outlet_id OR n.pesan LIKE '% di ' || o.nama || ' tersisa %')
+      `);
+
+      // 2. Bersihkan duplikat notifikasi identik (akibat race condition request paralel sebelumnya)
+      await pool.query(`
+        DELETE FROM notifications a
+        USING notifications b
+        WHERE a.id < b.id
+          AND a.is_read = false
+          AND b.is_read = false
+          AND a.outlet_id = b.outlet_id
+          AND a.tipe = b.tipe
+          AND a.pesan = b.pesan
+      `);
+
       const query = `
         SELECT s.outlet_id, s.product_id, s.qty_current, ps.min_qty, p.nama AS product_name, o.nama AS outlet_name
         FROM stocks s
@@ -110,12 +152,14 @@ class NotificationService {
 
       for (const row of res.rows) {
         const pesan = `Stok ${row.product_name} di ${row.outlet_name} tersisa ${row.qty_current} (batas aman ${row.min_qty})`;
+        const outletPattern = `% di ${row.outlet_name} tersisa %`;
 
         // Cek cabang
         const cekCabang = await pool.query(
-          `SELECT id FROM notifications 
+          `SELECT id, is_read, pesan FROM notifications 
            WHERE outlet_id = $1 AND product_id = $2 AND tipe = 'PAR_STOCK' 
-             AND (is_read = false OR created_at::date = CURRENT_DATE)`,
+             AND (is_read = false OR created_at::date = CURRENT_DATE)
+           ORDER BY id DESC`,
           [row.outlet_id, row.product_id]
         );
         if (cekCabang.rows.length === 0) {
@@ -123,21 +167,42 @@ class NotificationService {
             'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
             [row.outlet_id, row.product_id, pesan, 'PAR_STOCK']
           );
+        } else {
+          const latest = cekCabang.rows[0];
+          if (!latest.is_read && latest.pesan !== pesan) {
+            await pool.query('UPDATE notifications SET pesan = $1 WHERE id = $2', [pesan, latest.id]);
+          }
+          // Jika ada lebih dari 1 unread untuk produk yang sama di cabang ini, hapus sisanya
+          const extraUnreadIds = cekCabang.rows.slice(1).filter(r => !r.is_read).map(r => r.id);
+          if (extraUnreadIds.length > 0) {
+            await pool.query('DELETE FROM notifications WHERE id = ANY($1::int[])', [extraUnreadIds]);
+          }
         }
 
         // Cek pusat
         if (pusatId && pusatId !== row.outlet_id) {
           const cekPusat = await pool.query(
-            `SELECT id FROM notifications 
-             WHERE outlet_id = $1 AND product_id = $2 AND tipe = 'PAR_STOCK' 
-               AND (is_read = false OR created_at::date = CURRENT_DATE)`,
-            [pusatId, row.product_id]
+            `SELECT id, is_read, pesan FROM notifications 
+             WHERE outlet_id = $1 AND product_id = $2 AND tipe = 'PAR_STOCK'
+               AND pesan LIKE $3
+               AND (is_read = false OR created_at::date = CURRENT_DATE)
+             ORDER BY id DESC`,
+            [pusatId, row.product_id, outletPattern]
           );
           if (cekPusat.rows.length === 0) {
             await pool.query(
               'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
               [pusatId, row.product_id, pesan, 'PAR_STOCK']
             );
+          } else {
+            const latestPusat = cekPusat.rows[0];
+            if (!latestPusat.is_read && latestPusat.pesan !== pesan) {
+              await pool.query('UPDATE notifications SET pesan = $1 WHERE id = $2', [pesan, latestPusat.id]);
+            }
+            const extraPusatIds = cekPusat.rows.slice(1).filter(r => !r.is_read).map(r => r.id);
+            if (extraPusatIds.length > 0) {
+              await pool.query('DELETE FROM notifications WHERE id = ANY($1::int[])', [extraPusatIds]);
+            }
           }
         }
       }
@@ -208,7 +273,7 @@ class NotificationService {
     }
   }
 
-  static async getNotifications(outlet_id, is_read, page = 1, limit = 10) {
+  static async getNotifications(outlet_id, is_read, page = 1, limit = 50) {
     const offset = (page - 1) * limit;
     let query = 'SELECT * FROM notifications WHERE outlet_id = $1';
     const params = [outlet_id];
@@ -222,7 +287,7 @@ class NotificationService {
     const countRes = await pool.query(`SELECT COUNT(*) FROM (${query}) AS t`, params);
     const total = parseInt(countRes.rows[0].count);
 
-    query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    query += ` ORDER BY is_read ASC, created_at DESC, id DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(limit, offset);
 
     const result = await pool.query(query, params);

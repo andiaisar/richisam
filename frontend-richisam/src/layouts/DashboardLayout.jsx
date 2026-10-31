@@ -416,21 +416,31 @@ const DashboardLayout = () => {
     try {
       const [countRes, listRes] = await Promise.all([
         axiosClient.get('/notifications/unread-count'),
-        axiosClient.get('/notifications?limit=15')
+        axiosClient.get('/notifications?limit=100')
       ]);
       const count =
         countRes?.count ??
         countRes?.data?.count ??
         (typeof countRes?.data === 'number' ? countRes.data : 0);
-      const list = Array.isArray(listRes?.data)
+      const rawList = Array.isArray(listRes?.data)
         ? listRes.data
         : Array.isArray(listRes?.data?.data)
           ? listRes.data.data
           : Array.isArray(listRes)
             ? listRes
             : [];
-      
-      const numCount = Number(count) || 0;
+
+      // Pastikan tidak ada item notifikasi kembar yang tampil di daftar
+      const seenKeys = new Set();
+      const list = rawList.filter((item) => {
+        const key = `${item.tipe || ''}|${item.pesan || ''}|${Boolean(item.is_read)}`;
+        if (seenKeys.has(key)) return false;
+        seenKeys.add(key);
+        return true;
+      });
+
+      const unreadInList = list.filter((n) => !n.is_read).length;
+      const numCount = rawList.length < 100 ? unreadInList : (Number(count) || unreadInList);
       if (prevUnreadRef.current !== null && numCount > prevUnreadRef.current) {
         playNotificationSound();
       }

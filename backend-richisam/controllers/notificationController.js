@@ -23,11 +23,8 @@ exports.getNotifications = async (req, res) => {
       return res.status(403).json({ success: false, message: 'User tidak memiliki akses outlet' });
     }
 
-    // Jalankan pengecekan terjadwal batch kadaluarsa dan par stock secara otomatis
-    await Promise.allSettled([
-      NotificationService.checkExpiringBatches(),
-      NotificationService.checkAllParStocks()
-    ]);
+    // Jalankan pengecekan terjadwal batch kadaluarsa dan par stock secara tersinkronisasi (anti-duplikat)
+    await NotificationService.syncScheduledNotifications();
 
     const result = await NotificationService.getNotifications(outlet_id, is_read, page, limit);
     res.json({ 
@@ -47,10 +44,7 @@ exports.getUnreadCount = async (req, res) => {
     const outlet_id = await getEffectiveOutletId(req.user);
     if (!outlet_id) return res.json({ success: true, message: 'Count', data: 0, count: 0 });
 
-    await Promise.allSettled([
-      NotificationService.checkExpiringBatches(),
-      NotificationService.checkAllParStocks()
-    ]);
+    await NotificationService.syncScheduledNotifications();
 
     const count = await NotificationService.getUnreadCount(outlet_id);
     res.json({ success: true, message: 'Unread count', data: count, count });

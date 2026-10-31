@@ -82,13 +82,41 @@ const Mutasi = () => {
     const num = !isNaN(rawNum) && rawNum >= 0 ? rawNum : 0;
     setFormItems(prev => prev.map(item => {
       if (item.product_id === productId) {
+        const totalAvailable = item.saw + (field === 'masuk' ? num : item.masuk);
+
         if (field === 'masuk') {
-          const nextSak = item.sakEdited ? item.sak : (item.saw + num);
+          let nextSak;
+          if (item.lastEditedMode === 'keluar') {
+            const currentKeluar = Math.max(0, item.saw + item.masuk - item.sak);
+            nextSak = Math.max(0, totalAvailable - currentKeluar);
+          } else if (item.sakEdited) {
+            nextSak = item.sak;
+          } else {
+            nextSak = totalAvailable;
+          }
           return { ...item, masuk: num, sak: nextSak };
         }
+
         if (field === 'sak') {
-          return { ...item, sak: num, sakEdited: true };
+          return {
+            ...item,
+            sak: num,
+            sakEdited: true,
+            lastEditedMode: 'sak'
+          };
         }
+
+        if (field === 'keluar') {
+          // Input 2-Arah: saat Keluar diubah, SAK otomatis terhitung mundur: SAK = (SAW + Masuk) - Keluar
+          const nextSak = totalAvailable - num;
+          return {
+            ...item,
+            sak: nextSak,
+            sakEdited: true,
+            lastEditedMode: 'keluar'
+          };
+        }
+
         return { ...item, [field]: num };
       }
       return item;
@@ -99,7 +127,8 @@ const Mutasi = () => {
     setFormItems(prev => prev.map(item => ({
       ...item,
       sak: item.saw + item.masuk,
-      sakEdited: false
+      sakEdited: false,
+      lastEditedMode: null
     })));
     toast.success('Seluruh kolom Fisik (SAK) dikembalikan ke posisi Stok Awal + Masuk (Keluar = 0)');
   };
@@ -120,10 +149,16 @@ const Mutasi = () => {
       if (field === 'masuk') {
         const nextRef = inputRefs.current[`${rowIndex}-sak`];
         if (nextRef) nextRef.focus();
+      } else if (field === 'sak') {
+        const nextRef = inputRefs.current[`${rowIndex}-keluar`];
+        if (nextRef) nextRef.focus();
       }
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      if (field === 'sak') {
+      if (field === 'keluar') {
+        const prevRef = inputRefs.current[`${rowIndex}-sak`];
+        if (prevRef) prevRef.focus();
+      } else if (field === 'sak') {
         const prevRef = inputRefs.current[`${rowIndex}-masuk`];
         if (prevRef) prevRef.focus();
       }
@@ -139,10 +174,20 @@ const Mutasi = () => {
   };
 
   const handleSave = async () => {
-    // Check for negative K
-    const hasNegativeK = formItems.some(item => calculateK(item) < 0);
+    // Check for negative K or negative SAK
+    const hasNegativeK = formItems.some(item => calculateK(item) < 0 || item.sak < 0);
     if (hasNegativeK) {
-      return toast.error('Terdapat item dengan nilai Keluar (K) negatif. Periksa kembali hitungan fisik Anda.');
+      return toast.error('Terdapat item dengan nilai Keluar melebihi total barang tersedia. Periksa kembali hitungan fisik Anda.');
+    }
+
+    // Peringatan cerdas jika ada barang masuk banyak tapi Keluar = 0
+    const totalMasukAll = formItems.reduce((acc, i) => acc + (i.masuk || 0), 0);
+    const totalKeluarAll = formItems.reduce((acc, i) => acc + calculateK(i), 0);
+    if (totalMasukAll > 0 && totalKeluarAll === 0) {
+      const confirmZeroOut = window.confirm(
+        `Perhatian:\nAnda telah menginput total ${totalMasukAll.toLocaleString('id-ID')} unit barang masuk, namun kolom Keluar/Pemakaian masih 0.\n\nApakah shift ini benar-benar TIDAK ADA bahan yang dimasak/digunakan?\n\n• Klik OK untuk tetap menyimpan dengan Keluar = 0.\n• Klik Batal untuk kembali mengisi kolom Keluar atau Fisik.`
+      );
+      if (!confirmZeroOut) return;
     }
 
     // Hanya kirim item yang benar-benar ada pergerakan (Masuk > 0 atau Keluar > 0) atau sudah pernah disimpan di shift ini
@@ -298,6 +343,9 @@ const Mutasi = () => {
             </div>
 
             <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-950/30 border border-[#F9610D]/30 text-xs text-[#FFCE00] font-medium">
+                ✨ <strong>Input 2-Arah:</strong> Ketik di <strong>Keluar</strong> atau di <strong>Fisik</strong> (otomatis saling menghitung).
+              </span>
               <span className="px-3 py-1.5 rounded-xl bg-[#1A1412] border border-[#2D241E] text-stone-300 font-semibold">
                 Bahan Bergerak: <strong className="text-[#FFCE00]">{jumlahBarangBergerak}</strong> / {formItems.length} Item
               </span>
@@ -326,9 +374,18 @@ const Mutasi = () => {
                   <th className="px-4 py-3.5 min-w-[200px]">Nama Produk</th>
                   <th className="px-4 py-3.5 text-center">Satuan</th>
                   <th className="px-4 py-3.5 text-right text-stone-300" title="Stok Awal (diambil dari SAK shift sebelumnya)">SAW</th>
-                  <th className="px-4 py-3.5 w-32">Masuk (M)</th>
-                  <th className="px-4 py-3.5 w-32 text-[#FFCE00] font-bold">Fisik (SAK)</th>
-                  <th className="px-4 py-3.5 text-right text-[#EC1F27]" title="Keluar/Pemakaian">Keluar (K)</th>
+                  <th className="px-4 py-3.5 w-32 text-emerald-400 font-bold" title="Barang Masuk / Pengiriman Datang">
+                    Masuk (M)
+                    <span className="block text-[9px] font-normal text-emerald-500 lowercase">[+ datang]</span>
+                  </th>
+                  <th className="px-4 py-3.5 w-32 text-[#FFCE00] font-bold" title="Sisa Fisik Nyata di Dapur saat Tutup Shift">
+                    Fisik (SAK)
+                    <span className="block text-[9px] font-normal text-amber-400 lowercase">[= sisa fisik]</span>
+                  </th>
+                  <th className="px-4 py-3.5 w-32 text-[#F9610D] font-bold" title="Bahan Baku Keluar / Dimasak">
+                    Keluar (K)
+                    <span className="block text-[9px] font-normal text-orange-400 lowercase">[- pemakaian]</span>
+                  </th>
                   <th className="px-4 py-3.5 text-right">Nilai SAK</th>
                 </tr>
               </thead>
@@ -340,7 +397,7 @@ const Mutasi = () => {
                   })
                   .map((item, idx) => {
                   const k = calculateK(item);
-                  const isNegativeK = k < 0;
+                  const isNegativeK = k < 0 || item.sak < 0;
                   const isBelowPar = item.sak < item.par_stock;
 
                   return (
@@ -367,36 +424,60 @@ const Mutasi = () => {
                           value={item.masuk === 0 ? '' : item.masuk}
                           placeholder="0"
                           onChange={e => handleInputChange(item.product_id, 'masuk', e.target.value)}
+                          onFocus={e => e.target.select()}
                           onKeyDown={e => handleKeyDown(e, item.product_id, 'masuk', idx)}
                           ref={el => inputRefs.current[`${idx}-masuk`] = el}
-                          className="w-full px-2.5 py-1.5 text-right border border-[#2D241E] rounded-lg focus:ring-1 focus:ring-[#F9610D] focus:border-[#F9610D] outline-none bg-[#140F0D] text-emerald-400 font-bold placeholder:text-stone-600 text-sm"
+                          className="w-full px-2.5 py-1.5 text-right border border-[#2D241E] rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-[#140F0D] text-emerald-400 font-bold placeholder:text-stone-600 text-sm"
                         />
                       </td>
 
-                      {/* Input Fisik (SAK) */}
+                      {/* Input Fisik (SAK) - 2-Way Reactive */}
                       <td className="px-4 py-3">
                         <input
                           type="number"
                           min="0"
-                          value={item.sak === 0 && item.saw === 0 && item.masuk === 0 ? '' : item.sak}
+                          value={item.sak === 0 && !item.sakEdited ? '' : item.sak}
                           placeholder="0"
                           onChange={e => handleInputChange(item.product_id, 'sak', e.target.value)}
+                          onFocus={e => e.target.select()}
                           onKeyDown={e => handleKeyDown(e, item.product_id, 'sak', idx)}
                           ref={el => inputRefs.current[`${idx}-sak`] = el}
                           className={`w-full px-2.5 py-1.5 text-right border rounded-lg focus:ring-1 focus:outline-none font-black text-sm ${
-                            isBelowPar 
+                            item.sak < 0
+                              ? 'border-red-500 text-red-400 bg-red-950/40 focus:ring-red-500'
+                              : isBelowPar 
                               ? 'border-[#F9610D] text-[#FFCE00] bg-orange-950/30 focus:ring-[#F9610D]' 
-                              : 'border-[#2D241E] text-white bg-[#140F0D] focus:border-[#F9610D] focus:ring-[#F9610D]'
+                              : 'border-[#2D241E] text-amber-300 bg-[#140F0D] focus:border-amber-400 focus:ring-amber-400'
                           }`}
                         />
                       </td>
 
-                      {/* Keluar (K) */}
-                      <td className="px-4 py-3 text-right font-black bg-[#140F0D]/60">
-                        <span className={isNegativeK ? 'text-[#EC1F27] flex items-center justify-end gap-1' : 'text-stone-200'}>
-                          {isNegativeK && <AlertCircle size={14} />}
-                          {k}
-                        </span>
+                      {/* Input Keluar (K) - 2-Way Reactive */}
+                      <td className="px-4 py-3">
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            value={k === 0 && !item.sakEdited ? '' : (k < 0 ? 0 : k)}
+                            placeholder="0"
+                            onChange={e => handleInputChange(item.product_id, 'keluar', e.target.value)}
+                            onFocus={e => e.target.select()}
+                            onKeyDown={e => handleKeyDown(e, item.product_id, 'keluar', idx)}
+                            ref={el => inputRefs.current[`${idx}-keluar`] = el}
+                            className={`w-full px-2.5 py-1.5 text-right border rounded-lg focus:ring-1 focus:outline-none font-black text-sm ${
+                              isNegativeK
+                                ? 'border-red-500 text-red-400 bg-red-950/40 focus:ring-red-500'
+                                : k > 0
+                                ? 'border-[#F9610D]/70 text-[#F9610D] bg-orange-950/20 focus:border-[#F9610D] focus:ring-[#F9610D]'
+                                : 'border-[#2D241E] text-stone-400 bg-[#140F0D] focus:border-[#F9610D] focus:ring-[#F9610D]'
+                            }`}
+                          />
+                          {isNegativeK && (
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-red-400" title="Keluar melebihi total barang tersedia">
+                              <AlertCircle size={14} />
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Nilai SAK */}

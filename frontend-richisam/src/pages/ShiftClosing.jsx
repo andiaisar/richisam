@@ -25,9 +25,9 @@ import {
 } from 'lucide-react';
 
 const SHIFT_OPTIONS = [
-  { value: 'PAGI', label: 'Shift Pagi (09:00 - 16:00)', desc: 'Operasional buka hingga persiapan siang' },
-  { value: 'SORE', label: 'Shift Sore / Malam (16:00 - 23:00)', desc: 'Operasional ramai malam & tutup toko' },
-  { value: 'MIDNIGHT', label: 'Shift Midnight / Lembur', desc: 'Shift khusus prep dini hari' },
+  { value: 'PAGI', label: 'Shift Pagi (06:00 - 14:00)', desc: 'Operasional pagi hingga siang (06:00 - 14:00)' },
+  { value: 'SORE', label: 'Shift Siang / Sore (14:00 - 22:00)', desc: 'Operasional siang hingga malam (14:00 - 22:00)' },
+  { value: 'MIDNIGHT', label: 'Shift Midnight (22:00 - 06:00)', desc: 'Operasional malam hingga subuh (22:00 - 06:00)' },
 ];
 
 const ShiftClosing = () => {

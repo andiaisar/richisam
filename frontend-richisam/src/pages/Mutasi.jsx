@@ -298,15 +298,15 @@ const Mutasi = () => {
             </div>
           </div>
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">Shift</label>
+            <label className="text-xs font-bold text-stone-300 uppercase tracking-wider">Sesi Shift</label>
             <select 
               value={shift}
               onChange={e => setShift(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white focus:outline-none focus:border-[#F9610D]"
+              className="w-full px-3.5 py-2.5 bg-[#140F0D] border border-[#2D241E] rounded-xl text-sm text-white focus:outline-none focus:border-[#F9610D] cursor-pointer"
             >
-              <option value="MIDNIGHT">MIDNIGHT</option>
-              <option value="PAGI">PAGI</option>
-              <option value="SORE">SORE</option>
+              <option value="PAGI">Shift Pagi (06:00 - 14:00)</option>
+              <option value="SORE">Shift Siang / Sore (14:00 - 22:00)</option>
+              <option value="MIDNIGHT">Shift Midnight (22:00 - 06:00)</option>
             </select>
           </div>
           <div className="flex items-end h-full">
@@ -374,17 +374,17 @@ const Mutasi = () => {
                   <th className="px-4 py-3.5 min-w-[200px]">Nama Produk</th>
                   <th className="px-4 py-3.5 text-center">Satuan</th>
                   <th className="px-4 py-3.5 text-right text-stone-300" title="Stok Awal (diambil dari SAK shift sebelumnya)">SAW</th>
-                  <th className="px-4 py-3.5 w-32 text-emerald-400 font-bold" title="Barang Masuk / Pengiriman Datang">
+                  <th className="px-4 py-3.5 w-32 font-bold" title="Barang Masuk / Pengiriman Datang">
                     Masuk (M)
-                    <span className="block text-[9px] font-normal text-emerald-500 lowercase">[+ datang]</span>
+                    <span className="block text-[9px] font-normal text-stone-400 lowercase">[+ datang]</span>
                   </th>
-                  <th className="px-4 py-3.5 w-32 text-[#FFCE00] font-bold" title="Sisa Fisik Nyata di Dapur saat Tutup Shift">
+                  <th className="px-4 py-3.5 w-32 font-bold" title="Sisa Fisik Nyata di Dapur saat Tutup Shift">
                     Fisik (SAK)
-                    <span className="block text-[9px] font-normal text-amber-400 lowercase">[= sisa fisik]</span>
+                    <span className="block text-[9px] font-normal text-stone-400 lowercase">[= sisa fisik]</span>
                   </th>
-                  <th className="px-4 py-3.5 w-32 text-[#F9610D] font-bold" title="Bahan Baku Keluar / Dimasak">
+                  <th className="px-4 py-3.5 w-32 font-bold" title="Bahan Baku Keluar / Dimasak">
                     Keluar (K)
-                    <span className="block text-[9px] font-normal text-orange-400 lowercase">[- pemakaian]</span>
+                    <span className="block text-[9px] font-normal text-stone-400 lowercase">[- pemakaian]</span>
                   </th>
                   <th className="px-4 py-3.5 text-right">Nilai SAK</th>
                 </tr>
@@ -398,12 +398,12 @@ const Mutasi = () => {
                   .map((item, idx) => {
                   const k = calculateK(item);
                   const isNegativeK = k < 0 || item.sak < 0;
-                  const isBelowPar = item.sak < item.par_stock;
+                  const isBelowPar = item.par_stock > 0 && item.sak < item.par_stock;
 
                   return (
                     <tr 
                       key={item.product_id} 
-                      className={`transition-colors hover:bg-white/[0.03] ${isBelowPar ? 'bg-[#F9610D]/5' : ''}`}
+                      className="transition-colors hover:bg-white/[0.03]"
                     >
                       {/* Nomor Urut Selalu Terlihat dengan Jelas */}
                       <td className="px-4 py-3 text-center font-bold text-stone-300">
@@ -411,7 +411,14 @@ const Mutasi = () => {
                       </td>
                       <td className="px-4 py-3">
                         <p className="font-bold text-white">{item.nama}</p>
-                        <p className="text-xs text-stone-400 mt-0.5">Par: {item.par_stock} • {formatRupiah(item.harga)}</p>
+                        <p className="text-xs text-stone-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span>Par: {item.par_stock} • {formatRupiah(item.harga)}</span>
+                          {isBelowPar && (
+                            <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/15 text-amber-500 border border-amber-500/30">
+                              Menipis
+                            </span>
+                          )}
+                        </p>
                       </td>
                       <td className="px-4 py-3 text-center font-medium text-stone-300">{item.satuan}</td>
                       <td className="px-4 py-3 text-right font-black text-stone-200 bg-[#140F0D]/60">{item.saw}</td>
@@ -427,7 +434,7 @@ const Mutasi = () => {
                           onFocus={e => e.target.select()}
                           onKeyDown={e => handleKeyDown(e, item.product_id, 'masuk', idx)}
                           ref={el => inputRefs.current[`${idx}-masuk`] = el}
-                          className="w-full px-2.5 py-1.5 text-right border border-[#2D241E] rounded-lg focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-[#140F0D] text-emerald-400 font-bold placeholder:text-stone-600 text-sm"
+                          className="w-full px-2.5 py-1.5 text-right border border-[#2D241E] rounded-lg focus:ring-1 focus:ring-[#F9610D] focus:border-[#F9610D] outline-none bg-[#140F0D] text-white font-bold placeholder:text-stone-500 text-sm"
                         />
                       </td>
 
@@ -442,12 +449,12 @@ const Mutasi = () => {
                           onFocus={e => e.target.select()}
                           onKeyDown={e => handleKeyDown(e, item.product_id, 'sak', idx)}
                           ref={el => inputRefs.current[`${idx}-sak`] = el}
-                          className={`w-full px-2.5 py-1.5 text-right border rounded-lg focus:ring-1 focus:outline-none font-black text-sm ${
+                          className={`w-full px-2.5 py-1.5 text-right border rounded-lg focus:ring-1 focus:outline-none font-bold text-sm bg-[#140F0D] text-white ${
                             item.sak < 0
-                              ? 'border-red-500 text-red-400 bg-red-950/40 focus:ring-red-500'
+                              ? 'border-red-500 text-red-500 bg-red-950/20 focus:ring-red-500'
                               : isBelowPar 
-                              ? 'border-[#F9610D] text-[#FFCE00] bg-orange-950/30 focus:ring-[#F9610D]' 
-                              : 'border-[#2D241E] text-amber-300 bg-[#140F0D] focus:border-amber-400 focus:ring-amber-400'
+                              ? 'border-amber-500/70 focus:border-[#F9610D] focus:ring-[#F9610D]' 
+                              : 'border-[#2D241E] focus:border-[#F9610D] focus:ring-[#F9610D]'
                           }`}
                         />
                       </td>
@@ -464,12 +471,10 @@ const Mutasi = () => {
                             onFocus={e => e.target.select()}
                             onKeyDown={e => handleKeyDown(e, item.product_id, 'keluar', idx)}
                             ref={el => inputRefs.current[`${idx}-keluar`] = el}
-                            className={`w-full px-2.5 py-1.5 text-right border rounded-lg focus:ring-1 focus:outline-none font-black text-sm ${
+                            className={`w-full px-2.5 py-1.5 text-right border rounded-lg focus:ring-1 focus:outline-none font-bold text-sm bg-[#140F0D] text-white ${
                               isNegativeK
-                                ? 'border-red-500 text-red-400 bg-red-950/40 focus:ring-red-500'
-                                : k > 0
-                                ? 'border-[#F9610D]/70 text-[#F9610D] bg-orange-950/20 focus:border-[#F9610D] focus:ring-[#F9610D]'
-                                : 'border-[#2D241E] text-stone-400 bg-[#140F0D] focus:border-[#F9610D] focus:ring-[#F9610D]'
+                                ? 'border-red-500 text-red-500 bg-red-950/20 focus:ring-red-500'
+                                : 'border-[#2D241E] focus:border-[#F9610D] focus:ring-[#F9610D]'
                             }`}
                           />
                           {isNegativeK && (

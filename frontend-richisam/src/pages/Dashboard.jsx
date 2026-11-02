@@ -203,7 +203,8 @@ const Dashboard = () => {
     total_diajukan: recentRequests.filter((r) => r.status === 'DIAJUKAN').length,
     total_diproses: recentRequests.filter((r) => r.status === 'DIPROSES').length,
     total_dikirim: recentRequests.filter((r) => r.status === 'DIKIRIM').length,
-    total_selesai_bulan_ini: recentRequests.filter((r) => r.status === 'SELESAI').length
+    total_selesai_bulan_ini: recentRequests.filter((r) => r.status === 'SELESAI').length,
+    total_selesai: recentRequests.filter((r) => r.status === 'SELESAI').length,
   };
   const opnSummary = stats?.opname_summary || {
     total_final_bulan_ini: 0,
@@ -440,7 +441,9 @@ const Dashboard = () => {
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3 tracking-tight">
                 {reqSummary.total_aktif > 0
                   ? `${reqSummary.total_aktif} Antrean`
-                  : `${reqSummary.total_selesai_bulan_ini} Selesai`}
+                  : reqSummary.total_selesai_bulan_ini > 0
+                  ? `${reqSummary.total_selesai_bulan_ini} Selesai`
+                  : (reqSummary.total_selesai > 0 ? `${reqSummary.total_selesai} Selesai` : '0 Antrean')}
               </p>
               <div className="flex items-center gap-2 flex-wrap mt-1.5 text-xs text-stone-400">
                 {reqSummary.total_aktif > 0 ? (
@@ -449,8 +452,12 @@ const Dashboard = () => {
                     <span>•</span>
                     <span className="text-[#F9610D] font-semibold">{reqSummary.total_diproses + reqSummary.total_dikirim} Dikirim/Proses</span>
                   </>
+                ) : reqSummary.total_selesai_bulan_ini > 0 ? (
+                  <span>{reqSummary.total_selesai_bulan_ini} distribusi restock selesai ({activePeriodLabel})</span>
+                ) : reqSummary.total_selesai > 0 ? (
+                  <span>{reqSummary.total_selesai} total tiket selesai • Tidak ada antrean aktif</span>
                 ) : (
-                  <span>{reqSummary.total_selesai_bulan_ini} distribusi restock selesai bulan ini</span>
+                  <span>Pasokan terkendali • Belum ada tiket diajukan</span>
                 )}
               </div>
             </div>

@@ -509,13 +509,13 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
             total_nilai_persediaan: 85000000,
             nilai_pemakaian_bulan_ini: 12500000,
             assets: { total_unit: 250, total_baik: 248, total_rusak: 2, total_jenis: 25 },
-            requests_summary: {
+            requests_summary: expect.objectContaining({
               total_aktif: 3,
               total_diajukan: 2,
               total_diproses: 1,
               total_dikirim: 0,
               total_selesai_bulan_ini: 14
-            },
+            }),
             opname_summary: {
               total_final_bulan_ini: 2,
               total_draft_aktif: 1,

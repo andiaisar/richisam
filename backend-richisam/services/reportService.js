@@ -141,9 +141,11 @@ class ReportService {
           COUNT(*) FILTER (WHERE status = 'DIKIRIM') as total_dikirim,
           COUNT(*) FILTER (
             WHERE status = 'SELESAI'
-            AND EXTRACT(MONTH FROM created_at) = ${targetMonthExpr}
-            AND EXTRACT(YEAR FROM created_at) = ${targetYearExpr}
-          ) as total_selesai_bulan_ini
+            AND EXTRACT(MONTH FROM COALESCE(received_at, updated_at, created_at)) = ${targetMonthExpr}
+            AND EXTRACT(YEAR FROM COALESCE(received_at, updated_at, created_at)) = ${targetYearExpr}
+          ) as total_selesai_bulan_ini,
+          COUNT(*) FILTER (WHERE status = 'SELESAI') as total_selesai,
+          COUNT(*) as total_tiket
         FROM restock_tickets
         ${reqCond}
       `);
@@ -263,7 +265,9 @@ class ReportService {
         total_diajukan: parseInt(reqSummaryRow.total_diajukan || 0),
         total_diproses: parseInt(reqSummaryRow.total_diproses || 0),
         total_dikirim: parseInt(reqSummaryRow.total_dikirim || 0),
-        total_selesai_bulan_ini: parseInt(reqSummaryRow.total_selesai_bulan_ini || 0)
+        total_selesai_bulan_ini: parseInt(reqSummaryRow.total_selesai_bulan_ini || 0),
+        total_selesai: parseInt(reqSummaryRow.total_selesai || reqSummaryRow.total_selesai_bulan_ini || 0),
+        total_tiket: parseInt(reqSummaryRow.total_tiket || 0)
       },
       opname_summary: {
         total_final_bulan_ini: parseInt(opnameSummaryRow.total_final_bulan_ini || 0),

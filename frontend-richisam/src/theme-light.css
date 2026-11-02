@@ -907,6 +907,96 @@ html[data-theme="light"] .card-par-stock .card-par-footer a {
   color: #FFFFFF !important;
 }
 
+/* ── Searchable Product Select Dropdown (Light Mode) ── */
+html[data-theme="light"] .search-select-dropdown {
+  background-color: #FFFFFF !important;
+  border: 1px solid #E8DED3 !important;
+  box-shadow: 0 20px 25px -5px rgba(20, 15, 13, 0.1), 0 8px 10px -6px rgba(20, 15, 13, 0.06) !important;
+}
+
+html[data-theme="light"] .search-select-header {
+  background-color: #FBF8F5 !important;
+  border-bottom: 1px solid #EFE8DE !important;
+  color: #66564B !important;
+}
+
+html[data-theme="light"] .search-select-count {
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .search-select-list {
+  background-color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .search-select-list > :not([hidden]) ~ :not([hidden]) {
+  border-color: #F5EFE6 !important;
+}
+
+html[data-theme="light"] .search-select-item {
+  color: #241B16 !important;
+}
+
+html[data-theme="light"] .search-select-item:hover,
+html[data-theme="light"] .search-select-item.is-highlighted {
+  background-color: #FFF5EE !important;
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .search-select-item.is-selected {
+  background-color: #FFF0E6 !important;
+  border: 1px solid rgba(249, 97, 13, 0.4) !important;
+  color: #C2410C !important;
+}
+
+html[data-theme="light"] .search-select-badge {
+  background-color: #FFF4ED !important;
+  border: 1px solid #FED7AA !important;
+  color: #C2410C !important;
+}
+
+html[data-theme="light"] .search-select-name {
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .search-select-cat {
+  color: #8C7A6B !important;
+}
+
+html[data-theme="light"] .search-select-unit {
+  background-color: #F5EFE6 !important;
+  border: 1px solid #E8DED3 !important;
+  color: #4A3E36 !important;
+}
+
+html[data-theme="light"] .search-select-price {
+  color: #66564B !important;
+}
+
+html[data-theme="light"] .search-select-input {
+  background-color: #FFFFFF !important;
+  border-color: #D4C5B5 !important;
+  color: #140F0D !important;
+}
+
+html[data-theme="light"] .search-select-input::placeholder {
+  color: #8C7A6B !important;
+}
+
+html[data-theme="light"] .search-select-input:focus {
+  border-color: #F9610D !important;
+  box-shadow: 0 0 0 3px rgba(249, 97, 13, 0.15) !important;
+}
+
+html[data-theme="light"] .search-select-trigger {
+  background-color: #FFFFFF !important;
+  border-color: #D4C5B5 !important;
+}
+
+html[data-theme="light"] .search-select-trigger:hover {
+  background-color: #FFF8F3 !important;
+  border-color: #F9610D !important;
+}
+
 /* Transisi halus saat berganti mode */
 html.theme-switching,
 html.theme-switching * {

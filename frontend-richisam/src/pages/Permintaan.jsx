@@ -6,6 +6,7 @@ import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import SuratJalanModal from '../components/SuratJalanModal';
 import Pagination from '../components/Pagination';
+import SearchableProductSelect from '../components/SearchableProductSelect';
 
 const Permintaan = () => {
   const { user } = useAuthStore();
@@ -382,11 +383,14 @@ const Permintaan = () => {
                 </select>
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-ink">Pilih Produk</label>
-                <select required value={emergencyData.product_id} onChange={e => setEmergencyData({...emergencyData, product_id: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 bg-white">
-                  <option value="">Pilih Produk</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.kode} - {p.nama} ({p.satuan})</option>)}
-                </select>
+                <label className="text-sm font-medium text-ink">Pilih Produk <span className="text-red-600">*</span></label>
+                <SearchableProductSelect
+                  products={products}
+                  value={emergencyData.product_id}
+                  onChange={(productId) => setEmergencyData({ ...emergencyData, product_id: productId })}
+                  placeholder="Ketik nama atau kode produk darurat..."
+                  required
+                />
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-ink">Jumlah Fisik Diambil (Sesuai Satuan Di Atas)</label>
@@ -414,26 +418,47 @@ const Permintaan = () => {
       {/* Modal Add Request */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-visible relative">
+            <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30 rounded-t-2xl">
               <h2 className="font-bold text-ink text-lg">Buat Tiket Permintaan</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-ink"><X size={20} /></button>
+              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-ink cursor-pointer"><X size={20} /></button>
             </div>
             <form onSubmit={handleCreateTicket} className="p-5 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-ink mb-1">Produk</label>
-                <select required value={formData.product_id} onChange={e => setFormData({...formData, product_id: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange">
-                  <option value="">-- Pilih Produk --</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.kode} - {p.nama}</option>)}
-                </select>
+                <label className="block text-sm font-medium text-ink mb-1">
+                  Produk <span className="text-[#F9610D]">*</span>
+                </label>
+                <SearchableProductSelect
+                  products={products}
+                  value={formData.product_id}
+                  onChange={(productId) => setFormData({ ...formData, product_id: productId })}
+                  placeholder="Ketik nama atau kode produk... (contoh: Ayam, Beras)"
+                  required
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-ink mb-1">Jumlah Diminta</label>
-                <input required type="number" min="1" value={formData.qty_requested} onChange={e => setFormData({...formData, qty_requested: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" />
+                <label className="block text-sm font-medium text-ink mb-1">
+                  Jumlah Diminta{' '}
+                  {(() => {
+                    const selected = products.find(p => String(p.id) === String(formData.product_id));
+                    return selected?.satuan ? (
+                      <span className="font-bold text-[#F9610D]">({selected.satuan})</span>
+                    ) : '';
+                  })()} <span className="text-[#F9610D]">*</span>
+                </label>
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  value={formData.qty_requested}
+                  onChange={e => setFormData({...formData, qty_requested: e.target.value})}
+                  className="w-full px-4 py-2.5 bg-white border border-line rounded-xl text-sm focus:outline-none focus:border-richisam-orange"
+                  placeholder="Masukkan jumlah yang dibutuhkan"
+                />
               </div>
               <div className="pt-4 border-t border-line flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 text-sm font-medium text-muted hover:text-ink">Batal</button>
-                <button type="submit" disabled={submitting} className="px-4 py-2 text-sm font-medium bg-richisam-orange text-white rounded-lg hover:bg-[#d9530a] disabled:opacity-50">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 text-sm font-medium text-muted hover:text-ink cursor-pointer">Batal</button>
+                <button type="submit" disabled={submitting} className="px-5 py-2.5 text-sm font-bold bg-richisam-orange text-white rounded-xl hover:bg-[#d9530a] disabled:opacity-50 transition-colors shadow-md shadow-[#F9610D]/20 cursor-pointer">
                   {submitting ? 'Menyimpan...' : 'Kirim Tiket'}
                 </button>
               </div>

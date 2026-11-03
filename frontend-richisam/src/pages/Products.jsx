@@ -279,7 +279,7 @@ const Products = () => {
           </div>
 
           {/* Status Tabs (Aktif, Nonaktif, Semua) */}
-          <div className="flex items-center gap-1 p-1 bg-cream/70 dark:bg-stone-900/60 rounded-xl border border-line text-xs font-semibold self-start sm:self-auto shrink-0">
+          <div className="product-status-tabs flex items-center gap-1 p-1 bg-cream/70 rounded-xl border border-line text-xs font-semibold self-start sm:self-auto shrink-0">
             <button
               type="button"
               onClick={() => setStatusFilter('active')}

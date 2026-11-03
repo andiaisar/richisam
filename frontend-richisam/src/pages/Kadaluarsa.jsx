@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import { 
   CalendarClock, AlertTriangle, AlertCircle, CheckCircle2, Plus, 
-  Search, RefreshCw, Trash2, Filter, ShieldAlert, X, ChevronRight, Store
+  Search, RefreshCw, Trash2, Filter, ShieldAlert, X, Store
 } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -20,7 +20,7 @@ const Kadaluarsa = () => {
   
   const [loading, setLoading] = useState(true);
   const [selectedOutlet, setSelectedOutlet] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Pagination State
@@ -163,10 +163,12 @@ const Kadaluarsa = () => {
 
   const metrics = summary?.metrics || {
     total_batches: 0,
+    total_active_batches: 0,
     total_expired: 0,
     total_critical: 0,
     total_warning: 0,
-    total_safe: 0
+    total_safe: 0,
+    total_archived: 0
   };
 
   useEffect(() => {
@@ -230,10 +232,6 @@ const Kadaluarsa = () => {
             </p>
           </div>
         </div>
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-black/30 border border-white/5 text-xs text-stone-300">
-          <span>Prioritas Aktif</span>
-          <ChevronRight className="w-3.5 h-3.5 text-stone-500" />
-        </div>
       </div>
 
       {/* KPI Cards */}
@@ -249,7 +247,11 @@ const Kadaluarsa = () => {
           <div className="text-3xl font-black text-red-500 mt-2">
             {metrics.total_expired}
           </div>
-          <p className="text-[11px] text-stone-400 mt-1">Batch lewat tanggal (Wajib Afkir)</p>
+          <p className="text-[11px] text-stone-400 mt-1">
+            {Number(metrics.total_archived) > 0 
+              ? `Wajib afkir (${metrics.total_archived} terarsip >10 hari)`
+              : 'Batch lewat tanggal (Wajib Afkir)'}
+          </p>
           <div className="absolute -right-2 -bottom-2 w-16 h-16 bg-red-500/5 rounded-full blur-xl pointer-events-none"></div>
         </div>
 
@@ -340,11 +342,13 @@ const Kadaluarsa = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               className="px-3 py-2 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-xs focus:outline-none focus:border-[#F9610D]"
             >
-              <option value="ALL">Semua Status</option>
-              <option value="EXPIRED">🔴 Kadaluarsa (Expired)</option>
+              <option value="ACTIVE">⚡ Semua Batch Aktif (Default)</option>
+              <option value="EXPIRED">🔴 Kadaluarsa (≤ 10 Hari)</option>
               <option value="CRITICAL">🟡 Kritis (H ≤ 3)</option>
               <option value="WARNING">🟠 Peringatan (H ≤ 7)</option>
               <option value="SAFE">🟢 Aman (&gt; 7 Hari)</option>
+              <option value="ARCHIVED">📁 Arsip Kadaluarsa (&gt; 10 Hari)</option>
+              <option value="ALL">📋 Tampilkan Semua (Termasuk Arsip)</option>
             </select>
           </div>
         </div>
@@ -381,7 +385,14 @@ const Kadaluarsa = () => {
                   let statusBadge = null;
                   let countdownText = '';
 
-                  if (days < 0) {
+                  if (days < -10) {
+                    countdownText = `Lewat ${Math.abs(days)} hari`;
+                    statusBadge = (
+                      <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase bg-stone-500/10 border border-stone-500/30 text-stone-400">
+                        TERARSIP (&gt;10 HARI)
+                      </span>
+                    );
+                  } else if (days < 0) {
                     countdownText = `Lewat ${Math.abs(days)} hari`;
                     statusBadge = (
                       <span className="px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide uppercase bg-red-950/60 border border-red-500/40 text-red-400">
@@ -440,7 +451,7 @@ const Kadaluarsa = () => {
                         {b.expired_date}
                       </td>
                       <td className="px-6 py-4 text-center font-bold text-xs">
-                        <span className={days < 0 ? 'text-red-400' : days <= 3 ? 'text-amber-400' : 'text-stone-300'}>
+                        <span className={days < -10 ? 'text-stone-400 italic' : days < 0 ? 'text-red-400 font-bold' : days <= 3 ? 'text-amber-400 font-bold' : 'text-stone-300'}>
                           {countdownText}
                         </span>
                       </td>

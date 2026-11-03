@@ -329,6 +329,27 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
       await batchController.deleteBatch(req, res);
       expect(res.status).toHaveBeenCalledWith(403);
     });
+
+    it('getBatches menyaring batch aktif (>= -10 hari) secara default dan mendukung filter ARCHIVED', async () => {
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 1, batch_no: 'BCH-001', status: 'SAFE' }] });
+
+      const reqDefault = { query: {}, user: { id: 1, role: 'ADMIN_PUSAT' } };
+      const resDefault = mockRes();
+      await batchController.getBatches(reqDefault, resDefault);
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('(b.expired_date - CURRENT_DATE) >= -10'),
+        expect.any(Array)
+      );
+
+      pool.query.mockResolvedValueOnce({ rows: [{ id: 2, batch_no: 'BCH-OLD', status: 'ARCHIVED' }] });
+      const reqArchived = { query: { status: 'ARCHIVED' }, user: { id: 1, role: 'ADMIN_PUSAT' } };
+      const resArchived = mockRes();
+      await batchController.getBatches(reqArchived, resArchived);
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('(b.expired_date - CURRENT_DATE) < -10'),
+        expect.any(Array)
+      );
+    });
   });
 
   describe('8. Tutup Buku Shift & Buka Kunci (Shift Closing)', () => {

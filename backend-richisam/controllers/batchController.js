@@ -27,6 +27,7 @@ exports.getBatches = async (req, res) => {
         TO_CHAR(b.expired_date, 'YYYY-MM-DD') as expired_date,
         (b.expired_date - CURRENT_DATE) as days_remaining,
         CASE 
+          WHEN (b.expired_date - CURRENT_DATE) < -10 THEN 'ARCHIVED'
           WHEN (b.expired_date - CURRENT_DATE) < 0 THEN 'EXPIRED'
           WHEN (b.expired_date - CURRENT_DATE) <= 3 THEN 'CRITICAL'
           WHEN (b.expired_date - CURRENT_DATE) <= 7 THEN 'WARNING'
@@ -53,15 +54,22 @@ exports.getBatches = async (req, res) => {
       query += ` AND (LOWER(p.nama) LIKE $${params.length} OR LOWER(b.batch_no) LIKE $${params.length} OR LOWER(p.kode) LIKE $${params.length})`;
     }
 
-    if (status && status !== 'ALL') {
-      if (status === 'EXPIRED') {
-        query += ` AND (b.expired_date - CURRENT_DATE) < 0`;
-      } else if (status === 'CRITICAL') {
+    // Default status is 'ACTIVE' (sembunyikan batch kadaluarsa > 10 hari)
+    const effectiveStatus = status || 'ACTIVE';
+
+    if (effectiveStatus !== 'ALL') {
+      if (effectiveStatus === 'ACTIVE') {
+        query += ` AND (b.expired_date - CURRENT_DATE) >= -10`;
+      } else if (effectiveStatus === 'EXPIRED') {
+        query += ` AND (b.expired_date - CURRENT_DATE) < 0 AND (b.expired_date - CURRENT_DATE) >= -10`;
+      } else if (effectiveStatus === 'CRITICAL') {
         query += ` AND (b.expired_date - CURRENT_DATE) >= 0 AND (b.expired_date - CURRENT_DATE) <= 3`;
-      } else if (status === 'WARNING') {
+      } else if (effectiveStatus === 'WARNING') {
         query += ` AND (b.expired_date - CURRENT_DATE) > 3 AND (b.expired_date - CURRENT_DATE) <= 7`;
-      } else if (status === 'SAFE') {
+      } else if (effectiveStatus === 'SAFE') {
         query += ` AND (b.expired_date - CURRENT_DATE) > 7`;
+      } else if (effectiveStatus === 'ARCHIVED') {
+        query += ` AND (b.expired_date - CURRENT_DATE) < -10`;
       }
     }
 
@@ -161,17 +169,19 @@ exports.getBatchSummary = async (req, res) => {
     const summaryQuery = `
       SELECT
         COUNT(*) as total_batches,
-        COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) < 0 THEN 1 ELSE 0 END), 0) as total_expired,
+        COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) >= -10 THEN 1 ELSE 0 END), 0) as total_active_batches,
+        COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) < 0 AND (b.expired_date - CURRENT_DATE) >= -10 THEN 1 ELSE 0 END), 0) as total_expired,
         COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) >= 0 AND (b.expired_date - CURRENT_DATE) <= 3 THEN 1 ELSE 0 END), 0) as total_critical,
         COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) > 3 AND (b.expired_date - CURRENT_DATE) <= 7 THEN 1 ELSE 0 END), 0) as total_warning,
         COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) > 7 THEN 1 ELSE 0 END), 0) as total_safe,
-        COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) <= 3 THEN b.qty ELSE 0 END), 0) as at_risk_qty
+        COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) < -10 THEN 1 ELSE 0 END), 0) as total_archived,
+        COALESCE(SUM(CASE WHEN (b.expired_date - CURRENT_DATE) <= 3 AND (b.expired_date - CURRENT_DATE) >= -10 THEN b.qty ELSE 0 END), 0) as at_risk_qty
       ${baseQuery}
     `;
 
     const resSummary = await pool.query(summaryQuery, params);
     
-    // Also fetch the top 5 most urgent expiring batches for quick alert
+    // Also fetch the top 5 most urgent expiring batches for quick alert (hanya batch aktif)
     let urgentQuery = `
       SELECT 
         b.id,
@@ -185,7 +195,7 @@ exports.getBatchSummary = async (req, res) => {
       FROM product_batches b
       JOIN products p ON b.product_id = p.id
       JOIN outlets o ON b.outlet_id = o.id
-      WHERE (b.expired_date - CURRENT_DATE) <= 7
+      WHERE (b.expired_date - CURRENT_DATE) <= 7 AND (b.expired_date - CURRENT_DATE) >= -10
     `;
     if (outletFilter) {
       urgentQuery += ` AND b.outlet_id = $1`;

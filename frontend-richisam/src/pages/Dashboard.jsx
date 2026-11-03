@@ -219,20 +219,6 @@ const Dashboard = () => {
         {/* Header Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-[#241C18]">
           <div>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F9610D]/15 border border-[#F9610D]/30 text-[#F9610D] text-[11px] font-bold">
-                <UserCheck size={13} />
-                <span>Login Aktif: {user?.nama || user?.username} ({roleDisplay})</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#221B17] border border-[#2D241E] text-stone-300 text-[11px] font-semibold">
-                <Store size={12} className="text-[#FFCE00]" />
-                <span>Cakupan Data: {activeScopeLabel}</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-semibold">
-                <CalendarClock size={12} />
-                <span>Periode: {activePeriodLabel}</span>
-              </span>
-            </div>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
               {dashboardTitle}
             </h1>
@@ -428,15 +414,6 @@ const Dashboard = () => {
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-stone-400">Tiket Permintaan Stok</span>
-                {reqSummary.total_aktif > 0 ? (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30">
-                    {reqSummary.total_aktif} Berjalan
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    Terkendali
-                  </span>
-                )}
               </div>
               <p className="text-2xl sm:text-3xl font-extrabold text-white mt-3 tracking-tight">
                 {reqSummary.total_aktif > 0

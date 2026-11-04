@@ -9,8 +9,10 @@ const { initCronJobs } = require('./jobs/cronJobs');
 
 const app = express();
 
-// Init cron jobs
-initCronJobs();
+// Init cron jobs (hanya jika bukan di environment serverless Vercel)
+if (!process.env.VERCEL) {
+  initCronJobs();
+}
 
 
 // 1. MIDDLEWARE HARUS DI ATAS (urutan penting!)

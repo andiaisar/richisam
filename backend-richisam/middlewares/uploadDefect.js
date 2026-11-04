@@ -3,9 +3,13 @@ const path = require('path');
 const fs = require('fs');
 
 // Memastikan folder penyimpanan ada
-const uploadDir = 'public/uploads/defects/';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = process.env.VERCEL ? '/tmp' : path.join(__dirname, '../public/uploads/defects/');
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Warning: Could not create uploadDir:', e.message);
 }
 
 // Konfigurasi penyimpanan multer

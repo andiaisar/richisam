@@ -5,9 +5,13 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadDir = 'public/uploads/';
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+const uploadDir = process.env.VERCEL ? '/tmp' : path.join(__dirname, '../public/uploads/');
+try {
+  if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('Warning: Could not create uploadDir:', e.message);
 }
 
 const storage = multer.diskStorage({

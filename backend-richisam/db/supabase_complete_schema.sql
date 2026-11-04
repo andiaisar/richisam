@@ -359,3 +359,4 @@ FROM products p CROSS JOIN outlets o;
 INSERT INTO par_stocks (product_id, outlet_id, min_qty)
 SELECT p.id, o.id, 20
 FROM products p CROSS JOIN outlets o;
+

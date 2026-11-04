@@ -129,10 +129,17 @@ CREATE TABLE stock_mutations (
 CREATE TABLE restock_tickets (
     id SERIAL PRIMARY KEY,
     nomor_tiket VARCHAR(50) UNIQUE NOT NULL,
+    kode_tiket VARCHAR(50),
     outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
     status ticket_status_enum DEFAULT 'DIAJUKAN',
     catatan TEXT,
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    processed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    processed_at TIMESTAMP,
+    received_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    received_at TIMESTAMP,
+    ada_selisih BOOLEAN DEFAULT false,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -143,6 +150,9 @@ CREATE TABLE restock_ticket_items (
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     qty_diminta INTEGER NOT NULL,
     qty_disetujui INTEGER,
+    qty_dikirim INTEGER DEFAULT 0,
+    qty_diterima INTEGER DEFAULT 0,
+    catatan TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -154,8 +164,14 @@ CREATE TABLE defect_reports (
     qty INTEGER NOT NULL,
     foto_url VARCHAR(255),
     keterangan TEXT,
+    deskripsi TEXT,
+    alasan TEXT,
+    action VARCHAR(50) DEFAULT 'RETUR',
     status defect_status_enum DEFAULT 'BARU',
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    reported_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    batch_number VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

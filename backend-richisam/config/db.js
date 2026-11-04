@@ -17,6 +17,10 @@ const poolConfig = process.env.DATABASE_URL
 
 const pool = new Pool(poolConfig);
 
+pool.on('error', (err) => {
+  console.error('⚠️ Unexpected error on idle PostgreSQL client:', err.message);
+});
+
 pool.on('connect', () => {
   console.log('✅ Terhubung ke pool PostgreSQL');
 });

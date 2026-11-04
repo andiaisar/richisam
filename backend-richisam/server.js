@@ -5,6 +5,13 @@ require('dotenv').config();
 const helmet = require('helmet');
 const morgan = require('morgan');
 
+process.on('uncaughtException', (err) => {
+  console.error('🔥 UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🔥 UNHANDLED REJECTION:', reason);
+});
+
 const { initCronJobs } = require('./jobs/cronJobs');
 
 const app = express();
@@ -14,10 +21,11 @@ if (!process.env.VERCEL) {
   initCronJobs();
 }
 
-
 // 1. CORS Preflight & Headers (Letakkan paling atas agar OPTIONS selalu 200 OK)
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  console.log(`[REQ] ${req.method} ${req.url}`);
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
   if (req.method === 'OPTIONS') {
@@ -31,7 +39,7 @@ app.use(helmet({
 }));
 app.use(morgan('dev'));
 app.use(cors({
-  origin: '*',
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -57,36 +65,40 @@ const opnameRoutes = require('./routes/opnameRoutes');
 const assetRoutes = require('./routes/assetRoutes');
 const importRoutes = require('./routes/importRoutes');
 
-// 3. GUNAKAN ROUTES
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/outlets', outletRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/par-stocks', parStockRoutes);
-app.use('/api/mutations', mutationRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/stocks', stockRoutes);
-app.use('/api/requests', requestRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/defects', newDefectRoutes);
-app.use('/api/opening-balances', openingBalanceRoutes);
-app.use('/api/opnames', opnameRoutes);
-app.use('/api/assets', assetRoutes);
-app.use('/api/import', importRoutes);
-app.use('/api/transfers', require('./routes/transferRoutes'));
-app.use('/api/analytics', require('./routes/analyticsRoutes'));
-app.use('/api/batches', require('./routes/batchRoutes'));
-app.use('/api/audit', require('./routes/auditRoutes'));
-app.use('/api/shifts', require('./routes/shiftRoutes'));
+// 3. GUNAKAN ROUTES (Mendukung baik dengan prefix /api maupun tanpa prefix)
+app.use(['/api/auth', '/auth'], authRoutes);
+app.use(['/api/users', '/users'], userRoutes);
+app.use(['/api/outlets', '/outlets'], outletRoutes);
+app.use(['/api/products', '/products'], productRoutes);
+app.use(['/api/par-stocks', '/par-stocks'], parStockRoutes);
+app.use(['/api/mutations', '/mutations'], mutationRoutes);
+app.use(['/api/notifications', '/notifications'], notificationRoutes);
+app.use(['/api/stocks', '/stocks'], stockRoutes);
+app.use(['/api/requests', '/requests'], requestRoutes);
+app.use(['/api/reports', '/reports'], reportRoutes);
+app.use(['/api/defects', '/defects'], newDefectRoutes);
+app.use(['/api/opening-balances', '/opening-balances'], openingBalanceRoutes);
+app.use(['/api/opnames', '/opnames'], opnameRoutes);
+app.use(['/api/assets', '/assets'], assetRoutes);
+app.use(['/api/import', '/import'], importRoutes);
+app.use(['/api/transfers', '/transfers'], require('./routes/transferRoutes'));
+app.use(['/api/analytics', '/analytics'], require('./routes/analyticsRoutes'));
+app.use(['/api/batches', '/batches'], require('./routes/batchRoutes'));
+app.use(['/api/audit', '/audit'], require('./routes/auditRoutes'));
+app.use(['/api/shifts', '/shifts'], require('./routes/shiftRoutes'));
 
 // Cek Status API
-app.get('/', (req, res) => {
-  res.json({ message: 'API Sistem Inventaris Richisam Aktif dengan Arsitektur MVC!' });
+app.get(['/', '/api', '/health'], (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'API Sistem Inventaris Richisam Aktif dengan Arsitektur MVC!',
+    timestamp: new Date().toISOString()
+  });
 });
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Server error:', err.stack);
   if (err.name === 'MulterError' || (err.message && err.message.includes('file gambar'))) {
     return res.status(400).json({
       success: false,
@@ -102,7 +114,7 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-if (!process.env.VERCEL) {
+if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
   });

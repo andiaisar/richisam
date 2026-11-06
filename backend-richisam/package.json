@@ -9,6 +9,7 @@
     "dev": "node --watch server.js",
     "migrate": "node db/migrate.js",
     "migrate:master": "node db/migrate_master.js",
+    "migrate:supabase": "node db/migrate_supabase.js",
     "seed": "node db/seed.js",
     "seed:master": "node db/seed_master.js",
     "reset:data": "node db/reset_data.js"

@@ -7,24 +7,44 @@ import useAuthStore from './store/useAuthStore';
 import Login from './pages/Login';
 import DashboardLayout from './layouts/DashboardLayout';
 
+// Helper agar jika terjadi redeploy di Vercel (nama file chunk berubah), halaman otomatis reload tanpa error
+const lazyWithRetry = (componentImport) =>
+  lazy(async () => {
+    const pageAlreadyRefreshed = JSON.parse(
+      window.sessionStorage.getItem('chunk_retry_refreshed') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('chunk_retry_refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageAlreadyRefreshed) {
+        window.sessionStorage.setItem('chunk_retry_refreshed', 'true');
+        window.location.reload();
+        return { default: () => null };
+      }
+      throw error;
+    }
+  });
+
 // Lazy-loaded Pages for optimal bundle splitting
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Mutasi = lazy(() => import('./pages/Mutasi'));
-const Transfer = lazy(() => import('./pages/Transfer'));
-const Permintaan = lazy(() => import('./pages/Permintaan'));
-const Defect = lazy(() => import('./pages/Defect'));
-const Users = lazy(() => import('./pages/Users'));
-const Outlets = lazy(() => import('./pages/Outlets'));
-const Products = lazy(() => import('./pages/Products'));
-const OpeningBalance = lazy(() => import('./pages/OpeningBalance'));
-const Assets = lazy(() => import('./pages/Assets'));
-const Opname = lazy(() => import('./pages/Opname'));
-const ParStock = lazy(() => import('./pages/ParStock'));
-const Laporan = lazy(() => import('./pages/Laporan'));
-const Analytics = lazy(() => import('./pages/Analytics'));
-const Kadaluarsa = lazy(() => import('./pages/Kadaluarsa'));
-const ShiftClosing = lazy(() => import('./pages/ShiftClosing'));
-const AuditTrail = lazy(() => import('./pages/AuditTrail'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const Mutasi = lazyWithRetry(() => import('./pages/Mutasi'));
+const Transfer = lazyWithRetry(() => import('./pages/Transfer'));
+const Permintaan = lazyWithRetry(() => import('./pages/Permintaan'));
+const Defect = lazyWithRetry(() => import('./pages/Defect'));
+const Users = lazyWithRetry(() => import('./pages/Users'));
+const Outlets = lazyWithRetry(() => import('./pages/Outlets'));
+const Products = lazyWithRetry(() => import('./pages/Products'));
+const OpeningBalance = lazyWithRetry(() => import('./pages/OpeningBalance'));
+const Assets = lazyWithRetry(() => import('./pages/Assets'));
+const Opname = lazyWithRetry(() => import('./pages/Opname'));
+const ParStock = lazyWithRetry(() => import('./pages/ParStock'));
+const Laporan = lazyWithRetry(() => import('./pages/Laporan'));
+const Analytics = lazyWithRetry(() => import('./pages/Analytics'));
+const Kadaluarsa = lazyWithRetry(() => import('./pages/Kadaluarsa'));
+const ShiftClosing = lazyWithRetry(() => import('./pages/ShiftClosing'));
+const AuditTrail = lazyWithRetry(() => import('./pages/AuditTrail'));
 
 const PageLoader = () => (
   <div className="min-h-[40vh] flex items-center justify-center">

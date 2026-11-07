@@ -35,7 +35,36 @@ class MutationService {
         WHERE saw = 0 AND masuk = 0 AND keluar = 0 AND sak = 0
       `);
 
-      // 3. Jika ada baris yang dipulihkan atau ada stok 0 tanpa mutasi sak=0, kembalikan qty_current ke saldo valid terakhir
+      // 3. Sinkronkan rantai SAW -> SAK antar shift (PAGI -> SORE -> MIDNIGHT) jika ada baris yang sempat tersimpan dengan SAW lama
+      await pool.query(`
+        WITH ordered_muts AS (
+          SELECT 
+            id,
+            outlet_id,
+            product_id,
+            saw,
+            masuk,
+            keluar,
+            sak,
+            LAG(sak) OVER (
+              PARTITION BY outlet_id, product_id 
+              ORDER BY tanggal ASC, (CASE shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END) ASC, id ASC
+            ) AS expected_saw
+          FROM stock_mutations
+        )
+        UPDATE stock_mutations m
+        SET 
+          saw = o.expected_saw,
+          sak = GREATEST(0, o.expected_saw + m.masuk - GREATEST(0, m.keluar)),
+          keluar = GREATEST(0, m.keluar),
+          updated_at = CURRENT_TIMESTAMP
+        FROM ordered_muts o
+        WHERE m.id = o.id
+          AND o.expected_saw IS NOT NULL
+          AND m.saw IS DISTINCT FROM o.expected_saw
+      `);
+
+      // 4. Jika ada baris yang dipulihkan atau ada stok 0 tanpa mutasi sak=0, kembalikan qty_current ke saldo valid terakhir
       if (delRes.rowCount > 0) {
         await pool.query(`
           UPDATE stocks s
@@ -45,7 +74,7 @@ class MutationService {
               FROM stock_mutations m
               WHERE m.outlet_id = s.outlet_id AND m.product_id = s.product_id
               ORDER BY m.tanggal DESC,
-                       (CASE m.shift WHEN 'SORE' THEN 3 WHEN 'PAGI' THEN 2 WHEN 'MIDNIGHT' THEN 1 ELSE 0 END) DESC,
+                       (CASE m.shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END) DESC,
                        m.id DESC
               LIMIT 1
             ),
@@ -75,12 +104,12 @@ class MutationService {
 
   static getPreviousShift(dateStr, shift) {
     const dateObj = new Date(dateStr);
+    if (shift === 'MIDNIGHT') return { date: dateStr, shift: 'SORE' };
     if (shift === 'SORE') return { date: dateStr, shift: 'PAGI' };
-    if (shift === 'PAGI') return { date: dateStr, shift: 'MIDNIGHT' };
-    if (shift === 'MIDNIGHT') {
+    if (shift === 'PAGI') {
       dateObj.setDate(dateObj.getDate() - 1);
       const prevDate = dateObj.toISOString().split('T')[0];
-      return { date: prevDate, shift: 'SORE' };
+      return { date: prevDate, shift: 'MIDNIGHT' };
     }
     throw new Error('Shift tidak valid');
   }
@@ -103,6 +132,7 @@ class MutationService {
          COALESCE(ps.min_qty, 0) AS par_stock,
          curr.saw AS curr_saw,
          curr.masuk AS curr_masuk,
+         curr.keluar AS curr_keluar,
          curr.sak AS curr_sak,
          prev.sak AS prev_sak,
          ob.qty AS op_bal_qty,
@@ -118,12 +148,12 @@ class MutationService {
              m.tanggal < $2::date
              OR (
                m.tanggal = $2::date
-               AND (CASE m.shift WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 0 END)
-                 < (CASE $3::text WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 0 END)
+               AND (CASE m.shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
+                 < (CASE $3::text WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
              )
            )
          ORDER BY m.tanggal DESC,
-                  (CASE m.shift WHEN 'SORE' THEN 3 WHEN 'PAGI' THEN 2 WHEN 'MIDNIGHT' THEN 1 ELSE 0 END) DESC,
+                  (CASE m.shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END) DESC,
                   m.id DESC
          LIMIT 1
        ) prev ON true
@@ -136,13 +166,27 @@ class MutationService {
 
     return res.rows.map((p) => {
       const hasCurrent = p.curr_sak !== null && p.curr_sak !== undefined;
+      const hasPrev = p.prev_sak !== null && p.prev_sak !== undefined;
       let saw = 0;
-      if (hasCurrent) {
-        saw = p.curr_saw;
-      } else if (p.prev_sak !== null && p.prev_sak !== undefined) {
-        saw = p.prev_sak;
+      if (hasPrev) {
+        saw = parseInt(p.prev_sak, 10);
+      } else if (hasCurrent) {
+        saw = parseInt(p.curr_saw, 10);
       } else {
-        saw = p.op_bal_qty !== null && p.op_bal_qty !== undefined ? p.op_bal_qty : (p.stock_qty ?? 0);
+        saw = p.op_bal_qty !== null && p.op_bal_qty !== undefined ? parseInt(p.op_bal_qty, 10) : parseInt(p.stock_qty ?? 0, 10);
+      }
+
+      let sakVal = null;
+      if (hasCurrent) {
+        const currSawInt = parseInt(p.curr_saw, 10);
+        const currMasukInt = parseInt(p.curr_masuk || 0, 10);
+        const currSakInt = parseInt(p.curr_sak, 10);
+        if (hasPrev && currSawInt !== saw) {
+          const recordedKeluar = Math.max(0, p.curr_keluar !== undefined && p.curr_keluar !== null ? parseInt(p.curr_keluar, 10) : (currSawInt + currMasukInt - currSakInt));
+          sakVal = Math.max(0, saw + currMasukInt - recordedKeluar);
+        } else {
+          sakVal = currSakInt;
+        }
       }
 
       return {
@@ -153,11 +197,11 @@ class MutationService {
         satuan: p.satuan,
         harga: parseFloat(p.harga || 0),
         par_stock: parseInt(p.par_stock || 0, 10),
-        saw: saw !== null && saw !== undefined ? parseInt(saw, 10) : 0,
+        saw: !isNaN(saw) ? saw : 0,
         canInput: true,
         message: null,
         masuk: hasCurrent ? parseInt(p.curr_masuk, 10) : null,
-        sak: hasCurrent ? parseInt(p.curr_sak, 10) : null
+        sak: sakVal
       };
     });
   }
@@ -183,7 +227,29 @@ class MutationService {
         }
 
         const exist = await client.query(
-          'SELECT id, saw FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4 FOR UPDATE',
+          `SELECT id,
+             COALESCE(
+               (
+                 SELECT m2.sak FROM stock_mutations m2
+                 WHERE m2.outlet_id = $1 AND m2.product_id = $2
+                   AND (
+                     m2.tanggal < $3
+                     OR (
+                       m2.tanggal = $3
+                       AND (CASE m2.shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
+                         < (CASE $4 WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
+                     )
+                   )
+                 ORDER BY m2.tanggal DESC,
+                          (CASE m2.shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END) DESC,
+                          m2.id DESC
+                 LIMIT 1
+               ),
+               saw
+             ) AS saw
+           FROM stock_mutations
+           WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4
+           FOR UPDATE`,
           [outlet_id, item.product_id, tanggal, shift]
         );
         if (exist.rows.length > 0) {
@@ -196,7 +262,7 @@ class MutationService {
           }
 
           await client.query(
-            'UPDATE stock_mutations SET masuk = $1, keluar = $2, sak = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $4',
+            `UPDATE stock_mutations SET masuk = $1, keluar = $2, sak = $3, saw = ${Number(saw) || 0}, updated_at = CURRENT_TIMESTAMP WHERE id = $4`,
             [item.masuk, keluar, item.sak, existingMut.id]
           );
 
@@ -217,16 +283,16 @@ class MutationService {
                  tanggal = $3 
                  AND (
                    CASE shift 
-                     WHEN 'MIDNIGHT' THEN 1 
-                     WHEN 'PAGI' THEN 2 
-                     WHEN 'SORE' THEN 3 
+                     WHEN 'PAGI' THEN 1 
+                     WHEN 'SORE' THEN 2 
+                     WHEN 'MIDNIGHT' THEN 3 
                      ELSE 0 
                    END
                  ) < (
                    CASE $4 
-                     WHEN 'MIDNIGHT' THEN 1 
-                     WHEN 'PAGI' THEN 2 
-                     WHEN 'SORE' THEN 3 
+                     WHEN 'PAGI' THEN 1 
+                     WHEN 'SORE' THEN 2 
+                     WHEN 'MIDNIGHT' THEN 3 
                      ELSE 0 
                    END
                  )
@@ -234,9 +300,9 @@ class MutationService {
              )
            ORDER BY tanggal DESC, 
                     (CASE shift 
-                      WHEN 'SORE' THEN 3 
-                      WHEN 'PAGI' THEN 2 
-                      WHEN 'MIDNIGHT' THEN 1 
+                      WHEN 'MIDNIGHT' THEN 3 
+                      WHEN 'SORE' THEN 2 
+                      WHEN 'PAGI' THEN 1 
                       ELSE 0 
                     END) DESC, 
                     id DESC 
@@ -329,7 +395,7 @@ class MutationService {
          throw new Error(`Shift ${m.shift} pada tanggal ${dateStr} telah ditutup & dikunci. Tidak dapat diubah.`);
        }
        
-       // Cek apakah ada mutasi setelahnya berdasarkan kronologis 3 shift
+       // Cek apakah ada mutasi setelahnya berdasarkan kronologis 3 shift (PAGI -> SORE -> MIDNIGHT)
        const nextMut = await client.query(
          `SELECT id FROM stock_mutations 
           WHERE outlet_id = $1 AND product_id = $2 
@@ -339,16 +405,16 @@ class MutationService {
                 tanggal = $3 
                 AND (
                   CASE shift 
-                    WHEN 'MIDNIGHT' THEN 1 
-                    WHEN 'PAGI' THEN 2 
-                    WHEN 'SORE' THEN 3 
+                    WHEN 'PAGI' THEN 1 
+                    WHEN 'SORE' THEN 2 
+                    WHEN 'MIDNIGHT' THEN 3 
                     ELSE 0 
                   END
                 ) > (
                   CASE $4 
-                    WHEN 'MIDNIGHT' THEN 1 
-                    WHEN 'PAGI' THEN 2 
-                    WHEN 'SORE' THEN 3 
+                    WHEN 'PAGI' THEN 1 
+                    WHEN 'SORE' THEN 2 
+                    WHEN 'MIDNIGHT' THEN 3 
                     ELSE 0 
                   END
                 )
@@ -436,20 +502,20 @@ class MutationService {
       const pagi = pm.find(m => m.shift === 'PAGI');
       const sore = pm.find(m => m.shift === 'SORE');
       
-      const total_keluar = (mid ? mid.keluar : 0) + (pagi ? pagi.keluar : 0) + (sore ? sore.keluar : 0);
-      let sak_sore = sore ? sore.sak : (pagi ? pagi.sak : (mid ? mid.sak : 0));
-      let harga = sore ? sore.harga_snapshot : (pagi ? pagi.harga_snapshot : (mid ? mid.harga_snapshot : 0));
-      const nilai_persediaan = parseFloat(sak_sore) * parseFloat(harga);
+      const total_keluar = (pagi ? pagi.keluar : 0) + (sore ? sore.keluar : 0) + (mid ? mid.keluar : 0);
+      let sak_akhir = mid ? mid.sak : (sore ? sore.sak : (pagi ? pagi.sak : 0));
+      let harga = mid ? mid.harga_snapshot : (sore ? sore.harga_snapshot : (pagi ? pagi.harga_snapshot : 0));
+      const nilai_persediaan = parseFloat(sak_akhir) * parseFloat(harga);
       
       summary.push({
         product_id: p.id,
         nama: p.nama,
         urutan: p.urutan,
-        MIDNIGHT: mid ? { saw: mid.saw, m: mid.masuk, sak: mid.sak, k: mid.keluar } : null,
         PAGI: pagi ? { saw: pagi.saw, m: pagi.masuk, sak: pagi.sak, k: pagi.keluar } : null,
         SORE: sore ? { saw: sore.saw, m: sore.masuk, sak: sore.sak, k: sore.keluar } : null,
+        MIDNIGHT: mid ? { saw: mid.saw, m: mid.masuk, sak: mid.sak, k: mid.keluar } : null,
         total_keluar,
-        stok_gudang: sak_sore,
+        stok_gudang: sak_akhir,
         nilai_persediaan
       });
     }

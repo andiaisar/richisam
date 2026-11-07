@@ -85,12 +85,12 @@ describe('MutationService', () => {
       expect(insertCall[1][8]).toBe(1200); // harga_snapshot = 1200
     });
 
-    it('Rantai SAW antar shift berurutan (MIDNIGHT hari berikutnya = SORE hari sebelumnya)', () => {
-      const prevShift1 = MutationService.getPreviousShift('2023-10-02', 'MIDNIGHT');
-      expect(prevShift1).toEqual({ date: '2023-10-01', shift: 'SORE' });
-      
-      const prevShift2 = MutationService.getPreviousShift('2023-11-01', 'MIDNIGHT');
-      expect(prevShift2).toEqual({ date: '2023-10-31', shift: 'SORE' });
+    it('Rantai SAW antar shift berurutan (PAGI -> SORE -> MIDNIGHT pada hari yang sama, dan PAGI hari berikutnya = MIDNIGHT hari sebelumnya)', () => {
+      const prevShiftMalam = MutationService.getPreviousShift('2023-10-02', 'MIDNIGHT');
+      expect(prevShiftMalam).toEqual({ date: '2023-10-02', shift: 'SORE' });
+
+      const prevShiftPagi = MutationService.getPreviousShift('2023-11-01', 'PAGI');
+      expect(prevShiftPagi).toEqual({ date: '2023-10-31', shift: 'MIDNIGHT' });
     });
   });
 });

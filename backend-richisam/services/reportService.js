@@ -313,7 +313,7 @@ class ReportService {
             AND m_awal.tanggal >= $1 AND m_awal.tanggal <= $2
             ${outlet_id ? 'AND m_awal.outlet_id = $3' : ''}
           ORDER BY m_awal.tanggal ASC, 
-                   (CASE m_awal.shift WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 4 END) ASC,
+                   (CASE m_awal.shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 4 END) ASC,
                    m_awal.id ASC
           LIMIT 1
         ), COALESCE((
@@ -331,7 +331,7 @@ class ReportService {
             AND m_akhir.tanggal >= $1 AND m_akhir.tanggal <= $2
             ${outlet_id ? 'AND m_akhir.outlet_id = $3' : ''}
           ORDER BY m_akhir.tanggal DESC, 
-                   (CASE m_akhir.shift WHEN 'SORE' THEN 3 WHEN 'PAGI' THEN 2 WHEN 'MIDNIGHT' THEN 1 ELSE 0 END) DESC,
+                   (CASE m_akhir.shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END) DESC,
                    m_akhir.id DESC
           LIMIT 1
         ), COALESCE((

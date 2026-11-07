@@ -77,6 +77,13 @@ const Mutasi = () => {
     }
   };
 
+  useEffect(() => {
+    if (selectedOutlet && tanggal && shift) {
+      fetchForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOutlet, tanggal, shift]);
+
   const handleInputChange = (productId, field, value) => {
     const rawNum = value === '' ? 0 : parseInt(value, 10);
     const num = !isNaN(rawNum) && rawNum >= 0 ? rawNum : 0;
@@ -306,7 +313,7 @@ const Mutasi = () => {
             >
               <option value="PAGI">Shift Pagi (06:00 - 14:00)</option>
               <option value="SORE">Shift Siang / Sore (14:00 - 22:00)</option>
-              <option value="MIDNIGHT">Shift Midnight (22:00 - 06:00)</option>
+              <option value="MIDNIGHT">Shift Malam / Midnight (22:00 - 06:00)</option>
             </select>
           </div>
           <div className="flex items-end h-full">

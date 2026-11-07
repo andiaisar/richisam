@@ -74,7 +74,17 @@ exports.reportDefect = async (req, res) => {
     const parsed = defectSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
 
-    const foto_url = req.file ? `/uploads/${req.file.filename}` : '';
+    let foto_url = '';
+    if (req.file) {
+      if (process.env.VERCEL && req.file.path && fs.existsSync(req.file.path)) {
+        const mime = req.file.mimetype || 'image/jpeg';
+        const b64 = fs.readFileSync(req.file.path).toString('base64');
+        foto_url = `data:${mime};base64,${b64}`;
+        try { fs.unlinkSync(req.file.path); } catch (_) {}
+      } else {
+        foto_url = `/uploads/${req.file.filename}`;
+      }
+    }
     const deskripsi = parsed.data.deskripsi || parsed.data.keterangan || '';
 
     const defect = await DefectService.reportDefect(

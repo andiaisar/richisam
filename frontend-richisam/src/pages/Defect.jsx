@@ -57,12 +57,13 @@ const Defect = () => {
 
   useEffect(() => {
     if (location.state?.autoOpenDefect && location.state?.defectData) {
-      const { product_id, qty, tipe, keterangan } = location.state.defectData;
+      const { product_id, qty, tipe, keterangan, outlet_id } = location.state.defectData;
       setFormData({
         product_id: product_id ? String(product_id) : '',
         qty: qty ? String(qty) : '',
         tipe: tipe || 'RUSAK',
-        deskripsi: keterangan || ''
+        deskripsi: keterangan || '',
+        outlet_id: outlet_id ? String(outlet_id) : ''
       });
       setFotoFile(null);
       setIsModalOpen(true);
@@ -72,7 +73,7 @@ const Defect = () => {
   }, [location.state]);
 
   const openAddModal = () => {
-    setFormData({ product_id: '', qty: '', tipe: 'RETUR', deskripsi: '' });
+    setFormData({ product_id: '', qty: '', tipe: 'RETUR', deskripsi: '', outlet_id: '' });
     setFotoFile(null);
     setIsModalOpen(true);
   };
@@ -93,6 +94,9 @@ const Defect = () => {
       data.append('qty', formData.qty);
       data.append('tipe', formData.tipe);
       data.append('deskripsi', formData.deskripsi);
+      if (formData.outlet_id) {
+        data.append('outlet_id', formData.outlet_id);
+      }
       if (fotoFile) {
         data.append('foto', fotoFile);
       }
@@ -205,8 +209,8 @@ const Defect = () => {
                   <tr key={d.id} className="hover:bg-cream/30 transition-colors group">
                     <td className="px-6 py-4">
                       {d.foto_url ? (
-                        <a href={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${d.foto_url}`} target="_blank" rel="noreferrer">
-                          <img src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${d.foto_url}`} alt="Defect" className="h-10 w-10 rounded-md object-cover border border-line hover:opacity-80 transition-opacity" />
+                        <a href={d.foto_url.startsWith('data:') || d.foto_url.startsWith('http') ? d.foto_url : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${d.foto_url}`} target="_blank" rel="noreferrer">
+                          <img src={d.foto_url.startsWith('data:') || d.foto_url.startsWith('http') ? d.foto_url : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${d.foto_url}`} alt="Defect" className="h-10 w-10 rounded-md object-cover border border-line hover:opacity-80 transition-opacity" />
                         </a>
                       ) : (
                         <div className="h-10 w-10 rounded-md bg-cream flex items-center justify-center border border-line text-muted">
@@ -274,6 +278,7 @@ const Defect = () => {
                   <select required value={formData.tipe} onChange={e => setFormData({...formData, tipe: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange">
                     <option value="RETUR">RETUR</option>
                     <option value="BUANG">BUANG</option>
+                    <option value="RUSAK">RUSAK / AFKIR</option>
                   </select>
                 </div>
               </div>
@@ -328,7 +333,7 @@ const Defect = () => {
                 {selectedDefect.foto_url && (
                    <div className="mt-3">
                      <span className="font-medium text-ink block mb-1">Foto Bukti:</span>
-                     <img src={`${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${selectedDefect.foto_url}`} alt="Bukti" className="w-full h-auto max-h-40 object-contain rounded border border-line bg-white" />
+                     <img src={selectedDefect.foto_url.startsWith('data:') || selectedDefect.foto_url.startsWith('http') ? selectedDefect.foto_url : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}${selectedDefect.foto_url}`} alt="Bukti" className="w-full h-auto max-h-40 object-contain rounded border border-line bg-white" />
                    </div>
                 )}
               </div>

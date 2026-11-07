@@ -117,35 +117,35 @@ exports.createOpeningBalances = async (req, res) => {
       return res.status(400).json({ success: false, message: 'outlet_id dan items diperlukan' });
     }
     
+    const outletIdInt = parseInt(outlet_id, 10);
+    const productIds = items.map(it => parseInt(it.product_id, 10));
+    const qtys = items.map(it => parseInt(it.qty, 10) || 0);
+
     await client.query('BEGIN');
-    for (let item of items) {
-      const qtyNum = parseInt(item.qty) || 0;
-      
-      // Simpan atau perbarui nilai stok awal (UPSERT)
-      await client.query(
-        `INSERT INTO opening_balances (outlet_id, product_id, qty, tanggal, created_by) 
-         VALUES ($1, $2, $3, CURRENT_DATE, $4)
-         ON CONFLICT (product_id, outlet_id) 
-         DO UPDATE SET qty = EXCLUDED.qty, tanggal = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP`,
-        [outlet_id, item.product_id, qtyNum, req.user.id]
-      );
-      
-      // Cek apakah produk ini sudah memiliki riwayat mutasi shift
-      const mutExist = await client.query(
-        'SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 LIMIT 1',
-        [outlet_id, item.product_id]
-      );
-      // Jika belum ada mutasi shift harian, sinkronkan juga tabel stocks (qty_current)
-      if (mutExist.rows.length === 0) {
-        await client.query(
-          `INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at) 
-           VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
-           ON CONFLICT (product_id, outlet_id) 
-           DO UPDATE SET qty_current = EXCLUDED.qty_current, updated_at = CURRENT_TIMESTAMP`,
-          [outlet_id, item.product_id, qtyNum]
-        );
-      }
-    }
+
+    // 1. Bulk UPSERT ke opening_balances
+    await client.query(
+      `INSERT INTO opening_balances (outlet_id, product_id, qty, tanggal, created_by)
+       SELECT $1::int, u.product_id, u.qty, CURRENT_DATE, $4::int
+       FROM UNNEST($2::int[], $3::int[]) AS u(product_id, qty)
+       ON CONFLICT (product_id, outlet_id)
+       DO UPDATE SET qty = EXCLUDED.qty, tanggal = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP`,
+      [outletIdInt, productIds, qtys, req.user.id]
+    );
+
+    // 2. Sinkronkan tabel stocks (qty_current) untuk produk yang belum memiliki riwayat mutasi shift
+    await client.query(
+      `INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at)
+       SELECT $1::int, u.product_id, u.qty, CURRENT_TIMESTAMP
+       FROM UNNEST($2::int[], $3::int[]) AS u(product_id, qty)
+       WHERE NOT EXISTS (
+         SELECT 1 FROM stock_mutations sm WHERE sm.outlet_id = $1::int AND sm.product_id = u.product_id
+       )
+       ON CONFLICT (product_id, outlet_id)
+       DO UPDATE SET qty_current = EXCLUDED.qty_current, updated_at = CURRENT_TIMESTAMP`,
+      [outletIdInt, productIds, qtys]
+    );
+
     await client.query('COMMIT');
     res.status(201).json({ success: true, message: 'Opening balances berhasil disimpan' });
   } catch(e) {

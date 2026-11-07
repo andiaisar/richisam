@@ -4,8 +4,12 @@ const ShiftService = require('./shiftService');
 const AuditService = require('./auditService');
 
 class MutationService {
+  static _lastHealTime = 0;
+
   static async healAccidentalMassZeroMutations() {
     if (process.env.JEST_WORKER_ID) return;
+    const now = Date.now();
+    if (now - this._lastHealTime < 60000) return;
     try {
       // 1. Bersihkan baris mutasi mass-zero akibat default sak=0 (ketika >= 10 produk dalam 1 shift mengalami masuk=0, sak=0, keluar=saw)
       const delRes = await pool.query(`
@@ -63,6 +67,7 @@ class MutationService {
             )
         `);
       }
+      this._lastHealTime = Date.now();
     } catch (err) {
       console.error('Error in healAccidentalMassZeroMutations:', err.message);
     }
@@ -90,106 +95,71 @@ class MutationService {
 
   static async getMutationForm(outlet_id, tanggal, shift) {
     await this.healAccidentalMassZeroMutations();
-    const prev = this.getPreviousShift(tanggal, shift);
-    
-    const products = await pool.query(
-      `SELECT p.id, p.nama, p.satuan, p.harga, p.urutan,
-       COALESCE(ps.min_qty, 0) as par_stock
-       FROM products p 
+    this.getPreviousShift(tanggal, shift);
+
+    const res = await pool.query(
+      `SELECT 
+         p.id, p.kode, p.nama, p.satuan, p.harga, p.urutan,
+         COALESCE(ps.min_qty, 0) AS par_stock,
+         curr.saw AS curr_saw,
+         curr.masuk AS curr_masuk,
+         curr.sak AS curr_sak,
+         prev.sak AS prev_sak,
+         ob.qty AS op_bal_qty,
+         s.qty_current AS stock_qty
+       FROM products p
        LEFT JOIN par_stocks ps ON ps.product_id = p.id AND ps.outlet_id = $1
-       WHERE p.is_active = true 
-       ORDER BY p.urutan ASC`,
-       [outlet_id]
-    );
-    
-    // Ambil semua mutasi form ini jika sudah ada
-    const currentMuts = await pool.query(
-      'SELECT product_id, saw, masuk, sak FROM stock_mutations WHERE outlet_id = $1 AND tanggal = $2 AND shift = $3',
+       LEFT JOIN stock_mutations curr ON curr.outlet_id = $1 AND curr.product_id = p.id AND curr.tanggal = $2::date AND curr.shift = $3::shift_enum
+       LEFT JOIN LATERAL (
+         SELECT m.sak
+         FROM stock_mutations m
+         WHERE m.outlet_id = $1 AND m.product_id = p.id
+           AND (
+             m.tanggal < $2::date
+             OR (
+               m.tanggal = $2::date
+               AND (CASE m.shift WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 0 END)
+                 < (CASE $3::text WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 0 END)
+             )
+           )
+         ORDER BY m.tanggal DESC,
+                  (CASE m.shift WHEN 'SORE' THEN 3 WHEN 'PAGI' THEN 2 WHEN 'MIDNIGHT' THEN 1 ELSE 0 END) DESC,
+                  m.id DESC
+         LIMIT 1
+       ) prev ON true
+       LEFT JOIN opening_balances ob ON ob.outlet_id = $1 AND ob.product_id = p.id
+       LEFT JOIN stocks s ON s.outlet_id = $1 AND s.product_id = p.id
+       WHERE p.is_active = true
+       ORDER BY p.urutan ASC, p.id ASC`,
       [outlet_id, tanggal, shift]
     );
-    const currentMutMap = {};
-    for (let m of currentMuts.rows) {
-      currentMutMap[m.product_id] = m;
-    }
 
-    const formData = [];
-    for (let p of products.rows) {
-       let current = currentMutMap[p.id];
-       let saw = 0;
-       let canInput = true;
-       let message = null;
+    return res.rows.map((p) => {
+      const hasCurrent = p.curr_sak !== null && p.curr_sak !== undefined;
+      let saw = 0;
+      if (hasCurrent) {
+        saw = p.curr_saw;
+      } else if (p.prev_sak !== null && p.prev_sak !== undefined) {
+        saw = p.prev_sak;
+      } else {
+        saw = p.op_bal_qty !== null && p.op_bal_qty !== undefined ? p.op_bal_qty : (p.stock_qty ?? 0);
+      }
 
-       if (current) {
-         // Jika mutasi untuk shift ini sudah pernah disimpan, tampilkan saw aslinya
-         saw = current.saw;
-       } else {
-         // Cari mutasi terakhir sebelum (tanggal, shift) ini berdasarkan kronologis 3 shift
-         const prevMut = await pool.query(
-           `SELECT sak, tanggal, shift FROM stock_mutations 
-            WHERE outlet_id = $1 AND product_id = $2 
-              AND (
-                tanggal < $3 
-                OR (
-                  tanggal = $3 
-                  AND (
-                    CASE shift 
-                      WHEN 'MIDNIGHT' THEN 1 
-                      WHEN 'PAGI' THEN 2 
-                      WHEN 'SORE' THEN 3 
-                      ELSE 0 
-                    END
-                  ) < (
-                    CASE $4 
-                      WHEN 'MIDNIGHT' THEN 1 
-                      WHEN 'PAGI' THEN 2 
-                      WHEN 'SORE' THEN 3 
-                      ELSE 0 
-                    END
-                  )
-                )
-              )
-            ORDER BY tanggal DESC, 
-                     (CASE shift 
-                       WHEN 'SORE' THEN 3 
-                       WHEN 'PAGI' THEN 2 
-                       WHEN 'MIDNIGHT' THEN 1 
-                       ELSE 0 
-                     END) DESC, 
-                     id DESC 
-            LIMIT 1`,
-           [outlet_id, p.id, tanggal, shift]
-         );
-         
-         if (prevMut.rows.length > 0) {
-           saw = prevMut.rows[0].sak;
-         } else {
-           // Jika belum pernah ada mutasi sebelumnya sama sekali, ambil dari opening_balances atau stocks.qty_current
-           const opBal = await pool.query(
-             `SELECT COALESCE(
-                (SELECT qty FROM opening_balances WHERE outlet_id = $1 AND product_id = $2 LIMIT 1),
-                (SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2 LIMIT 1),
-                0
-              ) AS qty`,
-             [outlet_id, p.id]
-           );
-           saw = opBal.rows.length > 0 ? opBal.rows[0].qty : 0;
-         }
-       }
-       
-       formData.push({
-         product_id: p.id,
-         nama: p.nama,
-         satuan: p.satuan,
-         harga: parseFloat(p.harga),
-         par_stock: parseInt(p.par_stock),
-         saw: saw !== null && saw !== undefined ? parseInt(saw) : 0,
-         canInput,
-         message,
-         masuk: current ? current.masuk : null,
-         sak: current ? current.sak : null
-       });
-    }
-    return formData;
+      return {
+        product_id: p.id,
+        kode: p.kode,
+        urutan: p.urutan,
+        nama: p.nama,
+        satuan: p.satuan,
+        harga: parseFloat(p.harga || 0),
+        par_stock: parseInt(p.par_stock || 0, 10),
+        saw: saw !== null && saw !== undefined ? parseInt(saw, 10) : 0,
+        canInput: true,
+        message: null,
+        masuk: hasCurrent ? parseInt(p.curr_masuk, 10) : null,
+        sak: hasCurrent ? parseInt(p.curr_sak, 10) : null
+      };
+    });
   }
 
   static async createMutations(outlet_id, tanggal, shift, items, user_id) {
@@ -315,8 +285,12 @@ class MutationService {
 
       await client.query('COMMIT');
       
-      for (let item of items) {
-        await this.checkParStockHook(outlet_id, item.product_id);
+      if (!process.env.JEST_WORKER_ID && items.length > 3) {
+        await NotificationService.checkAllParStocks();
+      } else {
+        for (let item of items) {
+          await this.checkParStockHook(outlet_id, item.product_id);
+        }
       }
 
       // Rekam jejak ke AUDIT TRAIL

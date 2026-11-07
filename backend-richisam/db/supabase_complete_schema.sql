@@ -113,22 +113,26 @@ CREATE TABLE stock_mutations (
     outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
     tanggal DATE NOT NULL,
     shift shift_enum NOT NULL,
+    saw INTEGER DEFAULT 0,
     sak INTEGER DEFAULT 0,
     masuk INTEGER DEFAULT 0,
     keluar INTEGER DEFAULT 0,
-    sisa INTEGER NOT NULL,
+    sisa INTEGER DEFAULT 0,
     sumber_masuk sumber_masuk_enum,
+    ticket_id INTEGER,
     keterangan TEXT,
     harga_snapshot NUMERIC(14,0),
     is_opening BOOLEAN DEFAULT false,
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(product_id, outlet_id, tanggal, shift)
 );
 
 -- 9. TABEL RESTOCK_TICKETS & ITEMS
 CREATE TABLE restock_tickets (
     id SERIAL PRIMARY KEY,
-    nomor_tiket VARCHAR(50) UNIQUE NOT NULL,
+    nomor_tiket VARCHAR(50) UNIQUE,
     kode_tiket VARCHAR(50),
     outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
     status ticket_status_enum DEFAULT 'DIAJUKAN',

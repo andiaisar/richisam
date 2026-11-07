@@ -30,13 +30,16 @@ class ParStockService {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      for (let item of updates) {
-         await client.query(`
-           INSERT INTO par_stocks (product_id, outlet_id, min_qty)
-           VALUES ($1, $2, $3)
-           ON CONFLICT (product_id, outlet_id) 
-           DO UPDATE SET min_qty = EXCLUDED.min_qty, updated_at = CURRENT_TIMESTAMP
-         `, [item.product_id, outlet_id, item.min_qty]);
+      if (updates && updates.length > 0) {
+        const prodIds = updates.map(it => parseInt(it.product_id, 10));
+        const minQtys = updates.map(it => parseInt(it.min_qty, 10) || 0);
+        await client.query(`
+          INSERT INTO par_stocks (product_id, outlet_id, min_qty)
+          SELECT u.product_id, $1::int, u.min_qty
+          FROM UNNEST($2::int[], $3::int[]) AS u(product_id, min_qty)
+          ON CONFLICT (product_id, outlet_id) 
+          DO UPDATE SET min_qty = EXCLUDED.min_qty, updated_at = CURRENT_TIMESTAMP
+        `, [parseInt(outlet_id, 10), prodIds, minQtys]);
       }
       await client.query('COMMIT');
       return true;

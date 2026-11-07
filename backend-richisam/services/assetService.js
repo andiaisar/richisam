@@ -66,10 +66,17 @@ class AssetService {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      for (let item of items) {
+      if (items && items.length > 0) {
+        const assetIds = items.map(it => parseInt(it.asset_id, 10));
+        const baikQtys = items.map(it => parseInt(it.qty_baik, 10) || 0);
+        const rusakQtys = items.map(it => parseInt(it.qty_rusak, 10) || 0);
         await client.query(
-          'INSERT INTO asset_stocks (asset_id, outlet_id, qty_baik, qty_rusak) VALUES ($1, $2, $3, $4) ON CONFLICT (asset_id, outlet_id) DO UPDATE SET qty_baik = EXCLUDED.qty_baik, qty_rusak = EXCLUDED.qty_rusak, updated_at = CURRENT_TIMESTAMP',
-          [item.asset_id, outlet_id, item.qty_baik, item.qty_rusak]
+          `INSERT INTO asset_stocks (asset_id, outlet_id, qty_baik, qty_rusak)
+           SELECT u.asset_id, $1::int, u.qty_baik, u.qty_rusak
+           FROM UNNEST($2::int[], $3::int[], $4::int[]) AS u(asset_id, qty_baik, qty_rusak)
+           ON CONFLICT (asset_id, outlet_id)
+           DO UPDATE SET qty_baik = EXCLUDED.qty_baik, qty_rusak = EXCLUDED.qty_rusak, updated_at = CURRENT_TIMESTAMP`,
+          [parseInt(outlet_id, 10), assetIds, baikQtys, rusakQtys]
         );
       }
       await client.query('COMMIT');

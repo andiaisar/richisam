@@ -71,6 +71,8 @@ class AuditService {
     }
   }
 
+  static _lastSyncTime = 0;
+
   /**
    * Sinkronisasi & backfill otomatis log aktivitas dari tabel transaksi riil
    * serta perbaikan deskripsi mutasi lama (69 item) agar sesuai mutasi aktual.
@@ -79,6 +81,11 @@ class AuditService {
     if (pool.query && pool.query._isMockFunction) {
       return;
     }
+    const now = Date.now();
+    if (now - this._lastSyncTime < 60000) {
+      return;
+    }
+    this._lastSyncTime = now;
     try {
       // 1. Perbaiki log MUTASI lama yang masih tertulis "(69 item)" atau belum memiliki detail masuk/keluar
       const mutLogsRes = await pool.query(`

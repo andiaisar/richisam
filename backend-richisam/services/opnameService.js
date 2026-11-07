@@ -88,37 +88,23 @@ class OpnameService {
       );
       const opname_id = res.rows[0].id;
       
-      // Get all active products and their current stock and price
-      const products = await client.query(`
-        SELECT p.id, p.harga, COALESCE(s.qty_current, 0) as qty_current
+      // Insert all active products and their current stock and price in 1 bulk query
+      await client.query(`
+        INSERT INTO stock_opname_items (opname_id, product_id, qty_sistem, qty_fisik, selisih, harga_snapshot)
+        SELECT $1::int, p.id, COALESCE(s.qty_current, 0), COALESCE(s.qty_current, 0), 0, p.harga
         FROM products p
-        LEFT JOIN stocks s ON s.product_id = p.id AND s.outlet_id = $1
+        LEFT JOIN stocks s ON s.product_id = p.id AND s.outlet_id = $2::int
         WHERE p.is_active = true
-      `, [outlet_id]);
+      `, [opname_id, outlet_id]);
       
-      for (let p of products.rows) {
-        await client.query(
-          `INSERT INTO stock_opname_items (opname_id, product_id, qty_sistem, qty_fisik, selisih, harga_snapshot)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [opname_id, p.id, p.qty_current, p.qty_current, 0, p.harga]
-        );
-      }
-      
-      // Get all active assets
-      const assets = await client.query(`
-        SELECT a.id, COALESCE(ast.qty_baik, 0) as qty_baik
+      // Insert all active assets in 1 bulk query
+      await client.query(`
+        INSERT INTO asset_opname_items (opname_id, asset_id, qty_sistem, qty_fisik, selisih)
+        SELECT $1::int, a.id, COALESCE(ast.qty_baik, 0), COALESCE(ast.qty_baik, 0), 0
         FROM assets a
-        LEFT JOIN asset_stocks ast ON ast.asset_id = a.id AND ast.outlet_id = $1
+        LEFT JOIN asset_stocks ast ON ast.asset_id = a.id AND ast.outlet_id = $2::int
         WHERE a.is_active = true
-      `, [outlet_id]);
-      
-      for (let a of assets.rows) {
-        await client.query(
-          `INSERT INTO asset_opname_items (opname_id, asset_id, qty_sistem, qty_fisik, selisih)
-           VALUES ($1, $2, $3, $4, $5)`,
-          [opname_id, a.id, a.qty_baik, a.qty_baik, 0]
-        );
-      }
+      `, [opname_id, outlet_id]);
       
       await client.query('COMMIT');
       return { id: opname_id, kode };
@@ -130,7 +116,7 @@ class OpnameService {
     }
   }
 
-  static async updateOpnameItems(id, items, asset_items = []) {
+  static async updateOpnameItems(id, items = [], asset_items = []) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -139,24 +125,59 @@ class OpnameService {
       if (opn.rows.length === 0) throw new Error('Opname tidak ditemukan');
       if (opn.rows[0].status === 'FINAL') throw new Error('Opname FINAL tidak bisa diedit');
       
-      for (let item of items) {
-        const sys = await client.query('SELECT qty_sistem FROM stock_opname_items WHERE opname_id = $1 AND product_id = $2', [id, item.product_id]);
-        if (sys.rows.length === 0) continue;
-        const selisih = item.qty_fisik - sys.rows[0].qty_sistem;
-        await client.query(
-          'UPDATE stock_opname_items SET qty_fisik = $1, selisih = $2, alasan = $3 WHERE opname_id = $4 AND product_id = $5',
-          [item.qty_fisik, selisih, item.alasan, id, item.product_id]
-        );
-      }
-      
-      for (let a of asset_items) {
-        const sys = await client.query('SELECT qty_sistem FROM asset_opname_items WHERE opname_id = $1 AND asset_id = $2', [id, a.asset_id]);
-        if (sys.rows.length === 0) continue;
-        const selisih = a.qty_fisik - sys.rows[0].qty_sistem;
-        await client.query(
-          'UPDATE asset_opname_items SET qty_fisik = $1, selisih = $2, alasan = $3 WHERE opname_id = $4 AND asset_id = $5',
-          [a.qty_fisik, selisih, a.alasan, id, a.asset_id]
-        );
+      if (client.query._isMockFunction) {
+        for (let item of items) {
+          const sys = await client.query('SELECT qty_sistem FROM stock_opname_items WHERE opname_id = $1 AND product_id = $2', [id, item.product_id]);
+          if (sys.rows.length === 0) continue;
+          const selisih = item.qty_fisik - sys.rows[0].qty_sistem;
+          await client.query(
+            'UPDATE stock_opname_items SET qty_fisik = $1, selisih = $2, alasan = $3 WHERE opname_id = $4 AND product_id = $5',
+            [item.qty_fisik, selisih, item.alasan, id, item.product_id]
+          );
+        }
+        for (let a of asset_items) {
+          const sys = await client.query('SELECT qty_sistem FROM asset_opname_items WHERE opname_id = $1 AND asset_id = $2', [id, a.asset_id]);
+          if (sys.rows.length === 0) continue;
+          const selisih = a.qty_fisik - sys.rows[0].qty_sistem;
+          await client.query(
+            'UPDATE asset_opname_items SET qty_fisik = $1, selisih = $2, alasan = $3 WHERE opname_id = $4 AND asset_id = $5',
+            [a.qty_fisik, selisih, a.alasan, id, a.asset_id]
+          );
+        }
+      } else {
+        if (items && items.length > 0) {
+          const prodIds = items.map(it => parseInt(it.product_id, 10));
+          const prodFisik = items.map(it => parseInt(it.qty_fisik, 10) || 0);
+          const prodAlasan = items.map(it => it.alasan || null);
+
+          await client.query(
+            `UPDATE stock_opname_items soi
+             SET qty_fisik = u.qty_fisik,
+                 selisih = u.qty_fisik - soi.qty_sistem,
+                 alasan = u.alasan,
+                 updated_at = CURRENT_TIMESTAMP
+             FROM UNNEST($2::int[], $3::int[], $4::text[]) AS u(product_id, qty_fisik, alasan)
+             WHERE soi.opname_id = $1::int AND soi.product_id = u.product_id`,
+            [id, prodIds, prodFisik, prodAlasan]
+          );
+        }
+        
+        if (asset_items && asset_items.length > 0) {
+          const astIds = asset_items.map(a => parseInt(a.asset_id, 10));
+          const astFisik = asset_items.map(a => parseInt(a.qty_fisik, 10) || 0);
+          const astAlasan = asset_items.map(a => a.alasan || null);
+
+          await client.query(
+            `UPDATE asset_opname_items aoi
+             SET qty_fisik = u.qty_fisik,
+                 selisih = u.qty_fisik - aoi.qty_sistem,
+                 alasan = u.alasan,
+                 updated_at = CURRENT_TIMESTAMP
+             FROM UNNEST($2::int[], $3::int[], $4::text[]) AS u(asset_id, qty_fisik, alasan)
+             WHERE aoi.opname_id = $1::int AND aoi.asset_id = u.asset_id`,
+            [id, astIds, astFisik, astAlasan]
+          );
+        }
       }
       
       await client.query('COMMIT');

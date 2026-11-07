@@ -139,6 +139,7 @@ const Kadaluarsa = () => {
       state: {
         autoOpenDefect: true,
         defectData: {
+          batch_id: batch.id,
           product_id: batch.product_id,
           qty: batch.qty,
           tipe: 'RUSAK',
@@ -439,7 +440,12 @@ const Kadaluarsa = () => {
                         <div className="text-xs text-stone-500 font-mono">{b.product_kode}</div>
                       </td>
                       <td className="px-6 py-4 text-stone-300 text-xs">
-                        {b.outlet_name}
+                        <div className="font-semibold text-stone-200">{b.outlet_name}</div>
+                        {b.catatan && (
+                          <div className="text-[11px] text-stone-400 mt-0.5 truncate max-w-[200px]" title={b.catatan}>
+                            📍 {b.catatan}
+                          </div>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-center font-black text-white text-base">
                         {b.qty} <span className="text-xs font-normal text-stone-400">{b.product_satuan}</span>

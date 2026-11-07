@@ -57,8 +57,9 @@ const Defect = () => {
 
   useEffect(() => {
     if (location.state?.autoOpenDefect && location.state?.defectData) {
-      const { product_id, qty, tipe, keterangan, outlet_id } = location.state.defectData;
+      const { batch_id, product_id, qty, tipe, keterangan, outlet_id } = location.state.defectData;
       setFormData({
+        batch_id: batch_id ? String(batch_id) : '',
         product_id: product_id ? String(product_id) : '',
         qty: qty ? String(qty) : '',
         tipe: tipe || 'RUSAK',
@@ -73,7 +74,7 @@ const Defect = () => {
   }, [location.state]);
 
   const openAddModal = () => {
-    setFormData({ product_id: '', qty: '', tipe: 'RETUR', deskripsi: '', outlet_id: '' });
+    setFormData({ batch_id: '', product_id: '', qty: '', tipe: 'RETUR', deskripsi: '', outlet_id: '' });
     setFotoFile(null);
     setIsModalOpen(true);
   };
@@ -97,6 +98,9 @@ const Defect = () => {
       if (formData.outlet_id) {
         data.append('outlet_id', formData.outlet_id);
       }
+      if (formData.batch_id) {
+        data.append('batch_id', formData.batch_id);
+      }
       if (fotoFile) {
         data.append('foto', fotoFile);
       }
@@ -104,7 +108,7 @@ const Defect = () => {
       await axiosClient.post('/defects', data, {
         headers: { 'Content-Type': undefined }
       });
-      toast.success('Laporan defect berhasil dikirim');
+      toast.success(formData.batch_id ? 'Laporan afkir terkirim & batch kadaluarsa ditarik dari daftar!' : 'Laporan defect berhasil dikirim');
       setIsModalOpen(false);
       fetchDefects();
     } catch (e) {
@@ -157,7 +161,7 @@ const Defect = () => {
           <button onClick={fetchDefects} className="p-2 rounded-lg border border-line bg-white hover:bg-cream text-ink transition-colors" title="Muat Ulang">
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
-          {user?.role === 'STAF_CABANG' && (
+          {(user?.role === 'STAF_CABANG' || user?.role === 'ADMIN_GUDANG') && (
             <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm">
               <Plus size={18} />
               Buat Laporan

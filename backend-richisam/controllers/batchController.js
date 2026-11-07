@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const AuditService = require('../services/auditService');
+const NotificationService = require('../services/notificationService');
 
 exports.getBatches = async (req, res) => {
   try {
@@ -117,6 +118,8 @@ exports.createBatch = async (req, res) => {
       details: { nomor_batch: batch_no.trim(), product_id, jumlah: parseInt(qty), tanggal_masuk: tglMasuk, tanggal_kadaluarsa: expired_date }
     });
 
+    NotificationService.checkExpiringBatches().catch(() => {});
+
     res.status(201).json({ success: true, message: 'Pencatatan batch kadaluarsa berhasil disimpan', data: result.rows[0] });
   } catch (e) {
     console.error('createBatch error:', e);
@@ -127,7 +130,7 @@ exports.createBatch = async (req, res) => {
 exports.deleteBatch = async (req, res) => {
   try {
     const { id } = req.params;
-    const check = await pool.query('SELECT outlet_id FROM product_batches WHERE id = $1', [id]);
+    const check = await pool.query('SELECT outlet_id, batch_no FROM product_batches WHERE id = $1', [id]);
     if (check.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Batch tidak ditemukan' });
     }
@@ -135,6 +138,12 @@ exports.deleteBatch = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Akses ditolak: Anda hanya dapat menghapus batch milik cabang Anda sendiri' });
     }
     await pool.query('DELETE FROM product_batches WHERE id = $1', [id]);
+    if (check.rows[0].batch_no) {
+      await pool.query(
+        `DELETE FROM notifications WHERE tipe = 'KADALUARSA' AND is_read = false AND pesan LIKE $1`,
+        [`%${check.rows[0].batch_no}%`]
+      );
+    }
     AuditService.logAction({
       userId: req.user?.id,
       userName: req.user?.nama || req.user?.username,
@@ -142,8 +151,8 @@ exports.deleteBatch = async (req, res) => {
       outletId: check.rows[0].outlet_id,
       module: 'KADALUARSA',
       action: 'DELETE',
-      description: `Menarik / menyelesaikan Batch Kadaluarsa ID #${id}.`,
-      details: { batch_id: id }
+      description: `Menarik / menyelesaikan Batch Kadaluarsa ID #${id} (${check.rows[0].batch_no || ''}).`,
+      details: { batch_id: id, batch_no: check.rows[0].batch_no }
     });
     res.json({ success: true, message: 'Batch berhasil dihapus / selesai digunakan' });
   } catch (e) {

@@ -1,4 +1,5 @@
 const { z } = require('zod');
+const pool = require('../config/db');
 const DefectService = require('../services/defectService');
 const AuditService = require('../services/auditService');
 const multer = require('multer');
@@ -43,11 +44,12 @@ const upload = multer({
 exports.upload = upload;
 
 const defectSchema = z.object({
-  product_id: z.string().transform(v => parseInt(v)),
-  qty: z.string().transform(v => parseInt(v)),
+  product_id: z.coerce.number().int().positive(),
+  qty: z.coerce.number().int().positive(),
   keterangan: z.string().optional(),
   deskripsi: z.string().optional(),
-  tipe: z.string().optional()
+  tipe: z.string().optional(),
+  batch_id: z.coerce.number().int().positive().optional()
 });
 
 const updateSchema = z.object({
@@ -68,7 +70,7 @@ exports.getDefects = async (req, res) => {
 
 exports.reportDefect = async (req, res) => {
   try {
-    const outlet_id = req.body.outlet_id || req.user.outlet_id;
+    const outlet_id = req.user.role === 'STAF_CABANG' ? req.user.outlet_id : (req.body.outlet_id || req.user.outlet_id);
     if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
 
     const parsed = defectSchema.safeParse(req.body);
@@ -95,6 +97,18 @@ exports.reportDefect = async (req, res) => {
       foto_url, 
       req.user.id
     );
+
+    if (parsed.data.batch_id) {
+      try {
+        const batchRes = await pool.query('DELETE FROM product_batches WHERE id = $1 RETURNING batch_no', [parsed.data.batch_id]);
+        if (batchRes.rows[0]?.batch_no) {
+          await pool.query(
+            `DELETE FROM notifications WHERE tipe = 'KADALUARSA' AND is_read = false AND pesan LIKE $1`,
+            [`%${batchRes.rows[0].batch_no}%`]
+          );
+        }
+      } catch (_) {}
+    }
     AuditService.logAction({
       userId: req.user?.id,
       userName: req.user?.nama || req.user?.username,

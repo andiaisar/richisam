@@ -219,7 +219,7 @@ class NotificationService {
         FROM product_batches b
         JOIN products p ON b.product_id = p.id
         JOIN outlets o ON b.outlet_id = o.id
-        WHERE b.qty > 0 AND (b.expired_date - CURRENT_DATE) <= 3
+        WHERE b.qty > 0 AND (b.expired_date - CURRENT_DATE) <= 3 AND (b.expired_date - CURRENT_DATE) >= -10
         ORDER BY b.expired_date ASC
       `;
       const res = await pool.query(query);

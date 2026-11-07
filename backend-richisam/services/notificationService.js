@@ -17,7 +17,7 @@ class NotificationService {
     const db = client || pool;
     try {
       await db.query(
-        'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
+        'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4) ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING',
         [outlet_id, product_id, pesan, tipe]
       );
     } catch (e) {
@@ -31,7 +31,7 @@ class NotificationService {
       const pusatId = await this.getPusatOutletId(db);
       if (pusatId) {
         await db.query(
-          'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
+          'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4) ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING',
           [pusatId, product_id, pesan, tipe]
         );
       }
@@ -61,27 +61,17 @@ class NotificationService {
         if (qty_current <= min_qty) {
           const pesan = `Stok ${product_name} di ${outlet_name} tersisa ${qty_current} (batas aman ${min_qty})`;
           
-          // Cek apakah sudah ada notif yang belum dibaca atau dibuat hari ini
-          const cekCabang = await client.query(
-            `SELECT id FROM notifications 
-             WHERE outlet_id = $1 AND product_id = $2 AND tipe = $3 
-               AND (is_read = false OR created_at::date = CURRENT_DATE)`,
-            [outlet_id, product_id, 'PAR_STOCK']
+          await client.query(
+            'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4) ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING',
+            [outlet_id, product_id, pesan, 'PAR_STOCK']
           );
           
-          if (cekCabang.rows.length === 0) {
+          const pusatId = await this.getPusatOutletId(client);
+          if (pusatId && pusatId !== outlet_id) {
             await client.query(
-              'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
-              [outlet_id, product_id, pesan, 'PAR_STOCK']
+              'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4) ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING',
+              [pusatId, product_id, pesan, 'PAR_STOCK']
             );
-            
-            const pusatId = await this.getPusatOutletId(client);
-            if (pusatId && pusatId !== outlet_id) {
-              await client.query(
-                'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
-                [pusatId, product_id, pesan, 'PAR_STOCK']
-              );
-            }
           }
         }
       }
@@ -96,8 +86,15 @@ class NotificationService {
   }
 
   static _syncPromise = null;
+  static _lastSyncTime = 0;
 
   static async syncScheduledNotifications() {
+    const now = Date.now();
+    // Cegah eksekusi berulang jika baru saja dieksekusi dalam 30 detik terakhir
+    if (now - this._lastSyncTime < 30000) {
+      return;
+    }
+
     if (this._syncPromise) {
       return this._syncPromise;
     }
@@ -105,6 +102,7 @@ class NotificationService {
       try {
         await this.checkExpiringBatches();
         await this.checkAllParStocks();
+        this._lastSyncTime = Date.now();
       } finally {
         this._syncPromise = null;
       }
@@ -114,6 +112,8 @@ class NotificationService {
 
   static async checkAllParStocks() {
     try {
+      const pusatId = await this.getPusatOutletId();
+
       // 1. Bersihkan notifikasi PAR_STOCK belum dibaca yang stok aktualnya kini sudah aman (> min_qty)
       await pool.query(`
         DELETE FROM notifications n
@@ -127,7 +127,7 @@ class NotificationService {
           AND (n.outlet_id = s.outlet_id OR n.pesan LIKE '% di ' || o.nama || ' tersisa %')
       `);
 
-      // 2. Bersihkan duplikat notifikasi identik (akibat race condition request paralel sebelumnya)
+      // 2. Bersihkan duplikat notifikasi identik yang belum dibaca
       await pool.query(`
         DELETE FROM notifications a
         USING notifications b
@@ -139,72 +139,71 @@ class NotificationService {
           AND a.pesan = b.pesan
       `);
 
-      const query = `
-        SELECT s.outlet_id, s.product_id, s.qty_current, ps.min_qty, p.nama AS product_name, o.nama AS outlet_name
+      // 3. Update isi pesan notifikasi aktif jika ada perubahan sisa stok aktual
+      await pool.query(`
+        UPDATE notifications n
+        SET pesan = 'Stok ' || p.nama || ' di ' || o.nama || ' tersisa ' || s.qty_current || ' (batas aman ' || ps.min_qty || ')'
+        FROM stocks s
+        JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
+        JOIN products p ON s.product_id = p.id
+        JOIN outlets o ON s.outlet_id = o.id
+        WHERE n.product_id = s.product_id
+          AND n.tipe = 'PAR_STOCK'
+          AND n.is_read = false
+          AND n.pesan LIKE '% di ' || o.nama || ' tersisa %'
+          AND s.qty_current <= ps.min_qty
+          AND n.pesan <> ('Stok ' || p.nama || ' di ' || o.nama || ' tersisa ' || s.qty_current || ' (batas aman ' || ps.min_qty || ')')
+      `);
+
+      // 4. Masukkan notifikasi stok kritis untuk masing-masing cabang
+      await pool.query(`
+        INSERT INTO notifications (outlet_id, product_id, pesan, tipe)
+        SELECT 
+          s.outlet_id,
+          s.product_id,
+          'Stok ' || p.nama || ' di ' || o.nama || ' tersisa ' || s.qty_current || ' (batas aman ' || ps.min_qty || ')',
+          'PAR_STOCK'::notif_tipe_enum
         FROM stocks s
         JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
         JOIN products p ON s.product_id = p.id
         JOIN outlets o ON s.outlet_id = o.id
         WHERE s.qty_current <= ps.min_qty
-      `;
-      const res = await pool.query(query);
-      const pusatId = await this.getPusatOutletId();
+          AND NOT EXISTS (
+            SELECT 1 FROM notifications n
+            WHERE n.outlet_id = s.outlet_id
+              AND n.product_id = s.product_id
+              AND n.tipe = 'PAR_STOCK'
+              AND n.pesan LIKE ('% di ' || o.nama || ' tersisa %')
+              AND (n.is_read = false OR n.created_at::date = CURRENT_DATE)
+          )
+        ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING
+      `);
 
-      for (const row of res.rows) {
-        const pesan = `Stok ${row.product_name} di ${row.outlet_name} tersisa ${row.qty_current} (batas aman ${row.min_qty})`;
-        const outletPattern = `% di ${row.outlet_name} tersisa %`;
-
-        // Cek cabang
-        const cekCabang = await pool.query(
-          `SELECT id, is_read, pesan FROM notifications 
-           WHERE outlet_id = $1 AND product_id = $2 AND tipe = 'PAR_STOCK' 
-             AND (is_read = false OR created_at::date = CURRENT_DATE)
-           ORDER BY id DESC`,
-          [row.outlet_id, row.product_id]
-        );
-        if (cekCabang.rows.length === 0) {
-          await pool.query(
-            'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
-            [row.outlet_id, row.product_id, pesan, 'PAR_STOCK']
-          );
-        } else {
-          const latest = cekCabang.rows[0];
-          if (!latest.is_read && latest.pesan !== pesan) {
-            await pool.query('UPDATE notifications SET pesan = $1 WHERE id = $2', [pesan, latest.id]);
-          }
-          // Jika ada lebih dari 1 unread untuk produk yang sama di cabang ini, hapus sisanya
-          const extraUnreadIds = cekCabang.rows.slice(1).filter(r => !r.is_read).map(r => r.id);
-          if (extraUnreadIds.length > 0) {
-            await pool.query('DELETE FROM notifications WHERE id = ANY($1::int[])', [extraUnreadIds]);
-          }
-        }
-
-        // Cek pusat
-        if (pusatId && pusatId !== row.outlet_id) {
-          const cekPusat = await pool.query(
-            `SELECT id, is_read, pesan FROM notifications 
-             WHERE outlet_id = $1 AND product_id = $2 AND tipe = 'PAR_STOCK'
-               AND pesan LIKE $3
-               AND (is_read = false OR created_at::date = CURRENT_DATE)
-             ORDER BY id DESC`,
-            [pusatId, row.product_id, outletPattern]
-          );
-          if (cekPusat.rows.length === 0) {
-            await pool.query(
-              'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
-              [pusatId, row.product_id, pesan, 'PAR_STOCK']
-            );
-          } else {
-            const latestPusat = cekPusat.rows[0];
-            if (!latestPusat.is_read && latestPusat.pesan !== pesan) {
-              await pool.query('UPDATE notifications SET pesan = $1 WHERE id = $2', [pesan, latestPusat.id]);
-            }
-            const extraPusatIds = cekPusat.rows.slice(1).filter(r => !r.is_read).map(r => r.id);
-            if (extraPusatIds.length > 0) {
-              await pool.query('DELETE FROM notifications WHERE id = ANY($1::int[])', [extraPusatIds]);
-            }
-          }
-        }
+      // 5. Masukkan notifikasi stok kritis cabang untuk Pusat (CK)
+      if (pusatId) {
+        await pool.query(`
+          INSERT INTO notifications (outlet_id, product_id, pesan, tipe)
+          SELECT 
+            $1::integer,
+            s.product_id,
+            'Stok ' || p.nama || ' di ' || o.nama || ' tersisa ' || s.qty_current || ' (batas aman ' || ps.min_qty || ')',
+            'PAR_STOCK'::notif_tipe_enum
+          FROM stocks s
+          JOIN par_stocks ps ON s.product_id = ps.product_id AND s.outlet_id = ps.outlet_id
+          JOIN products p ON s.product_id = p.id
+          JOIN outlets o ON s.outlet_id = o.id
+          WHERE s.qty_current <= ps.min_qty
+            AND s.outlet_id <> $1::integer
+            AND NOT EXISTS (
+              SELECT 1 FROM notifications n
+              WHERE n.outlet_id = $1::integer
+                AND n.product_id = s.product_id
+                AND n.tipe = 'PAR_STOCK'
+                AND n.pesan LIKE ('% di ' || o.nama || ' tersisa %')
+                AND (n.is_read = false OR n.created_at::date = CURRENT_DATE)
+            )
+          ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING
+        `, [pusatId]);
       }
     } catch (e) {
       console.error('Error in checkAllParStocks:', e);
@@ -247,7 +246,7 @@ class NotificationService {
         );
         if (cekCabang.rows.length === 0) {
           await pool.query(
-            'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
+            'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4) ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING',
             [b.outlet_id, b.product_id, pesan, 'KADALUARSA']
           );
         }
@@ -262,7 +261,7 @@ class NotificationService {
           );
           if (cekPusat.rows.length === 0) {
             await pool.query(
-              'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4)',
+              'INSERT INTO notifications (outlet_id, product_id, pesan, tipe) VALUES ($1, $2, $3, $4) ON CONFLICT (outlet_id, tipe, pesan) WHERE is_read = false DO NOTHING',
               [pusatId, b.product_id, pesan, 'KADALUARSA']
             );
           }
@@ -312,4 +311,5 @@ class NotificationService {
     return true;
   }
 }
+
 module.exports = NotificationService;

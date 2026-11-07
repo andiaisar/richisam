@@ -180,12 +180,17 @@ CREATE TABLE defect_reports (
 CREATE TABLE notifications (
     id SERIAL PRIMARY KEY,
     outlet_id INTEGER REFERENCES outlets(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
     tipe notif_tipe_enum NOT NULL,
     pesan TEXT NOT NULL,
     is_read BOOLEAN DEFAULT false,
     reference_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_unread_notif 
+ON notifications (outlet_id, tipe, pesan) 
+WHERE is_read = false;
 
 -- 12. TABEL OPENING_BALANCES
 CREATE TABLE opening_balances (

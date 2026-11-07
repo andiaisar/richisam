@@ -221,6 +221,7 @@ const Analytics = () => {
                     <th className="px-6 py-4 font-bold">Barang</th>
                     <th className="px-6 py-4 font-bold text-right">Total Keluar (30h)</th>
                     <th className="px-6 py-4 font-bold text-right">Nilai Rupiah</th>
+                    <th className="px-6 py-4 font-bold text-center">% Nilai</th>
                     <th className="px-6 py-4 font-bold text-center">% Kumulatif</th>
                     <th className="px-6 py-4 font-bold text-center">Kelas</th>
                   </tr>
@@ -228,7 +229,7 @@ const Analytics = () => {
                 <tbody className="divide-y divide-line">
                   {abcLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-muted">
+                      <td colSpan={7} className="px-6 py-12 text-center text-muted">
                         <Activity className="animate-spin inline-block mr-2" size={18} />
                         Menganalisis data...
                       </td>
@@ -243,6 +244,7 @@ const Analytics = () => {
                         </td>
                         <td className="px-6 py-4 text-right font-medium text-ink">{item.total_keluar} {item.satuan}</td>
                         <td className="px-6 py-4 text-right font-bold text-richisam-orange">Rp {item.total_nilai.toLocaleString('id-ID')}</td>
+                        <td className="px-6 py-4 text-center font-bold text-ink">{Number(item.persentase || 0).toFixed(1)}%</td>
                         <td className="px-6 py-4 text-center text-muted font-medium">{item.kumulatif.toFixed(1)}%</td>
                         <td className="px-6 py-4 text-center">
                           <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-black text-sm border ${
@@ -257,7 +259,7 @@ const Analytics = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-muted">Tidak ada data pemakaian untuk dianalisis.</td>
+                      <td colSpan={7} className="px-6 py-12 text-center text-muted">Tidak ada data pemakaian untuk dianalisis.</td>
                     </tr>
                   )}
                 </tbody>

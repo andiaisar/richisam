@@ -101,14 +101,31 @@ const Products = () => {
       });
     } else {
       setEditingProduct(null);
+      let maxNum = products.length;
+      products.forEach(p => {
+        const m = String(p.kode || '').match(/(\d+)$/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        }
+      });
+      let nextKode = `PRD-${String(maxNum + 1).padStart(3, '0')}`;
+      const existingCodes = new Set(products.map(p => String(p.kode || '').toUpperCase()));
+      let step = 1;
+      while (existingCodes.has(nextKode.toUpperCase())) {
+        step++;
+        nextKode = `PRD-${String(maxNum + step).padStart(3, '0')}`;
+      }
+      const maxUrutan = products.reduce((max, p) => Math.max(max, parseInt(p.urutan || 0, 10)), 0);
+
       setFormData({ 
-        kode: '', 
+        kode: nextKode, 
         nama: '', 
         kategori: '', 
         satuan: '', 
         satuan_besar: '', 
         konversi: 1, 
-        urutan: 0, 
+        urutan: maxUrutan + 1, 
         harga: 0, 
         satuan_perlu_konfirmasi: false,
         is_active: true
@@ -522,13 +539,13 @@ const Products = () => {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Satuan Kecil (Cabang)</label>
-                  <input type="text" placeholder="Misal: pcs, pack, gram, botol" required value={formData.satuan} onChange={e => setFormData({...formData, satuan: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input type="text" placeholder="Misal: pcs, pack, gram, botol" required value={formData.satuan} onChange={e => setFormData(prev => ({...prev, satuan: e.target.value, satuan_besar: prev.satuan_besar === '' || prev.satuan_besar === prev.satuan ? e.target.value : prev.satuan_besar}))} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Satuan Besar (Gudang)</label>
-                  <input type="text" placeholder="Misal: dus, bal, karung, slop" required value={formData.satuan_besar} onChange={e => setFormData({...formData, satuan_besar: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
+                  <input type="text" placeholder="Misal: dus, bal, karung, slop" value={formData.satuan_besar} onChange={e => setFormData({...formData, satuan_besar: e.target.value})} className="w-full px-3 py-2 border border-line rounded-lg focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange outline-none transition-all"/>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-ink">Rasio Konversi</label>

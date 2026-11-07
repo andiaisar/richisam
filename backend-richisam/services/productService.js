@@ -64,20 +64,31 @@ class ProductService {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      
-      const cekKode = await client.query('SELECT id FROM products WHERE kode = $1', [data.kode]);
-      if (cekKode.rows.length > 0) throw new Error('Kode produk sudah digunakan');
+
+      let finalKode = (data.kode || '').trim();
+      if (!finalKode) {
+        const allKodes = await client.query("SELECT kode FROM products WHERE kode ~ '^PRD-[0-9]+$'");
+        let maxNum = 0;
+        for (const row of allKodes.rows) {
+          const num = parseInt(row.kode.replace('PRD-', ''), 10);
+          if (!isNaN(num) && num > maxNum) maxNum = num;
+        }
+        finalKode = `PRD-${String(maxNum + 1).padStart(3, '0')}`;
+      }
+
+      const cekKode = await client.query('SELECT id FROM products WHERE kode = $1', [finalKode]);
+      if (cekKode.rows.length > 0) throw new Error(`Kode produk "${finalKode}" sudah digunakan, silakan gunakan kode lain`);
 
       const res = await client.query(
         'INSERT INTO products (kode, nama, satuan, kategori, urutan, harga, satuan_perlu_konfirmasi, satuan_besar, konversi) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *',
-        [data.kode, data.nama, data.satuan, data.kategori, data.urutan || 0, data.harga || 0, data.satuan_perlu_konfirmasi || false, data.satuan_besar || data.satuan, data.konversi || 1]
+        [finalKode, data.nama, data.satuan, data.kategori || 'Lainnya', data.urutan || 0, data.harga || 0, data.satuan_perlu_konfirmasi || false, data.satuan_besar || data.satuan, data.konversi || 1]
       );
       const newProduct = res.rows[0];
 
       const outlets = await client.query('SELECT id FROM outlets WHERE is_active = true');
       for (let o of outlets.rows) {
-        await client.query('INSERT INTO stocks (product_id, outlet_id, qty_current) VALUES ($1, $2, 0)', [newProduct.id, o.id]);
-        await client.query('INSERT INTO par_stocks (product_id, outlet_id, min_qty) VALUES ($1, $2, 0)', [newProduct.id, o.id]);
+        await client.query('INSERT INTO stocks (product_id, outlet_id, qty_current) VALUES ($1, $2, 0) ON CONFLICT (product_id, outlet_id) DO NOTHING', [newProduct.id, o.id]);
+        await client.query('INSERT INTO par_stocks (product_id, outlet_id, min_qty) VALUES ($1, $2, 0) ON CONFLICT (product_id, outlet_id) DO NOTHING', [newProduct.id, o.id]);
       }
 
       await client.query('COMMIT');

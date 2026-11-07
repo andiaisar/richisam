@@ -6,7 +6,7 @@ const { authenticate, enforceOutletScope, authorize } = require('../middlewares/
 router.use(authenticate, enforceOutletScope);
 
 router.get('/', defectController.getDefects);
-router.post('/', authorize('STAF_CABANG', 'ADMIN_PUSAT'), defectController.upload.single('foto'), defectController.reportDefect);
-router.put('/:id', authorize('ADMIN_PUSAT', 'OWNER'), defectController.processDefect);
+router.post('/', authorize('STAF_CABANG', 'ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), defectController.upload.single('foto'), defectController.reportDefect);
+router.put('/:id', authorize('ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), defectController.processDefect);
 
 module.exports = router;

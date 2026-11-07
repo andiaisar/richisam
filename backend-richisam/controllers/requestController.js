@@ -3,8 +3,9 @@ const RequestService = require('../services/requestService');
 const AuditService = require('../services/auditService');
 
 const requestSchema = z.object({
-  product_id: z.number(),
-  qty_requested: z.number().min(1, 'Jumlah harus lebih dari 0')
+  outlet_id: z.coerce.number().optional(),
+  product_id: z.coerce.number(),
+  qty_requested: z.coerce.number().min(1, 'Jumlah harus lebih dari 0')
 });
 
 const updateSchema = z.object({
@@ -30,15 +31,20 @@ exports.getRequests = async (req, res) => {
 
 exports.createRequest = async (req, res) => {
   try {
-    const isCK = req.user && (req.user.role === 'ADMIN_GUDANG' || (req.user.role === 'STAF_CABANG' && req.user.outlet_id === 1));
-    if (isCK) {
-      return res.status(403).json({ success: false, message: 'Staf Central Kitchen bertindak sebagai penyedia/pengirim bahan, bukan pemohon tiket.' });
-    }
-    const outlet_id = req.user?.outlet_id || req.body.outlet_id;
-    if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
-
     const parsed = requestSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+
+    const isBranchStaff = req.user && req.user.role === 'STAF_CABANG' && Number(req.user.outlet_id) !== 1;
+    let outlet_id = isBranchStaff
+      ? Number(req.user.outlet_id)
+      : Number(parsed.data.outlet_id || req.body.outlet_id || 0);
+
+    // Jika Admin Pusat / Owner / CK mengajukan tiket tanpa memilih cabang, arahkan ke cabang aktif pertama (bukan CK)
+    if (!outlet_id || outlet_id === 1) {
+      const pool = require('../config/db');
+      const firstBranch = await pool.query('SELECT id FROM outlets WHERE id <> 1 AND is_active = true ORDER BY id ASC LIMIT 1');
+      outlet_id = firstBranch.rows[0]?.id || 2;
+    }
 
     const tiket = await RequestService.createRequest(outlet_id, parsed.data.product_id, parsed.data.qty_requested, req.user.id);
     AuditService.logAction({

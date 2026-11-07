@@ -5,8 +5,8 @@ const { authenticate, authorize, enforceOutletScope } = require('../middlewares/
 
 router.use(authenticate, enforceOutletScope);
 
-router.post('/', authorize('STAF_CABANG', 'ADMIN_PUSAT', 'OWNER'), opnameController.createOpname);
-router.put('/:id/items', authorize('STAF_CABANG', 'ADMIN_PUSAT', 'OWNER'), opnameController.updateOpnameItems);
+router.post('/', authorize('STAF_CABANG', 'ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), opnameController.createOpname);
+router.put('/:id/items', authorize('STAF_CABANG', 'ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), opnameController.updateOpnameItems);
 router.patch('/:id/finalize', authorize('ADMIN_PUSAT', 'OWNER'), opnameController.finalizeOpname);
 router.get('/', opnameController.getOpnames);
 router.get('/:id', opnameController.getOpnameById);

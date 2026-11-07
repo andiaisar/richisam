@@ -30,7 +30,7 @@ const Permintaan = () => {
   const [selectedSuratJalan, setSelectedSuratJalan] = useState(null);
 
   // Form states
-  const [formData, setFormData] = useState({ product_id: '', qty_requested: '' });
+  const [formData, setFormData] = useState({ outlet_id: '', product_id: '', qty_requested: '' });
   const [updateData, setUpdateData] = useState({ status: '', qty_approved: '' });
   
   // Emergency Form State
@@ -70,9 +70,7 @@ const Permintaan = () => {
   useEffect(() => {
     fetchTickets();
     fetchProducts();
-    if (user?.role === 'ADMIN_PUSAT') {
-      fetchOutlets();
-    }
+    fetchOutlets();
   }, [filter]);
 
   useEffect(() => {
@@ -82,6 +80,7 @@ const Permintaan = () => {
   useEffect(() => {
     if (location.state?.openAddModal) {
       setFormData({
+        outlet_id: location.state.outlet_id ? String(location.state.outlet_id) : '',
         product_id: location.state.product_id ? String(location.state.product_id) : '',
         qty_requested: location.state.qty_needed ? String(location.state.qty_needed) : ''
       });
@@ -122,7 +121,12 @@ const Permintaan = () => {
   };
 
   const openAddModal = () => {
-    setFormData({ product_id: '', qty_requested: '' });
+    const branchOutlets = outlets.filter(o => Number(o.id) !== 1);
+    setFormData({
+      outlet_id: branchOutlets[0]?.id ? String(branchOutlets[0].id) : '',
+      product_id: '',
+      qty_requested: ''
+    });
     setIsModalOpen(true);
   };
 
@@ -140,10 +144,14 @@ const Permintaan = () => {
     if (!formData.product_id || formData.qty_requested <= 0) return toast.error('Silakan lengkapi form');
     setSubmitting(true);
     try {
-      await axiosClient.post('/requests', {
-        product_id: parseInt(formData.product_id),
-        qty_requested: parseInt(formData.qty_requested)
-      });
+      const payload = {
+        product_id: parseInt(formData.product_id, 10),
+        qty_requested: parseInt(formData.qty_requested, 10)
+      };
+      if (formData.outlet_id) {
+        payload.outlet_id = parseInt(formData.outlet_id, 10);
+      }
+      await axiosClient.post('/requests', payload);
       toast.success('Tiket permintaan berhasil dibuat');
       setIsModalOpen(false);
       fetchTickets();
@@ -235,7 +243,7 @@ const Permintaan = () => {
               Pengambilan Cito (Darurat)
             </button>
           )}
-          {isOutletStaff && (
+          {(isOutletStaff || user?.role === 'ADMIN_PUSAT' || user?.role === 'OWNER') && (
             <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer">
               <Plus size={18} />
               Buat Tiket Permintaan
@@ -424,6 +432,24 @@ const Permintaan = () => {
               <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-ink cursor-pointer"><X size={20} /></button>
             </div>
             <form onSubmit={handleCreateTicket} className="p-5 space-y-4">
+              {!isOutletStaff && (
+                <div>
+                  <label className="block text-sm font-medium text-ink mb-1">
+                    Cabang Pemohon <span className="text-[#F9610D]">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.outlet_id}
+                    onChange={e => setFormData({ ...formData, outlet_id: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-white border border-line rounded-xl text-sm focus:outline-none focus:border-richisam-orange"
+                  >
+                    <option value="">-- Pilih Cabang Pemohon --</option>
+                    {outlets.filter(o => Number(o.id) !== 1).map(o => (
+                      <option key={o.id} value={o.id}>{o.nama}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-ink mb-1">
                   Produk <span className="text-[#F9610D]">*</span>

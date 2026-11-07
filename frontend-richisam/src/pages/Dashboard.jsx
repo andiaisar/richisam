@@ -1068,6 +1068,7 @@ const Dashboard = () => {
                                       navigate('/permintaan', {
                                         state: {
                                           openAddModal: true,
+                                          outlet_id: item.outlet_id,
                                           product_id: item.product_id,
                                           qty_needed: item.selisih > 0 ? item.selisih : item.min_qty
                                         }

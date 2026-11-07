@@ -20,6 +20,11 @@ class ShiftService {
    * Ambil ringkasan aktivitas operasional shift untuk ditinjau sebelum tutup buku
    */
   static async getShiftSummary(outletId, date, shiftName) {
+    try {
+      const MutationService = require('./mutationService');
+      await MutationService.healAccidentalMassZeroMutations();
+    } catch (_) {}
+
     // 1. Cek status closing yang sudah ada
     const closingRes = await pool.query(
       `SELECT sc.*, u.nama as closed_by_nama, o.nama as outlet_nama
@@ -32,13 +37,13 @@ class ShiftService {
 
     const existingClosing = closingRes.rows[0] || null;
 
-    // 2. Ambil agregat mutasi stok pada shift tersebut
+    // 2. Ambil agregat mutasi stok pada shift tersebut (hanya bahan yang bergerak: masuk > 0 atau keluar > 0, dengan K = SAW + M - SAK)
     const mutasiRes = await pool.query(
       `SELECT 
-        COUNT(*) as total_transaksi,
+        COUNT(*) FILTER (WHERE masuk > 0 OR GREATEST(0, saw + masuk - sak) > 0) as total_transaksi,
         COALESCE(SUM(masuk), 0) as total_qty_masuk,
-        COALESCE(SUM(keluar), 0) as total_qty_keluar,
-        COUNT(DISTINCT product_id) as total_produk_terlibat
+        COALESCE(SUM(GREATEST(0, saw + masuk - sak)), 0) as total_qty_keluar,
+        COUNT(DISTINCT product_id) FILTER (WHERE masuk > 0 OR GREATEST(0, saw + masuk - sak) > 0) as total_produk_terlibat
        FROM stock_mutations
        WHERE outlet_id = $1 AND tanggal = $2 AND shift = $3`,
       [outletId, date, shiftName]
@@ -54,7 +59,7 @@ class ShiftService {
       [outletId, date]
     );
 
-    // 4. Ambil ringkasan detail mutasi per produk
+    // 4. Ambil ringkasan detail mutasi per produk (diurutkan sesuai urutan produk di Mutasi Stok)
     const detailMutasiRes = await pool.query(
       `SELECT 
         p.id as product_id,
@@ -62,12 +67,13 @@ class ShiftService {
         p.satuan,
         sm.saw,
         sm.masuk,
-        sm.keluar,
+        GREATEST(0, sm.saw + sm.masuk - sm.sak) as keluar,
         sm.sak
        FROM stock_mutations sm
        JOIN products p ON sm.product_id = p.id
        WHERE sm.outlet_id = $1 AND sm.tanggal = $2 AND sm.shift = $3
-       ORDER BY p.nama ASC`,
+         AND (sm.masuk > 0 OR GREATEST(0, sm.saw + sm.masuk - sm.sak) > 0)
+       ORDER BY p.urutan ASC, p.id ASC`,
       [outletId, date, shiftName]
     );
 
@@ -99,6 +105,11 @@ class ShiftService {
    * Tutup Buku & Kunci Shift (Shift Closing)
    */
   static async closeShift({ outletId, date, shiftName, notes = '', userId, userRole, userName, ipAddress = null }) {
+    try {
+      const MutationService = require('./mutationService');
+      await MutationService.healAccidentalMassZeroMutations();
+    } catch (_) {}
+
     // 1. Periksa apakah sudah terkunci
     const checkRes = await pool.query(
       `SELECT id, status FROM shift_closings 
@@ -114,7 +125,7 @@ class ShiftService {
     const statsRes = await pool.query(
       `SELECT 
         COALESCE(SUM(masuk), 0) as total_in,
-        COALESCE(SUM(keluar), 0) as total_out
+        COALESCE(SUM(GREATEST(0, saw + masuk - sak)), 0) as total_out
        FROM stock_mutations
        WHERE outlet_id = $1 AND tanggal = $2 AND shift = $3`,
       [outletId, date, shiftName]

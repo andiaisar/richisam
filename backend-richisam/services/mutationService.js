@@ -35,33 +35,47 @@ class MutationService {
         WHERE saw = 0 AND masuk = 0 AND keluar = 0 AND sak = 0
       `);
 
-      // 3. Sinkronkan rantai SAW -> SAK antar shift (PAGI -> SORE -> MIDNIGHT) jika ada baris yang sempat tersimpan dengan SAW lama
+      // 3. Sinkronkan rantai SAW -> SAK antar shift (PAGI -> SORE -> MIDNIGHT) dan pastikan rumus K = SAW + M - SAK selalu konsisten
       await pool.query(`
         WITH ordered_muts AS (
           SELECT 
-            id,
-            outlet_id,
-            product_id,
-            saw,
-            masuk,
-            keluar,
-            sak,
-            LAG(sak) OVER (
-              PARTITION BY outlet_id, product_id 
-              ORDER BY tanggal ASC, (CASE shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END) ASC, id ASC
+            m.id,
+            m.outlet_id,
+            m.product_id,
+            m.saw,
+            m.masuk,
+            m.keluar,
+            m.sak,
+            COALESCE(
+              LAG(m.sak) OVER (
+                PARTITION BY m.outlet_id, m.product_id 
+                ORDER BY m.tanggal ASC, (CASE m.shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END) ASC, m.id ASC
+              ),
+              CASE WHEN m.saw = 0 THEN ob.qty ELSE m.saw END
             ) AS expected_saw
-          FROM stock_mutations
+          FROM stock_mutations m
+          LEFT JOIN opening_balances ob ON ob.outlet_id = m.outlet_id AND ob.product_id = m.product_id
         )
         UPDATE stock_mutations m
         SET 
           saw = o.expected_saw,
           sak = GREATEST(0, o.expected_saw + m.masuk - GREATEST(0, m.keluar)),
-          keluar = GREATEST(0, m.keluar),
+          keluar = GREATEST(0, o.expected_saw + m.masuk - GREATEST(0, o.expected_saw + m.masuk - GREATEST(0, m.keluar))),
           updated_at = CURRENT_TIMESTAMP
         FROM ordered_muts o
         WHERE m.id = o.id
           AND o.expected_saw IS NOT NULL
           AND m.saw IS DISTINCT FROM o.expected_saw
+      `);
+
+      // 3b. Pastikan seluruh baris mutasi memiliki nilai keluar = GREATEST(0, saw + masuk - sak) agar Tutup Shift 100% klop dengan Mutasi Stok
+      await pool.query(`
+        UPDATE stock_mutations
+        SET 
+          keluar = GREATEST(0, saw + masuk - sak),
+          sak = GREATEST(0, saw + masuk - GREATEST(0, saw + masuk - sak)),
+          updated_at = CURRENT_TIMESTAMP
+        WHERE keluar IS DISTINCT FROM GREATEST(0, saw + masuk - sak)
       `);
 
       // 4. Jika ada baris yang dipulihkan atau ada stok 0 tanpa mutasi sak=0, kembalikan qty_current ke saldo valid terakhir

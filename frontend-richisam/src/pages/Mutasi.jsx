@@ -14,6 +14,7 @@ const Mutasi = () => {
   const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
   const [shift, setShift] = useState('PAGI');
   const [searchQuery, setSearchQuery] = useState('');
+  const [onlyMoving, setOnlyMoving] = useState(false);
   
   const [formItems, setFormItems] = useState([]); // Array of objects matching form structure
   const [loading, setLoading] = useState(false);
@@ -245,7 +246,8 @@ const Mutasi = () => {
   };
 
   const totalPersediaan = formItems.reduce((acc, item) => acc + calculateTotalHarga(item), 0);
-  const totalKeluar = formItems.reduce((acc, item) => acc + calculateK(item), 0);
+  const totalMasuk = formItems.reduce((acc, item) => acc + (item.masuk || 0), 0);
+  const totalKeluar = formItems.reduce((acc, item) => acc + Math.max(0, calculateK(item)), 0);
   const totalNilaiPemakaianShift = formItems.reduce((acc, item) => acc + (Math.max(0, calculateK(item)) * (item.harga || 0)), 0);
   const jumlahBarangBergerak = formItems.filter(item => item.masuk > 0 || calculateK(item) > 0).length;
 
@@ -353,11 +355,23 @@ const Mutasi = () => {
               <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-950/30 border border-[#F9610D]/30 text-xs text-[#FFCE00] font-medium">
                 ✨ <strong>Input 2-Arah:</strong> Ketik di <strong>Keluar</strong> atau di <strong>Fisik</strong> (otomatis saling menghitung).
               </span>
+              <button
+                type="button"
+                onClick={() => setOnlyMoving(prev => !prev)}
+                className={`px-3 py-1.5 rounded-xl border font-semibold transition-all cursor-pointer ${
+                  onlyMoving
+                    ? 'bg-[#F9610D] border-[#F9610D] text-white shadow-sm'
+                    : 'bg-[#1A1412] border-[#2D241E] text-stone-300 hover:border-[#F9610D]/50'
+                }`}
+                title="Klik untuk memfilter hanya bahan yang mengalami mutasi (sama seperti di halaman Tutup Shift)"
+              >
+                Bahan Bergerak: <strong className={onlyMoving ? 'text-white' : 'text-[#FFCE00]'}>{jumlahBarangBergerak}</strong> / {formItems.length} Item {onlyMoving ? '(Filter Aktif)' : ''}
+              </button>
               <span className="px-3 py-1.5 rounded-xl bg-[#1A1412] border border-[#2D241E] text-stone-300 font-semibold">
-                Bahan Bergerak: <strong className="text-[#FFCE00]">{jumlahBarangBergerak}</strong> / {formItems.length} Item
+                Total Unit Masuk: <strong className="text-emerald-400">+{totalMasuk}</strong>
               </span>
               <span className="px-3 py-1.5 rounded-xl bg-[#1A1412] border border-[#2D241E] text-stone-300 font-semibold">
-                Total Unit Keluar: <strong className="text-[#F9610D]">{totalKeluar}</strong>
+                Total Unit Keluar: <strong className="text-[#F9610D]">-{totalKeluar}</strong>
               </span>
               <span className="px-3 py-1.5 rounded-xl bg-[#1A1412] border border-[#2D241E] text-stone-300 font-semibold">
                 Nilai Pemakaian Shift: <strong className="text-white">{formatRupiah(totalNilaiPemakaianShift)}</strong>
@@ -399,6 +413,7 @@ const Mutasi = () => {
               <tbody className="divide-y divide-[#241C18]">
                 {formItems
                   .filter(item => {
+                    if (onlyMoving && item.masuk <= 0 && calculateK(item) <= 0) return false;
                     if (!searchQuery) return true;
                     return item.nama?.toLowerCase().includes(searchQuery.toLowerCase()) || item.kode?.toLowerCase().includes(searchQuery.toLowerCase());
                   })

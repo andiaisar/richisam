@@ -7,7 +7,10 @@ class RequestService {
     let query = `
       SELECT t.*, o.nama AS outlet_name, u.nama AS creator_name,
              (SELECT p.nama FROM restock_ticket_items rti JOIN products p ON rti.product_id = p.id WHERE rti.ticket_id = t.id LIMIT 1) AS product_name,
-             (SELECT SUM(qty_diminta) FROM restock_ticket_items WHERE ticket_id = t.id) AS qty_requested
+             (SELECT p.kode FROM restock_ticket_items rti JOIN products p ON rti.product_id = p.id WHERE rti.ticket_id = t.id LIMIT 1) AS product_kode,
+             (SELECT p.satuan FROM restock_ticket_items rti JOIN products p ON rti.product_id = p.id WHERE rti.ticket_id = t.id LIMIT 1) AS product_satuan,
+             (SELECT SUM(qty_diminta) FROM restock_ticket_items WHERE ticket_id = t.id) AS qty_requested,
+             (SELECT NULLIF(SUM(qty_dikirim), 0) FROM restock_ticket_items WHERE ticket_id = t.id) AS qty_approved
       FROM restock_tickets t
       JOIN outlets o ON t.outlet_id = o.id
       JOIN users u ON t.requested_by = u.id
@@ -75,14 +78,14 @@ class RequestService {
       if (tiketRes.rows.length === 0) throw new Error('Tiket tidak ditemukan');
       const tiket = tiketRes.rows[0];
 
-      const isCK = req_user.role === 'ADMIN_GUDANG' || (req_user.role === 'STAF_CABANG' && Number(req_user.outlet_id) === 1);
+      const isCK = req_user.role === 'ADMIN_GUDANG';
       const isPusatOrOwner = req_user.role === 'ADMIN_PUSAT' || req_user.role === 'OWNER';
 
       // 1. Memproses atau Mengirim Tiket (DIPROSES atau DIKIRIM)
-      // Hanya boleh dilakukan oleh Staf Central Kitchen (CK), Admin Pusat, atau Owner
+      // Staf Cabang tidak boleh mengubah status pengiriman; hanya Admin Gudang (CK), Admin Pusat, atau Owner
       if (newStatus === 'DIPROSES' || newStatus === 'DIKIRIM') {
         if (!isCK && !isPusatOrOwner) {
-          throw new Error('Hanya Staf Central Kitchen (CK), Admin Pusat, atau Owner yang berhak memproses dan mengirim tiket');
+          throw new Error('Staf tidak dapat mengubah status pengiriman. Hanya Admin Pusat atau Admin Gudang (CK) yang berhak memproses dan mengirim barang.');
         }
 
         // Potong stok Central Kitchen (outlet_id = 1) saat status diubah menjadi DIKIRIM
@@ -97,7 +100,7 @@ class RequestService {
           const tanggal = new Date().toISOString().split('T')[0];
 
           for (const item of items) {
-            const qty_awal = item.qty_dikirim || qty_approved || item.qty_diminta;
+            const qty_awal = qty_approved || item.qty_dikirim || item.qty_diminta;
             const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
             const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
             const qty = qty_awal * konversi;

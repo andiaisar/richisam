@@ -10,7 +10,7 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
   (config) => {
-    const token = Cookies.get('token');
+    const token = sessionStorage.getItem('token') || Cookies.get('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -22,7 +22,9 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response) => response.data,
   (error) => {
-    if (error.response?.status === 401) {
+    const reqUrl = error.config?.url || '';
+    if (error.response?.status === 401 && !reqUrl.includes('/auth/login')) {
+      sessionStorage.removeItem('token');
       Cookies.remove('token');
       // Redirect to login handled by protected route/zustand
     }

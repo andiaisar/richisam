@@ -213,8 +213,9 @@ const Permintaan = () => {
            t.outlet_name?.toLowerCase().includes(q);
   });
 
-  const isCK = user?.role === 'ADMIN_GUDANG' || (user?.role === 'STAF_CABANG' && (Number(user?.outlet_id) === 1 || user?.outlet_name?.toLowerCase().includes('central kitchen') || user?.outlet_name?.toLowerCase().includes('ck')));
-  const isOutletStaff = user?.role === 'STAF_CABANG' && !isCK;
+  const isCK = user?.role === 'ADMIN_GUDANG';
+  const canManageShipment = user?.role === 'ADMIN_PUSAT' || user?.role === 'ADMIN_GUDANG' || user?.role === 'OWNER';
+  const isOutletStaff = !canManageShipment;
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -511,39 +512,43 @@ const Permintaan = () => {
                 <p><span className="font-medium text-ink">Status Saat Ini:</span> <StatusBadge status={selectedTicket.status} /></p>
               </div>
 
-              {/* Tampilkan form update jika user berhak mengupdate status */}
+              {/* Tampilkan form update sesuai wewenang role:
+                  - Staf Cabang HANYA bisa mengonfirmasi selesai (barang tiba & lengkap) jika status sudah DIKIRIM.
+                  - Admin Pusat / Gudang CK memproses (DIPROSES) & mengirim barang (DIKIRIM). */}
               {isOutletStaff ? (
                 selectedTicket.status === 'DIKIRIM' ? (
                   <form onSubmit={handleConfirmReceipt} className="space-y-4 pt-3 border-t border-line">
                     <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
-                      <strong>Konfirmasi Penerimaan:</strong> Barang telah dikirim dari Central Kitchen (Qty: {selectedTicket.qty_approved || selectedTicket.qty_requested}). Klik tombol di bawah untuk memasukkan bahan ke stok cabang Anda.
+                      <strong>Konfirmasi Barang Tiba & Lengkap:</strong> Barang telah dikirim dari Central Kitchen (Qty: {selectedTicket.qty_approved || selectedTicket.qty_requested}). Klik tombol di bawah jika barang telah tiba dan lengkap untuk menambah stok cabang Anda.
                     </div>
                     <button type="submit" disabled={submitting} className="w-full px-4 py-2.5 text-sm font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
                       <Check size={16} />
-                      {submitting ? 'Memproses Penerimaan...' : 'Konfirmasi Terima Barang (Selesai)'}
+                      {submitting ? 'Memproses Penerimaan...' : 'Konfirmasi Selesai (Barang Telah Tiba & Lengkap)'}
                     </button>
                   </form>
                 ) : selectedTicket.status === 'SELESAI' ? (
                   <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 text-center font-medium">
-                    ✓ Barang telah diterima dan stok cabang sudah bertambah.
+                    ✓ Barang telah diterima lengkap dan stok cabang sudah bertambah.
                   </div>
                 ) : (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 text-center">
-                    ⏳ Tiket sedang dipersiapkan oleh Central Kitchen ({selectedTicket.status}). Mohon tunggu pengiriman barang.
+                    ⏳ Tiket sedang dipersiapkan oleh Central Kitchen ({selectedTicket.status}). Staf hanya dapat mengonfirmasi selesai setelah barang dikirim dan tiba di cabang.
                   </div>
                 )
               ) : (
-                selectedTicket.status !== 'SELESAI' ? (
+                (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? (
                   <form onSubmit={handleUpdateStatus} className="space-y-4 mt-2 border-t border-line pt-4">
                     <div>
-                      <label className="block text-xs font-bold text-ink mb-1.5">Tindakan / Status Tiket</label>
+                      <label className="block text-xs font-bold text-ink mb-1.5">Tindakan / Status Pengiriman</label>
                       <select 
                         required 
                         value={updateData.status} 
                         onChange={e => setUpdateData({...updateData, status: e.target.value})} 
                         className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange mb-3 font-medium"
                       >
-                        <option value="DIPROSES">DIPROSES (Sedang Disiapkan di Gudang CK)</option>
+                        {selectedTicket.status === 'DIAJUKAN' && (
+                          <option value="DIPROSES">DIPROSES (Sedang Disiapkan di Gudang CK)</option>
+                        )}
                         <option value="DIKIRIM">DIKIRIM (Kirim ke Cabang & Kurangi Stok CK)</option>
                       </select>
 
@@ -573,8 +578,12 @@ const Permintaan = () => {
                       </button>
                     </div>
                   </form>
+                ) : selectedTicket.status === 'DIKIRIM' ? (
+                  <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800 text-center font-medium mt-3">
+                    🚚 Barang sedang dalam pengiriman ke <strong>{selectedTicket.outlet_name}</strong>. Menunggu Staf Cabang mengonfirmasi barang telah tiba dan lengkap.
+                  </div>
                 ) : (
-                  <p className="text-sm text-green-600 text-center font-medium mt-4">Tiket ini telah diselesaikan (barang sudah diterima cabang).</p>
+                  <p className="text-sm text-green-600 text-center font-medium mt-4">✓ Tiket ini telah diselesaikan (barang sudah diterima lengkap oleh staf cabang).</p>
                 )
               )}
 

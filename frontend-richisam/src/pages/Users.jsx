@@ -66,12 +66,13 @@ const Users = () => {
 
   const openAddModal = () => {
     setSelectedUser(null);
+    const defaultBranch = outlets.find(o => o.id !== 1 && o.tipe !== 'PUSAT') || outlets[0];
     setFormData({
       nama: '',
       username: '',
       password: '',
       role: 'STAF_CABANG',
-      outlet_id: outlets.length > 0 ? String(outlets[0].id) : '',
+      outlet_id: defaultBranch ? String(defaultBranch.id) : '',
       is_active: true
     });
     setIsModalOpen(true);
@@ -252,11 +253,10 @@ const Users = () => {
                             </span>
                           );
                         }
-                        const isCK = u.outlet_id === 1 || u.outlet_name?.toLowerCase().includes('central kitchen') || u.outlet_name?.toLowerCase().includes('ck');
-                        if (isCK) {
+                        if (u.role === 'ADMIN_GUDANG') {
                           return (
-                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase badge-role-ck" title="Staf Central Kitchen (CK)">
-                              STAF CK
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wider border uppercase badge-role-ck" title="Admin Gudang Central Kitchen (CK)">
+                              ADMIN GUDANG (CK)
                             </span>
                           );
                         }
@@ -407,8 +407,19 @@ const Users = () => {
               )}
               <div>
                 <label className="block text-sm font-medium text-ink mb-1">Peran (Role)</label>
-                <select value={formData.role} onChange={e => setFormData({...formData, role: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange">
-                  <option value="STAF_CABANG">Staf Outlet / Staf Central Kitchen (CK)</option>
+                <select value={formData.role} onChange={e => {
+                  const newRole = e.target.value;
+                  let nextOutletId = formData.outlet_id;
+                  if (newRole === 'ADMIN_GUDANG') {
+                    nextOutletId = '1';
+                  } else if (newRole === 'STAF_CABANG' && String(formData.outlet_id) === '1') {
+                    const branch = outlets.find(o => o.id !== 1 && o.tipe !== 'PUSAT');
+                    if (branch) nextOutletId = String(branch.id);
+                  }
+                  setFormData({...formData, role: newRole, outlet_id: nextOutletId});
+                }} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange">
+                  <option value="STAF_CABANG">Staf Outlet (Cabang)</option>
+                  <option value="ADMIN_GUDANG">Admin Gudang (Central Kitchen)</option>
                   <option value="ADMIN_PUSAT">Admin Pusat</option>
                   <option value="OWNER">Owner</option>
                 </select>

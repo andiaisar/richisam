@@ -10,8 +10,13 @@ const useAuthStore = create((set) => ({
   login: async (username, password) => {
     try {
       const data = await axiosClient.post('/auth/login', { username, password });
-      Cookies.set('token', data.data.token, { expires: 1 });
-      set({ user: data.data.user, isAuthenticated: true });
+      const token = data?.data?.token || data?.token;
+      const userObj = data?.data?.user || data?.user;
+      if (token) {
+        sessionStorage.setItem('token', token);
+        Cookies.set('token', token, { expires: 1 });
+      }
+      set({ user: userObj, isAuthenticated: true });
       return { success: true };
     } catch (error) {
       return { 
@@ -22,6 +27,7 @@ const useAuthStore = create((set) => ({
   },
 
   logout: () => {
+    sessionStorage.removeItem('token');
     Cookies.remove('token');
     set({ user: null, isAuthenticated: false });
   },
@@ -31,11 +37,12 @@ const useAuthStore = create((set) => ({
   },
 
   checkAuth: async () => {
-    const token = Cookies.get('token');
+    const token = sessionStorage.getItem('token') || Cookies.get('token');
     if (!token) {
       set({ user: null, isAuthenticated: false, isLoading: false });
       return;
     }
+    sessionStorage.setItem('token', token);
     
     try {
       const base64Url = token.split('.')[1];
@@ -46,6 +53,7 @@ const useAuthStore = create((set) => ({
 
       const decoded = JSON.parse(jsonPayload);
       if (decoded.exp && decoded.exp * 1000 < Date.now()) {
+        sessionStorage.removeItem('token');
         Cookies.remove('token');
         set({ user: null, isAuthenticated: false, isLoading: false });
         return;
@@ -56,16 +64,19 @@ const useAuthStore = create((set) => ({
       // Verifikasi status aktif & sinkronisasi data terbaru dari server
       try {
         const res = await axiosClient.get('/auth/me');
-        if (res?.data?.data) {
-          set({ user: res.data.data, isAuthenticated: true, isLoading: false });
+        const freshUser = res?.data?.data || res?.data;
+        if (freshUser && freshUser.id) {
+          set({ user: freshUser, isAuthenticated: true, isLoading: false });
         }
       } catch (err) {
         if (err.response?.status === 401 || err.response?.status === 403 || err.response?.status === 404) {
+          sessionStorage.removeItem('token');
           Cookies.remove('token');
           set({ user: null, isAuthenticated: false, isLoading: false });
         }
       }
     } catch {
+      sessionStorage.removeItem('token');
       Cookies.remove('token');
       set({ user: null, isAuthenticated: false, isLoading: false });
     }

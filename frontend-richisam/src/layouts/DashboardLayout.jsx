@@ -114,20 +114,15 @@ const getRoleDisplayName = (user) => {
   if (!user) return '';
   if (user.role === 'ADMIN_PUSAT') return 'Admin Pusat';
   if (user.role === 'OWNER') return 'Owner';
-  if (user.role === 'ADMIN_GUDANG') return 'Staf Central Kitchen (CK)';
-  if (user.role === 'STAF_CABANG') {
-    if (user.outlet_id === 1 || user.outlet_name?.toLowerCase().includes('central kitchen') || user.outlet_name?.toLowerCase().includes('ck')) {
-      return 'Staf Central Kitchen (CK)';
-    }
-    return 'Staf Outlet';
-  }
+  if (user.role === 'ADMIN_GUDANG') return 'Admin Gudang (CK)';
+  if (user.role === 'STAF_CABANG') return 'Staf Outlet';
   return user.role || 'Pengguna';
 };
 
 const ROLE_LABEL = {
   ADMIN_PUSAT: 'Admin Pusat',
   STAF_CABANG: 'Staf Outlet',
-  ADMIN_GUDANG: 'Staf Central Kitchen (CK)',
+  ADMIN_GUDANG: 'Admin Gudang (CK)',
   OWNER: 'Owner',
 };
 
@@ -502,7 +497,7 @@ const DashboardLayout = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const isCK = user?.role === 'ADMIN_GUDANG' || (user?.role === 'STAF_CABANG' && (user?.outlet_id === 1 || user?.outlet_name?.toLowerCase().includes('central kitchen') || user?.outlet_name?.toLowerCase().includes('ck')));
+  const isCK = user?.role === 'ADMIN_GUDANG';
   const menus = user?.role === 'OWNER' 
     ? MENUS.OWNER 
     : user?.role === 'ADMIN_PUSAT' 

@@ -324,7 +324,7 @@ const Permintaan = () => {
                           ? (t.status === 'DIKIRIM' ? 'Terima Barang' : 'Detail') 
                           : (t.status === 'DIAJUKAN' ? 'Proses Tiket' : t.status === 'DIPROSES' ? 'Kirim Barang' : 'Detail')}
                       </button>
-                      {(t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
+                      {!isOutletStaff && (t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
                         <button 
                           onClick={() => {
                             setSelectedSuratJalan({
@@ -587,34 +587,36 @@ const Permintaan = () => {
                 )
               )}
 
-              <div className="pt-4 border-t border-line mt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedSuratJalan({
-                      kode_transfer: selectedTicket.kode_tiket,
-                      created_at: selectedTicket.created_at,
-                      from_outlet_name: 'Gudang Pusat Richisam',
-                      from_outlet_address: 'Makassar, Sulawesi Selatan',
-                      to_outlet_name: selectedTicket.outlet_name,
-                      to_outlet_address: 'Makassar, Sulawesi Selatan',
-                      creator_name: user?.nama || 'Admin/Staf',
-                      catatan: `Surat Pengiriman Barang untuk Tiket Permintaan: ${selectedTicket.kode_tiket}`,
-                      items: [{
-                        product_kode: selectedTicket.product_kode || 'PRD',
-                        product_name: selectedTicket.product_name,
-                        product_satuan: selectedTicket.product_satuan || 'pcs',
-                        qty: selectedTicket.qty_approved || selectedTicket.qty_requested
-                      }]
-                    });
-                    setIsSuratJalanOpen(true);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                >
-                  <Printer size={16} />
-                  <span>Cetak Surat Jalan (Delivery Note)</span>
-                </button>
-              </div>
+              {!isOutletStaff && (
+                <div className="pt-4 border-t border-line mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedSuratJalan({
+                        kode_transfer: selectedTicket.kode_tiket,
+                        created_at: selectedTicket.created_at,
+                        from_outlet_name: 'Gudang Pusat Richisam',
+                        from_outlet_address: 'Makassar, Sulawesi Selatan',
+                        to_outlet_name: selectedTicket.outlet_name,
+                        to_outlet_address: 'Makassar, Sulawesi Selatan',
+                        creator_name: user?.nama || 'Admin/Staf',
+                        catatan: `Surat Pengiriman Barang untuk Tiket Permintaan: ${selectedTicket.kode_tiket}`,
+                        items: [{
+                          product_kode: selectedTicket.product_kode || 'PRD',
+                          product_name: selectedTicket.product_name,
+                          product_satuan: selectedTicket.product_satuan || 'pcs',
+                          qty: selectedTicket.qty_approved || selectedTicket.qty_requested
+                        }]
+                      });
+                      setIsSuratJalanOpen(true);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <Printer size={16} />
+                    <span>Cetak Surat Jalan (Delivery Note)</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

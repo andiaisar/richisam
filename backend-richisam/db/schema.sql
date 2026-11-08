@@ -132,7 +132,7 @@ CREATE TABLE defect_reports (
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     qty INTEGER NOT NULL,
     deskripsi TEXT,
-    foto_url VARCHAR(255) NOT NULL,
+    foto_url TEXT,
     status defect_status_enum NOT NULL DEFAULT 'BARU',
     reported_by INTEGER NOT NULL REFERENCES users(id),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

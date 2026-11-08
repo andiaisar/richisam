@@ -166,7 +166,7 @@ CREATE TABLE defect_reports (
     product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
     qty INTEGER NOT NULL,
-    foto_url VARCHAR(255),
+    foto_url TEXT,
     keterangan TEXT,
     deskripsi TEXT,
     alasan TEXT,

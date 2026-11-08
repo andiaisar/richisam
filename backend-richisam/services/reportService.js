@@ -503,7 +503,7 @@ class ReportService {
       `SELECT * FROM stock_mutations 
        WHERE outlet_id = $1 AND tanggal >= $2 AND tanggal <= $3
        ORDER BY tanggal ASC, 
-                (CASE shift WHEN 'MIDNIGHT' THEN 1 WHEN 'PAGI' THEN 2 WHEN 'SORE' THEN 3 ELSE 4 END) ASC,
+                (CASE shift::text WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 4 END) ASC,
                 id ASC`,
       [outlet_id, startDate, endDate]
     );
@@ -521,8 +521,9 @@ class ReportService {
     const firstSawMap = {};
     const lastSakMap = {};
     mutations.rows.forEach(m => {
-      const dateStr = m.tanggal instanceof Date ? m.tanggal.toISOString().split('T')[0] : String(m.tanggal).split('T')[0];
-      const day = parseInt(dateStr.split('-')[2], 10);
+      const day = m.tanggal instanceof Date
+        ? (m.tanggal.getHours() === 0 ? m.tanggal.getDate() : m.tanggal.getUTCDate())
+        : parseInt(String(m.tanggal).split('T')[0].split('-')[2], 10);
       if (!mutMap[day]) mutMap[day] = {};
       if (!mutMap[day][m.product_id]) mutMap[day][m.product_id] = {};
       mutMap[day][m.product_id][m.shift] = m;
@@ -665,18 +666,36 @@ class ReportService {
     }
 
     // Sheet REKAP BULANAN
-    const wsRekap = workbook.addWorksheet('REKAP BULANAN');
-    wsRekap.mergeCells('A1:G1');
+    const wsRekap = workbook.addWorksheet('REKAP BULANAN', {
+      views: [{ state: 'frozen', xSplit: 2, ySplit: 3 }]
+    });
+    wsRekap.mergeCells('A1:I1');
     wsRekap.getCell('A1').value = `REKAP BULANAN STOK ${outletName} - ${bulan}/${tahun}`;
     wsRekap.getCell('A1').font = { bold: true, size: 14 };
 
-    const rekapHeaders = ['NO', 'NAMA BARANG', 'TOTAL MASUK', 'TOTAL KELUAR', 'SAK AKHIR BULAN', 'NILAI PERSEDIAAN', 'RATA-RATA KELUAR/HARI'];
+    const rekapHeaders = [
+      'NO',
+      'NAMA BARANG',
+      'SAW AWAL BULAN',
+      'TOTAL MASUK',
+      'TOTAL KELUAR',
+      'SAK AKHIR BULAN',
+      'NILAI PERSEDIAAN',
+      'NILAI PEMAKAIAN',
+      'RATA-RATA KELUAR/HARI'
+    ];
     wsRekap.getRow(3).values = rekapHeaders;
     wsRekap.getRow(3).font = { bold: true };
-    for (let c = 1; c <= 7; c++) {
+    for (let c = 1; c <= 9; c++) {
       wsRekap.getCell(3, c).fill = headerFill;
       wsRekap.getCell(3, c).border = borderAll;
+      wsRekap.getCell(3, c).alignment = { horizontal: 'center', vertical: 'middle' };
     }
+
+    let grandTotalMasuk = 0;
+    let grandTotalKeluar = 0;
+    let grandTotalNilaiPersediaan = 0;
+    let grandTotalNilaiPemakaian = 0;
 
     products.rows.forEach((p, idx) => {
       const rowNum = idx + 4;
@@ -686,36 +705,63 @@ class ReportService {
       
       let sumM = 0;
       let sumK = 0;
+      const sawAwal = firstSawMap[p.id] !== undefined
+        ? firstSawMap[p.id]
+        : (stockMap[p.id] !== undefined ? stockMap[p.id] : 0);
       let lastSak = lastSakMap[p.id] !== undefined
         ? lastSakMap[p.id]
         : (stockMap[p.id] !== undefined ? stockMap[p.id] : 0);
       const masterPrice = parseFloat(p.harga || 0);
       
-      // Calculate totals from mutations
+      // Calculate totals from mutations in chronological shift order (PAGI -> SORE -> MIDNIGHT)
       for (let day = 1; day <= lastDay; day++) {
         const pm = mutMap[day] && mutMap[day][p.id];
         if (pm) {
-          if (pm.MIDNIGHT) { sumM += parseFloat(pm.MIDNIGHT.masuk); sumK += parseFloat(pm.MIDNIGHT.keluar); lastSak = parseFloat(pm.MIDNIGHT.sak); }
           if (pm.PAGI) { sumM += parseFloat(pm.PAGI.masuk); sumK += parseFloat(pm.PAGI.keluar); lastSak = parseFloat(pm.PAGI.sak); }
           if (pm.SORE) { sumM += parseFloat(pm.SORE.masuk); sumK += parseFloat(pm.SORE.keluar); lastSak = parseFloat(pm.SORE.sak); }
+          if (pm.MIDNIGHT) { sumM += parseFloat(pm.MIDNIGHT.masuk); sumK += parseFloat(pm.MIDNIGHT.keluar); lastSak = parseFloat(pm.MIDNIGHT.sak); }
         }
       }
 
-      row.getCell(3).value = sumM;
-      row.getCell(4).value = sumK;
-      row.getCell(5).value = lastSak;
-      row.getCell(6).value = lastSak * masterPrice;
-      row.getCell(7).value = Number((sumK / lastDay).toFixed(2));
+      const nilaiPersediaan = lastSak * masterPrice;
+      const nilaiPemakaian = sumK * masterPrice;
+      grandTotalMasuk += sumM;
+      grandTotalKeluar += sumK;
+      grandTotalNilaiPersediaan += nilaiPersediaan;
+      grandTotalNilaiPemakaian += nilaiPemakaian;
 
-      for (let c = 1; c <= 7; c++) {
+      row.getCell(3).value = sawAwal;
+      row.getCell(4).value = sumM;
+      row.getCell(5).value = sumK;
+      row.getCell(6).value = lastSak;
+      row.getCell(7).value = nilaiPersediaan;
+      row.getCell(8).value = nilaiPemakaian;
+      row.getCell(9).value = Number((sumK / lastDay).toFixed(2));
+
+      for (let c = 1; c <= 9; c++) {
         row.getCell(c).border = borderAll;
-        if (c >= 3 && c <= 6) row.getCell(c).numFmt = '#,##0';
-        if (c === 7) row.getCell(c).numFmt = '#,##0.00';
+        if (c >= 3 && c <= 8) row.getCell(c).numFmt = '#,##0';
+        if (c === 9) row.getCell(c).numFmt = '#,##0.00';
       }
     });
+
+    const totalRekapRowIdx = products.rows.length + 4;
+    const totalRekapRow = wsRekap.getRow(totalRekapRowIdx);
+    totalRekapRow.getCell(2).value = 'TOTAL KESELURUHAN';
+    totalRekapRow.getCell(4).value = { formula: `SUM(D4:D${totalRekapRowIdx - 1})`, result: grandTotalMasuk };
+    totalRekapRow.getCell(5).value = { formula: `SUM(E4:E${totalRekapRowIdx - 1})`, result: grandTotalKeluar };
+    totalRekapRow.getCell(7).value = { formula: `SUM(G4:G${totalRekapRowIdx - 1})`, result: grandTotalNilaiPersediaan };
+    totalRekapRow.getCell(8).value = { formula: `SUM(H4:H${totalRekapRowIdx - 1})`, result: grandTotalNilaiPemakaian };
+    totalRekapRow.font = { bold: true };
+    for (let c = 1; c <= 9; c++) {
+      totalRekapRow.getCell(c).fill = headerFill;
+      totalRekapRow.getCell(c).border = borderAll;
+      if (c >= 3 && c <= 8) totalRekapRow.getCell(c).numFmt = '#,##0';
+    }
     
+    wsRekap.getColumn(1).width = 6;
     wsRekap.getColumn(2).width = 30;
-    for (let c = 3; c <= 7; c++) wsRekap.getColumn(c).width = 20;
+    for (let c = 3; c <= 9; c++) wsRekap.getColumn(c).width = 20;
 
     // Sheet STOK OPNAME
     // Prioritaskan opname FINAL terbaru pada bulan ini; jika belum ada yang FINAL, gunakan DRAFT terbaru bulan ini

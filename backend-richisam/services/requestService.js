@@ -100,13 +100,15 @@ class RequestService {
           const tanggal = new Date().toISOString().split('T')[0];
 
           for (const item of items) {
-            const qty_awal = qty_approved || item.qty_dikirim || item.qty_diminta;
-            const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
-            const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
-            const qty = qty_awal * konversi;
+            const qty = parseInt(qty_approved || item.qty_dikirim || item.qty_diminta, 10) || 0;
 
             const prevMut = await client.query(
-              'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
+              `SELECT sak FROM stock_mutations
+               WHERE outlet_id = $1 AND product_id = $2
+               ORDER BY tanggal DESC,
+                        CASE shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END DESC,
+                        id DESC
+               LIMIT 1`,
               [CK_OUTLET_ID, item.product_id]
             );
             let saw = 0;
@@ -152,15 +154,15 @@ class RequestService {
         const tanggal = new Date().toISOString().split('T')[0];
 
         for (const item of items) {
-          const qty_awal = item.qty_dikirim || item.qty_diminta;
-          
-          // Ambil konversi produk
-          const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
-          const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
-          const qty = qty_awal * konversi;
+          const qty = parseInt(item.qty_dikirim || item.qty_diminta, 10) || 0;
           
           const prevMut = await client.query(
-           'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
+           `SELECT sak FROM stock_mutations
+            WHERE outlet_id = $1 AND product_id = $2
+            ORDER BY tanggal DESC,
+                     CASE shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END DESC,
+                     id DESC
+            LIMIT 1`,
            [tiket.outlet_id, item.product_id]
           );
           
@@ -258,13 +260,15 @@ class RequestService {
           [ticket.id, item.product_id, item.qty, item.qty]
         );
 
-        // Ambil konversi produk
-        const prodRes = await client.query('SELECT konversi FROM products WHERE id = $1', [item.product_id]);
-        const konversi = prodRes.rows.length > 0 ? (prodRes.rows[0].konversi || 1) : 1;
-        const qtyToOutlet = item.qty * konversi;
+        const qtyToOutlet = parseInt(item.qty, 10) || 0;
 
         const prevMut = await client.query(
-         'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
+         `SELECT sak FROM stock_mutations
+          WHERE outlet_id = $1 AND product_id = $2
+          ORDER BY tanggal DESC,
+                   CASE shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END DESC,
+                   id DESC
+          LIMIT 1`,
          [outlet_id, item.product_id]
         );
         

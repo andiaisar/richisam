@@ -213,15 +213,14 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 50, kode_tiket: 'CITO-123', outlet_id: 3 }] }) // INSERT ticket
         .mockResolvedValueOnce({}) // INSERT ticket item
-        .mockResolvedValueOnce({ rows: [{ konversi: 10 }] }) // SELECT konversi (1 box = 10 pcs)
         .mockResolvedValueOnce({ rows: [{ sak: 5 }] }) // prevMut cabang (saw = 5)
-        .mockResolvedValueOnce({}) // INSERT mutation cabang (masuk = 20, sak = 25)
+        .mockResolvedValueOnce({}) // INSERT mutation cabang (masuk = 2, sak = 7)
         .mockResolvedValueOnce({}) // UPDATE stocks cabang
         .mockResolvedValueOnce({}) // checkParStock cabang BEGIN
         .mockResolvedValueOnce({ rows: [] }) // checkParStock cabang SELECT
         .mockResolvedValueOnce({}) // checkParStock cabang COMMIT
         .mockResolvedValueOnce({ rows: [{ sak: 100 }] }) // prevMut CK (sawCK = 100)
-        .mockResolvedValueOnce({}) // INSERT mutation CK (keluar = 20, sakCK = 80)
+        .mockResolvedValueOnce({}) // INSERT mutation CK (keluar = 2, sakCK = 98)
         .mockResolvedValueOnce({}) // UPDATE stocks CK
         .mockResolvedValueOnce({}) // checkParStock CK BEGIN
         .mockResolvedValueOnce({ rows: [] }) // checkParStock CK SELECT
@@ -236,7 +235,7 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         c => c[0].includes('UPDATE stocks SET qty_current') && c[1][1] === 1
       );
       expect(ckStockUpdate).toBeDefined();
-      expect(ckStockUpdate[1][0]).toBe(80); // 100 - (2 * 10) = 80
+      expect(ckStockUpdate[1][0]).toBe(98); // 100 - 2 = 98
     });
   });
 
@@ -418,9 +417,8 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 15, kode_tiket: 'REQ-15', outlet_id: 2, status: 'DIPROSES' }] }) // SELECT ticket
         .mockResolvedValueOnce({ rows: [{ id: 1, product_id: 1, qty_diminta: 3, qty_dikirim: 3 }] }) // SELECT items
-        .mockResolvedValueOnce({ rows: [{ konversi: 5 }] }) // SELECT konversi (3 * 5 = 15)
         .mockResolvedValueOnce({ rows: [{ sak: 50 }] }) // prevMut CK
-        .mockResolvedValueOnce({}) // INSERT mutation CK (keluar = 15, sak = 35)
+        .mockResolvedValueOnce({}) // INSERT mutation CK (keluar = 3, sak = 47)
         .mockResolvedValueOnce({}) // UPDATE stocks CK
         .mockResolvedValueOnce({}) // checkParStock BEGIN
         .mockResolvedValueOnce({ rows: [] }) // checkParStock SELECT
@@ -440,9 +438,8 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 15, kode_tiket: 'REQ-15', outlet_id: 2, status: 'DIKIRIM' }] }) // SELECT ticket
         .mockResolvedValueOnce({ rows: [{ id: 1, product_id: 1, qty_diminta: 3, qty_dikirim: 3 }] }) // SELECT items
-        .mockResolvedValueOnce({ rows: [{ konversi: 5 }] }) // SELECT konversi
         .mockResolvedValueOnce({ rows: [{ sak: 10 }] }) // prevMut cabang 2
-        .mockResolvedValueOnce({}) // INSERT mutation cabang 2 (masuk = 15, sak = 25)
+        .mockResolvedValueOnce({}) // INSERT mutation cabang 2 (masuk = 3, sak = 13)
         .mockResolvedValueOnce({}) // UPDATE stocks cabang 2
         .mockResolvedValueOnce({}) // checkParStock BEGIN
         .mockResolvedValueOnce({ rows: [] }) // checkParStock SELECT

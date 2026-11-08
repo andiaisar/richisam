@@ -106,6 +106,17 @@ const Users = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      if (!selectedUser && (!formData.username || formData.username.trim().length < 3)) {
+        toast.error('Username minimal 3 karakter');
+        setSubmitting(false);
+        return;
+      }
+      if (!selectedUser && (!formData.password || formData.password.length < 6)) {
+        toast.error('Password awal minimal 6 karakter');
+        setSubmitting(false);
+        return;
+      }
+
       const payload = { ...formData };
       payload.outlet_id = payload.outlet_id ? parseInt(payload.outlet_id) : null;
       if (payload.role === 'OWNER') {
@@ -387,6 +398,7 @@ const Users = () => {
                 <input 
                   required 
                   type="text" 
+                  minLength={3}
                   value={formData.username} 
                   readOnly={!!selectedUser} 
                   placeholder={selectedUser ? '' : 'Contoh: btp_rizal, pk3_wahyu, ald_fajar, ck_ahmad'}
@@ -402,7 +414,7 @@ const Users = () => {
               {!selectedUser && (
                 <div>
                   <label className="block text-sm font-medium text-ink mb-1">Password Awal</label>
-                  <input required type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" placeholder="Minimal 6 karakter" />
+                  <input required minLength={6} type="password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} className="w-full px-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange" placeholder="Minimal 6 karakter" />
                 </div>
               )}
               <div>

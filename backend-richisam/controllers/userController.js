@@ -5,26 +5,26 @@ const UserService = require('../services/userService');
 const userSchema = z.object({
   nama: z.string().min(1, 'Nama wajib diisi'),
   username: z.string().min(3, 'Username minimal 3 karakter'),
-  password: z.string().min(6, 'Password minimal 6 karakter').optional(),
-  role: z.enum(['OWNER', 'ADMIN_PUSAT', 'STAF_CABANG']),
-  outlet_id: z.number().nullable().optional(),
+  password: z.string().min(6, 'Password minimal 6 karakter'),
+  role: z.enum(['OWNER', 'ADMIN_PUSAT', 'STAF_CABANG', 'ADMIN_GUDANG']),
+  outlet_id: z.preprocess(val => (val === '' || val === null || val === undefined ? null : Number(val)), z.number().nullable().optional()),
 }).refine(data => {
   if (data.role === 'STAF_CABANG' && !data.outlet_id) return false;
   return true;
 }, {
-  message: 'Staf cabang wajib memiliki outlet_id',
+  message: 'Staf cabang wajib memilih penempatan cabang / outlet',
   path: ['outlet_id']
 });
 
 const updateUserSchema = z.object({
   nama: z.string().min(1, 'Nama wajib diisi'),
-  role: z.enum(['OWNER', 'ADMIN_PUSAT', 'STAF_CABANG']),
-  outlet_id: z.number().nullable().optional(),
+  role: z.enum(['OWNER', 'ADMIN_PUSAT', 'STAF_CABANG', 'ADMIN_GUDANG']),
+  outlet_id: z.preprocess(val => (val === '' || val === null || val === undefined ? null : Number(val)), z.number().nullable().optional()),
 }).refine(data => {
   if (data.role === 'STAF_CABANG' && !data.outlet_id) return false;
   return true;
 }, {
-  message: 'Staf cabang wajib memiliki outlet_id',
+  message: 'Staf cabang wajib memilih penempatan cabang / outlet',
   path: ['outlet_id']
 });
 
@@ -43,7 +43,8 @@ exports.createUser = async (req, res) => {
   try {
     const parsed = userSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+      const msg = parsed.error.issues?.[0]?.message || 'Validasi gagal';
+      return res.status(400).json({ success: false, message: msg, data: parsed.error.format() });
     }
 
     if (!parsed.data.password) {
@@ -70,7 +71,8 @@ exports.updateUser = async (req, res) => {
     const id = parseInt(req.params.id);
     const parsed = updateUserSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+      const msg = parsed.error.issues?.[0]?.message || 'Validasi gagal';
+      return res.status(400).json({ success: false, message: msg, data: parsed.error.format() });
     }
 
     const targetUser = await UserService.getUserById(id);
@@ -116,7 +118,8 @@ exports.resetPassword = async (req, res) => {
     const parsed = schema.safeParse(req.body);
     
     if (!parsed.success) {
-      return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+      const msg = parsed.error.issues?.[0]?.message || 'Validasi gagal';
+      return res.status(400).json({ success: false, message: msg, data: parsed.error.format() });
     }
 
     const targetUser = await UserService.getUserById(id);

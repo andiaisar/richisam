@@ -247,22 +247,22 @@ class MutationService {
                  SELECT m2.sak FROM stock_mutations m2
                  WHERE m2.outlet_id = $1 AND m2.product_id = $2
                    AND (
-                     m2.tanggal < $3
+                     m2.tanggal < $3::date
                      OR (
-                       m2.tanggal = $3
-                       AND (CASE m2.shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
-                         < (CASE $4 WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
+                       m2.tanggal = $3::date
+                       AND (CASE m2.shift::text WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
+                         < (CASE $4::text WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END)
                      )
                    )
                  ORDER BY m2.tanggal DESC,
-                          (CASE m2.shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END) DESC,
+                          (CASE m2.shift::text WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END) DESC,
                           m2.id DESC
                  LIMIT 1
                ),
                saw
              ) AS saw
            FROM stock_mutations
-           WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3 AND shift = $4
+           WHERE outlet_id = $1 AND product_id = $2 AND tanggal = $3::date AND shift = $4::shift_enum
            FOR UPDATE`,
           [outlet_id, item.product_id, tanggal, shift]
         );
@@ -292,18 +292,18 @@ class MutationService {
           `SELECT sak FROM stock_mutations 
            WHERE outlet_id = $1 AND product_id = $2 
              AND (
-               tanggal < $3 
+               tanggal < $3::date 
                OR (
-                 tanggal = $3 
+                 tanggal = $3::date 
                  AND (
-                   CASE shift 
+                   CASE shift::text 
                      WHEN 'PAGI' THEN 1 
                      WHEN 'SORE' THEN 2 
                      WHEN 'MIDNIGHT' THEN 3 
                      ELSE 0 
                    END
                  ) < (
-                   CASE $4 
+                   CASE $4::text 
                      WHEN 'PAGI' THEN 1 
                      WHEN 'SORE' THEN 2 
                      WHEN 'MIDNIGHT' THEN 3 
@@ -313,7 +313,7 @@ class MutationService {
                )
              )
            ORDER BY tanggal DESC, 
-                    (CASE shift 
+                    (CASE shift::text 
                       WHEN 'MIDNIGHT' THEN 3 
                       WHEN 'SORE' THEN 2 
                       WHEN 'PAGI' THEN 1 

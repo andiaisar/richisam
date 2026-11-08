@@ -5,7 +5,7 @@ exports.getMutationsReport = async (req, res) => {
     const { start_date, end_date } = req.query;
     if (!start_date || !end_date) return res.status(400).json({ success: false, message: 'start_date dan end_date diperlukan' });
 
-    const outlet_id = req.query.outlet_id || req.body.outlet_id; // from enforceOutletScope
+    const outlet_id = req.query.outlet_id || req.body?.outlet_id; // from enforceOutletScope
     const data = await ReportService.getMutationsReport(outlet_id ? parseInt(outlet_id) : null, start_date, end_date);
     res.json({ success: true, message: 'Laporan Mutasi', data });
   } catch (e) {
@@ -58,7 +58,7 @@ exports.exportMutationsExcel = async (req, res) => {
     const { start_date, end_date } = req.query;
     if (!start_date || !end_date) return res.status(400).json({ success: false, message: 'start_date dan end_date diperlukan' });
 
-    const outlet_id = req.query.outlet_id || req.body.outlet_id;
+    const outlet_id = req.query.outlet_id || req.body?.outlet_id || (req.user?.role === 'STAF_CABANG' ? req.user.outlet_id : null);
     const buffer = await ReportService.exportMutationsExcel(outlet_id ? parseInt(outlet_id) : null, start_date, end_date);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
@@ -74,7 +74,7 @@ exports.exportMonthlyExcel = async (req, res) => {
     const { bulan, tahun } = req.query;
     if (!bulan || !tahun) return res.status(400).json({ success: false, message: 'bulan dan tahun diperlukan' });
 
-    const outlet_id = req.query.outlet_id || req.body.outlet_id; // body.outlet_id dari enforceOutletScope kalau role staf
+    const outlet_id = req.query.outlet_id || req.body?.outlet_id || req.user?.outlet_id || 1;
     if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
 
     const buffer = await ReportService.exportMonthlyExcel(parseInt(outlet_id), parseInt(bulan), parseInt(tahun));

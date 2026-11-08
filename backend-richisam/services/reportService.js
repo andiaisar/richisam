@@ -13,8 +13,8 @@ class ReportService {
           SELECT m_awal.saw 
           FROM stock_mutations m_awal 
           WHERE m_awal.product_id = p.id AND m_awal.outlet_id = o.id 
-            AND m_awal.tanggal >= $1 AND m_awal.tanggal <= $2
-          ORDER BY m_awal.tanggal ASC, m_awal.shift ASC LIMIT 1
+            AND m_awal.tanggal >= $1::date AND m_awal.tanggal <= $2::date
+          ORDER BY m_awal.tanggal ASC, (CASE m_awal.shift::text WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END) ASC, m_awal.id ASC LIMIT 1
         ) AS saw_awal,
         SUM(m.masuk) AS total_masuk,
         SUM(m.keluar) AS total_keluar,
@@ -22,14 +22,14 @@ class ReportService {
           SELECT m_akhir.sak 
           FROM stock_mutations m_akhir 
           WHERE m_akhir.product_id = p.id AND m_akhir.outlet_id = o.id 
-            AND m_akhir.tanggal >= $1 AND m_akhir.tanggal <= $2
-          ORDER BY m_akhir.tanggal DESC, m_akhir.shift DESC LIMIT 1
+            AND m_akhir.tanggal >= $1::date AND m_akhir.tanggal <= $2::date
+          ORDER BY m_akhir.tanggal DESC, (CASE m_akhir.shift::text WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END) DESC, m_akhir.id DESC LIMIT 1
         ) AS sak_akhir
       FROM products p
       JOIN stock_mutations m ON p.id = m.product_id
       JOIN outlets o ON m.outlet_id = o.id
-      WHERE m.tanggal >= $1 AND m.tanggal <= $2
-        AND ($3::int IS NULL OR m.outlet_id = $3)
+      WHERE m.tanggal >= $1::date AND m.tanggal <= $2::date
+        AND ($3::int IS NULL OR m.outlet_id = $3::int)
       GROUP BY o.id, o.nama, p.id, p.nama
       ORDER BY o.nama ASC, p.nama ASC;
     `;

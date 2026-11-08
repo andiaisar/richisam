@@ -16,7 +16,7 @@ const createMutationSchema = z.object({
 
 exports.getMutationForm = async (req, res) => {
   try {
-    const outlet_id = req.query.outlet_id || req.body.outlet_id;
+    const outlet_id = req.query.outlet_id || req.body?.outlet_id;
     const { tanggal, shift } = req.query;
 
     if (!outlet_id || !tanggal || !shift) {

@@ -501,8 +501,14 @@ class RequestService {
 
       const outInfo = await client.query('SELECT nama FROM outlets WHERE id = $1', [parent.outlet_id]);
       const outletName = outInfo.rows[0]?.nama || 'Cabang';
-      const pesan = `Tiket Pengiriman Susulan [${kode_tiket}]: Central Kitchen telah menjadwalkan pengiriman kekurangan barang untuk ${outletName}.`;
-      await NotificationService.notifyOutlet({ outlet_id: parent.outlet_id, product_id: null, tipe: 'TIKET', pesan }, client);
+
+      if (req_user.role === 'STAF_CABANG') {
+        const pesan = `Pengajuan Susulan [${kode_tiket}]: ${outletName} mengajukan pengiriman kekurangan bahan (${backorderItems.length} item). Mohon segera diproses Central Kitchen.`;
+        await NotificationService.notifyPusat({ product_id: null, tipe: 'TIKET', pesan }, client);
+      } else {
+        const pesan = `Tiket Pengiriman Susulan [${kode_tiket}]: Central Kitchen telah menjadwalkan pengiriman kekurangan barang untuk ${outletName}.`;
+        await NotificationService.notifyOutlet({ outlet_id: parent.outlet_id, product_id: null, tipe: 'TIKET', pesan }, client);
+      }
 
       await client.query('COMMIT');
       return newTicket;

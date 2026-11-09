@@ -174,8 +174,9 @@ exports.createBackorder = async (req, res) => {
     const id = parseInt(req.params.id);
     const isCK = req.user && req.user.role === 'ADMIN_GUDANG';
     const isPusatOrOwner = req.user && (req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER');
-    if (!isCK && !isPusatOrOwner) {
-      return res.status(403).json({ success: false, message: 'Hanya Admin Gudang (CK) atau Admin Pusat yang dapat membuat tiket pengiriman susulan' });
+    const isBranchStaff = req.user && req.user.role === 'STAF_CABANG';
+    if (!isCK && !isPusatOrOwner && !isBranchStaff) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Anda tidak memiliki wewenang membuat tiket susulan' });
     }
 
     const newTicket = await RequestService.createBackorderTicket(id, req.user);

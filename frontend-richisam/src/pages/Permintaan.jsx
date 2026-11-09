@@ -1128,17 +1128,21 @@ const Permintaan = () => {
                         {selectedTicket.ada_selisih && detailItems.some(it => (parseInt(it.qty_diminta, 10) - (parseInt(it.qty_diterima !== null && it.qty_diterima !== undefined ? it.qty_diterima : it.qty_dikirim, 10) || 0)) > 0) && (
                           <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
                             <div className="text-xs text-amber-900">
-                              <strong className="block text-amber-950 font-bold mb-0.5">Kirim Barang Kekurangan (Susulan)?</strong>
-                              Terdapat kekurangan/selisih barang pada penerimaan tiket ini. Anda dapat membuat tiket pengiriman susulan untuk sisa bahan.
+                              <strong className="block text-amber-950 font-bold mb-0.5">
+                                {isOutletStaff ? 'Minta Pengiriman Susulan (Backorder)?' : 'Kirim Barang Kekurangan (Susulan)?'}
+                              </strong>
+                              {isOutletStaff
+                                ? 'Terdapat kekurangan barang pada penerimaan fisik. Anda dapat mengajukan tiket susulan agar Central Kitchen segera menyiapkan sisa bahan.'
+                                : 'Terdapat kekurangan/selisih barang pada penerimaan tiket ini. Anda dapat membuat tiket pengiriman susulan untuk sisa bahan.'}
                             </div>
                             <button
                               type="button"
                               onClick={handleCreateBackorder}
                               disabled={submitting}
-                              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer flex items-center gap-1.5"
+                              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer flex items-center gap-1.5 active:scale-95 transition-all"
                             >
                               <Truck size={14} />
-                              <span>Buat Pengiriman Susulan</span>
+                              <span>{isOutletStaff ? 'Ajukan Pengiriman Susulan' : 'Buat Pengiriman Susulan'}</span>
                             </button>
                           </div>
                         )}

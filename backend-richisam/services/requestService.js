@@ -450,6 +450,10 @@ class RequestService {
       if (parentRes.rows.length === 0) throw new Error('Tiket utama tidak ditemukan');
       const parent = parentRes.rows[0];
 
+      if (req_user.role === 'STAF_CABANG' && Number(req_user.outlet_id) !== Number(parent.outlet_id)) {
+        throw new Error('Anda tidak memiliki akses untuk membuat susulan untuk cabang lain');
+      }
+
       const itemsRes = await client.query(
         `SELECT rti.*, p.nama as product_name 
          FROM restock_ticket_items rti 

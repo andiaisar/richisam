@@ -8,7 +8,7 @@ router.use(authenticate, enforceOutletScope);
 router.get('/', requestController.getRequests);
 router.post('/emergency', authorize('ADMIN_PUSAT', 'OWNER', 'STAF_CABANG', 'ADMIN_GUDANG'), requestController.emergencyRequest);
 router.post('/', authorize('STAF_CABANG', 'ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), requestController.createRequest);
-router.post('/:id/create-backorder', authorize('ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), requestController.createBackorder);
+router.post('/:id/create-backorder', authorize('ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG', 'STAF_CABANG'), requestController.createBackorder);
 router.put('/:id', requestController.updateStatus);
 
 module.exports = router;

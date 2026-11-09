@@ -277,15 +277,15 @@ const Transfer = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 text-white animate-fade-in">
+    <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       {/* Header and Tab Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight flex items-center gap-3">
             <Send className="w-7 h-7 text-[#F9610D]" />
             Transfer Antar Cabang
           </h1>
-          <p className="text-stone-400 mt-1 text-sm">
+          <p className="text-muted mt-1 text-sm">
             {isBranchStaff 
               ? 'Pantau stok lintas cabang dengan Radar & ajukan permohonan transfer untuk diotorisasi Admin' 
               : 'Otorisasi permohonan transfer cabang, mutasi stok fisik, & cetak Surat Jalan resmi'}
@@ -293,13 +293,13 @@ const Transfer = () => {
         </div>
 
         {/* Tab Toggle */}
-        <div className="flex items-center bg-[#16110F] p-1.5 rounded-2xl border border-[#2D241E]">
+        <div className="flex items-center bg-cream/70 p-1.5 rounded-2xl border border-line">
           <button
             onClick={() => setActiveTab('transfer')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               activeTab === 'transfer'
-                ? 'bg-[#F9610D] text-white shadow-md'
-                : 'text-stone-400 hover:text-white'
+                ? 'bg-[#F9610D] text-white shadow-xs'
+                : 'text-muted hover:text-ink'
             }`}
           >
             <Send className="w-3.5 h-3.5" />
@@ -309,14 +309,16 @@ const Transfer = () => {
             onClick={() => { setActiveTab('riwayat'); fetchTransfers(); }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
               activeTab === 'riwayat'
-                ? 'bg-[#F9610D] text-white shadow-md'
-                : 'text-stone-400 hover:text-white'
+                ? 'bg-[#F9610D] text-white shadow-xs'
+                : 'text-muted hover:text-ink'
             }`}
           >
             <History className="w-3.5 h-3.5" />
             <span>Riwayat & Otorisasi</span>
             {pendingCount > 0 && (
-              <span className="px-2 py-0.5 text-[10px] rounded-full bg-amber-500 text-black font-extrabold animate-pulse">
+              <span className={`px-2 py-0.5 text-[10px] rounded-full font-extrabold ${
+                activeTab === 'riwayat' ? 'bg-white text-[#F9610D] shadow-xs' : 'bg-amber-500 text-white'
+              }`}>
                 {pendingCount} Pending
               </span>
             )}
@@ -325,13 +327,13 @@ const Transfer = () => {
       </div>
 
       {activeTab === 'transfer' ? (
-        <div className="bg-[#1A1412] rounded-3xl shadow-xl border border-[#2D241E] p-6 sm:p-8 space-y-6">
+        <div className="bg-white rounded-3xl shadow-xs border border-line p-6 sm:p-8 space-y-6">
           
           {/* Kebijakan Otorisasi Alert Banner */}
-          <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-200 leading-relaxed">
-              <strong className="block text-amber-300 font-bold mb-0.5">
+          <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-900 leading-relaxed">
+              <strong className="block text-amber-950 font-bold mb-0.5">
                 Kebijakan Otorisasi Terpusat (Admin Control)
               </strong>
               {isBranchStaff ? (
@@ -352,14 +354,14 @@ const Transfer = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* From Outlet */}
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-stone-300 mb-2">
+                <label className="block text-xs sm:text-sm font-semibold text-ink mb-2">
                   Cabang Asal (Pengirim)
                 </label>
                 <select
                   value={fromOutlet}
                   onChange={(e) => setFromOutlet(e.target.value)}
                   disabled={user?.role === 'STAF_CABANG'}
-                  className="w-full px-4 py-3 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-sm focus:outline-none focus:border-[#F9610D] disabled:opacity-60"
+                  className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] disabled:opacity-60"
                 >
                   <option value="">Pilih Cabang Asal</option>
                   {outlets.map(o => (
@@ -370,13 +372,13 @@ const Transfer = () => {
 
               {/* To Outlet */}
               <div>
-                <label className="block text-xs sm:text-sm font-semibold text-stone-300 mb-2">
+                <label className="block text-xs sm:text-sm font-semibold text-ink mb-2">
                   Cabang Tujuan (Penerima)
                 </label>
                 <select
                   value={toOutlet}
                   onChange={(e) => setToOutlet(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-sm focus:outline-none focus:border-[#F9610D]"
+                  className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D]"
                 >
                   <option value="">Pilih Cabang Tujuan</option>
                   {outlets.map(o => (
@@ -386,10 +388,10 @@ const Transfer = () => {
               </div>
             </div>
 
-            <div className="border-t border-[#241C18] pt-6">
+            <div className="border-t border-line pt-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-white">Item Produk Yang Akan Ditransfer</h3>
-                <span className="text-xs text-stone-400">
+                <h3 className="text-sm font-bold text-ink">Item Produk Yang Akan Ditransfer</h3>
+                <span className="text-xs text-muted">
                   💡 Klik ikon <strong>Radar</strong> untuk cek stok cabang lain secara langsung
                 </span>
               </div>
@@ -402,7 +404,7 @@ const Transfer = () => {
                         <select
                           value={item.product_id}
                           onChange={(e) => handleItemChange(index, 'product_id', e.target.value)}
-                          className="w-full px-4 py-3 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-sm focus:outline-none focus:border-[#F9610D]"
+                          className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D]"
                         >
                           <option value="">Pilih Produk...</option>
                           {products.map(p => (
@@ -417,7 +419,7 @@ const Transfer = () => {
                           min="1"
                           value={item.qty}
                           onChange={(e) => handleItemChange(index, 'qty', e.target.value)}
-                          className="w-full px-4 py-3 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-sm focus:outline-none focus:border-[#F9610D]"
+                          className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D]"
                         />
                       </div>
                       
@@ -426,7 +428,7 @@ const Transfer = () => {
                           type="button"
                           onClick={() => handleOpenRadar(index, item.product_id)}
                           disabled={!item.product_id}
-                          className="text-[#F9610D] hover:bg-[#F9610D]/10 font-medium p-3 rounded-xl border border-[#F9610D]/30 transition-colors disabled:opacity-40 flex items-center gap-2 cursor-pointer"
+                          className="text-[#F9610D] bg-[#F9610D]/10 hover:bg-[#F9610D] hover:text-white font-bold p-3 rounded-xl border border-[#F9610D]/30 transition-all disabled:opacity-40 flex items-center gap-2 cursor-pointer shadow-xs"
                           title="Cek Ketersediaan Stok Lintas Cabang (Radar Stok)"
                         >
                           <Radar className="w-5 h-5" />
@@ -436,7 +438,7 @@ const Transfer = () => {
                           <button
                             type="button"
                             onClick={() => handleRemoveItem(index)}
-                            className="text-[#EC1F27] hover:bg-[#EC1F27]/10 font-medium p-3 bg-red-950/20 border border-red-500/20 rounded-xl cursor-pointer"
+                            className="text-rose-600 hover:bg-rose-600 hover:text-white font-medium p-3 bg-rose-50 border border-rose-200 rounded-xl transition-all cursor-pointer shadow-xs"
                             title="Hapus baris"
                           >
                             <Trash2 className="w-5 h-5" />
@@ -447,15 +449,15 @@ const Transfer = () => {
                     
                     {/* Visual Radar Popup/Container */}
                     {activeRadar?.index === index && (
-                      <div className="w-full mt-2 p-4 sm:p-5 bg-[#130E0C] border border-[#2D241E] rounded-2xl animate-fade-in relative overflow-hidden shadow-inner">
+                      <div className="w-full mt-2 p-4 sm:p-5 bg-cream/50 border border-line rounded-2xl animate-fade-in relative overflow-hidden shadow-xs">
                         <div className="flex justify-between items-center mb-3">
-                          <h4 className="font-bold text-sm text-white flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-ink flex items-center gap-2">
                             <Radar className="w-4 h-4 text-[#F9610D]" /> Radar Ketersediaan Stok Lintas Cabang
                           </h4>
                           <button
                             type="button"
                             onClick={() => setActiveRadar(null)}
-                            className="text-stone-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+                            className="text-muted hover:text-ink p-1 rounded-lg transition-colors cursor-pointer"
                           >
                             <XCircle className="w-5 h-5" />
                           </button>
@@ -474,26 +476,26 @@ const Transfer = () => {
                                   key={r.outlet_id}
                                   className={`p-3.5 rounded-xl border ${
                                     isSafe
-                                      ? 'bg-emerald-950/20 border-emerald-500/30'
-                                      : 'bg-red-950/20 border-red-500/30'
-                                  } flex justify-between items-center`}
+                                      ? 'bg-emerald-50 border-emerald-200'
+                                      : 'bg-rose-50 border-rose-200'
+                                  } flex justify-between items-center shadow-xs`}
                                 >
                                   <div>
-                                    <div className="font-bold text-sm text-white">{r.outlet_name}</div>
-                                    <div className="text-xs text-stone-400">Batas Aman: {r.min_qty}</div>
+                                    <div className="font-bold text-sm text-ink">{r.outlet_name}</div>
+                                    <div className="text-xs text-muted">Batas Aman: {r.min_qty}</div>
                                   </div>
                                   <div className="text-right">
-                                    <div className={`font-black text-lg ${isSafe ? 'text-emerald-400' : 'text-[#EC1F27]'}`}>
+                                    <div className={`font-black text-lg ${isSafe ? 'text-emerald-700' : 'text-rose-700'}`}>
                                       {r.qty_current}
                                     </div>
-                                    <div className={`text-[10px] uppercase font-bold tracking-wider ${isSafe ? 'text-emerald-400' : 'text-[#EC1F27]'}`}>
+                                    <div className={`text-[10px] uppercase font-bold tracking-wider ${isSafe ? 'text-emerald-700' : 'text-rose-700'}`}>
                                       {isSafe ? 'Aman' : 'Kritis'}
                                     </div>
                                   </div>
                                 </div>
                               );
                             }) : (
-                              <div className="col-span-full text-center text-xs text-stone-400 py-3">
+                              <div className="col-span-full text-center text-xs text-muted py-3">
                                 Tidak ada data stok untuk produk ini.
                               </div>
                             )}
@@ -516,7 +518,7 @@ const Transfer = () => {
 
             {/* Catatan Pengiriman */}
             <div>
-              <label className="block text-xs sm:text-sm font-semibold text-stone-300 mb-2">
+              <label className="block text-xs sm:text-sm font-semibold text-ink mb-2">
                 Catatan / Alasan Transfer
               </label>
               <input
@@ -524,17 +526,17 @@ const Transfer = () => {
                 placeholder="Contoh: Stok menipis karena lonjakan order weekend, driver ojol tiba jam 11..."
                 value={catatan}
                 onChange={(e) => setCatatan(e.target.value)}
-                className="w-full px-4 py-3 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-sm focus:outline-none focus:border-[#F9610D] placeholder:text-stone-600"
+                className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] placeholder:text-muted"
               />
             </div>
 
             {/* Otorisasi Transfer dengan PIN/Password */}
-            <div className="border-t border-[#241C18] pt-6 bg-red-950/20 -mx-6 sm:-mx-8 px-6 sm:px-8 pb-6 rounded-b-3xl border-b border-red-900/30">
+            <div className="border-t border-line pt-6 bg-cream/40 -mx-6 sm:-mx-8 px-6 sm:px-8 pb-6 rounded-b-3xl">
               <div className="flex items-start gap-3 mb-4 mt-2">
-                <AlertCircle className="w-5 h-5 text-[#EC1F27] shrink-0 mt-0.5" />
-                <div className="text-xs sm:text-sm text-red-200">
-                  <p className="font-bold mb-1 text-white">Konfirmasi Keamanan & Identitas Pengirim</p>
-                  <p className="text-stone-300">
+                <AlertCircle className="w-5 h-5 text-[#F9610D] shrink-0 mt-0.5" />
+                <div className="text-xs sm:text-sm">
+                  <p className="font-bold mb-1 text-ink">Konfirmasi Keamanan & Identitas Pengirim</p>
+                  <p className="text-muted">
                     {isBranchStaff 
                       ? 'Masukkan PIN / Password akun Anda untuk menandatangani pengajuan transfer resmi:' 
                       : 'Masukkan PIN / Password akun Anda untuk memvalidasi pemindahan stok & penerbitan Surat Jalan:'}
@@ -548,7 +550,7 @@ const Transfer = () => {
                   placeholder="Masukkan PIN / Password Anda"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-[#130E0C] border border-red-500/40 text-white rounded-xl focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 text-sm placeholder:text-stone-600"
+                  className="w-full px-4 py-3 bg-white border border-line text-ink rounded-xl focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] text-sm placeholder:text-muted"
                 />
               </div>
             </div>
@@ -557,7 +559,7 @@ const Transfer = () => {
               <button
                 type="submit"
                 disabled={submitting}
-                className="px-8 py-3.5 bg-gradient-to-r from-[#F9610D] to-[#E25304] hover:from-[#FA6E20] hover:to-[#EB5B09] text-white font-bold rounded-xl shadow-lg shadow-[#F9610D]/25 transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                className="px-8 py-3.5 bg-[#F9610D] hover:bg-[#E0560C] text-white font-bold rounded-xl shadow-md transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
                 {submitting ? (
                   <RefreshCw className="w-5 h-5 animate-spin" />
@@ -575,14 +577,14 @@ const Transfer = () => {
         </div>
       ) : (
         /* Tab Riwayat Transfer & Otorisasi Admin */
-        <div className="bg-[#1A1412] rounded-3xl shadow-xl border border-[#2D241E] overflow-hidden">
-          <div className="p-6 border-b border-[#2D241E] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="bg-white rounded-3xl shadow-xs border border-line overflow-hidden">
+          <div className="p-6 border-b border-line flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-cream/30">
             <div>
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <h3 className="text-base font-bold text-ink flex items-center gap-2">
                 <FileText className="w-5 h-5 text-[#F9610D]" />
                 Riwayat Pengajuan & Arsip Surat Jalan
               </h3>
-              <p className="text-xs text-stone-400 mt-0.5">
+              <p className="text-xs text-muted mt-0.5">
                 {canApprove 
                   ? 'Review pengajuan transfer yang masuk dari cabang, setujui/tolak, dan cetak Surat Jalan' 
                   : 'Pantau status permohonan transfer cabang Anda'}
@@ -597,8 +599,8 @@ const Transfer = () => {
                   onClick={() => { setStatusFilter(st); setCurrentHistoryPage(1); }}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     statusFilter === st
-                      ? 'bg-[#F9610D] text-white shadow-sm'
-                      : 'bg-[#130E0C] text-stone-400 hover:text-white border border-[#2D241E]'
+                      ? 'bg-[#F9610D] text-white shadow-xs'
+                      : 'bg-white hover:bg-cream text-muted hover:text-ink border border-line'
                   }`}
                 >
                   {st === 'ALL' ? 'Semua' : st === 'PENDING' ? 'Pending' : st === 'APPROVED' ? 'Disetujui' : 'Ditolak'}
@@ -606,7 +608,7 @@ const Transfer = () => {
               ))}
               <button
                 onClick={fetchTransfers}
-                className="p-2 text-stone-400 hover:text-white bg-[#130E0C] border border-[#2D241E] rounded-xl transition-all cursor-pointer ml-1"
+                className="p-2 text-muted hover:text-ink bg-white hover:bg-cream border border-line rounded-xl transition-all cursor-pointer ml-1"
                 title="Refresh Riwayat"
               >
                 <RefreshCw className={`w-4 h-4 ${loadingTransfers ? 'animate-spin' : ''}`} />
@@ -616,13 +618,13 @@ const Transfer = () => {
 
           <div className="overflow-x-auto">
             {loadingTransfers ? (
-              <div className="py-16 text-center text-stone-400">
+              <div className="py-16 text-center text-muted">
                 <RefreshCw className="w-8 h-8 animate-spin mx-auto text-[#F9610D] mb-2" />
                 Memuat riwayat transfer...
               </div>
             ) : filteredTransfers.length > 0 ? (
               <table className="w-full text-left text-sm whitespace-nowrap">
-                <thead className="bg-[#140F0D] text-stone-400 font-semibold text-xs uppercase tracking-wider border-b border-[#2D241E]">
+                <thead className="bg-cream/60 text-muted font-bold text-xs uppercase tracking-wider border-b border-line">
                   <tr>
                     <th className="px-6 py-4">No. Surat Jalan / Kode</th>
                     <th className="px-6 py-4">Tanggal & Jam</th>
@@ -634,7 +636,7 @@ const Transfer = () => {
                     <th className="px-6 py-4 text-right">Aksi & Otorisasi</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#241B17]">
+                <tbody className="divide-y divide-line">
                   {filteredTransfers.slice((currentHistoryPage - 1) * pageSize, currentHistoryPage * pageSize).map((trf, idx) => {
                     const status = trf.status || 'APPROVED';
                     const isPending = status === 'PENDING';
@@ -642,11 +644,11 @@ const Transfer = () => {
                     const isRejected = status === 'REJECTED';
 
                     return (
-                      <tr key={idx} className="hover:bg-[#1E1714] transition-colors">
-                        <td className="px-6 py-4 font-mono font-bold text-[#FFCE00]">
+                      <tr key={idx} className="hover:bg-cream/40 transition-colors">
+                        <td className="px-6 py-4 font-mono font-bold text-ink">
                           {trf.kode_transfer}
                         </td>
-                        <td className="px-6 py-4 text-stone-300 text-xs">
+                        <td className="px-6 py-4 text-muted text-xs">
                           {new Date(trf.created_at).toLocaleDateString('id-ID', {
                             day: 'numeric',
                             month: 'short',
@@ -655,36 +657,36 @@ const Transfer = () => {
                             minute: '2-digit'
                           })}
                         </td>
-                        <td className="px-6 py-4 font-medium text-white">
+                        <td className="px-6 py-4 font-medium text-ink">
                           {trf.from_outlet_name}
                         </td>
-                        <td className="px-6 py-4 font-medium text-emerald-400">
+                        <td className="px-6 py-4 font-medium text-emerald-700">
                           {trf.to_outlet_name}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-[#140F0D] border border-[#2D241E] text-stone-200">
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-cream text-ink border border-line">
                             {trf.items?.length || 1} Bahan
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           {isPending ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              <Clock className="w-3 h-3" /> Menunggu Admin
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs">
+                              <Clock className="w-3.5 h-3.5 text-amber-700" /> Menunggu Admin
                             </span>
                           ) : isApproved ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              <CheckCircle2 className="w-3 h-3" /> Disetujui
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" /> Disetujui
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/30" title={trf.rejection_reason}>
-                              <XCircle className="w-3 h-3" /> Ditolak
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-xs" title={trf.rejection_reason}>
+                              <XCircle className="w-3.5 h-3.5 text-rose-700" /> Ditolak
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-xs text-stone-400">
-                          <div>{trf.creator_name || '-'}</div>
+                        <td className="px-6 py-4 text-xs text-muted">
+                          <div className="font-semibold text-ink">{trf.creator_name || '-'}</div>
                           {trf.approver_name && (
-                            <div className="text-[10px] text-stone-500 font-mono mt-0.5">Acc: {trf.approver_name}</div>
+                            <div className="text-[11px] text-muted font-mono mt-0.5">Acc: {trf.approver_name}</div>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -693,9 +695,9 @@ const Transfer = () => {
                               type="button"
                               onClick={() => setDetailModal({ isOpen: true, transfer: trf })}
                               title="Lihat Rincian Barang"
-                              className="px-2.5 py-1.5 bg-[#241B17] hover:bg-[#2D241E] text-stone-300 hover:text-white border border-[#3E3028] rounded-xl text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                              className="px-2.5 py-1.5 bg-white hover:bg-cream text-ink border border-line rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 cursor-pointer transition-all"
                             >
-                              <Eye className="w-3.5 h-3.5" />
+                              <Eye className="w-3.5 h-3.5 text-muted" />
                               <span className="hidden sm:inline">Rincian</span>
                             </button>
 
@@ -706,7 +708,7 @@ const Transfer = () => {
                                     type="button"
                                     onClick={() => handleOpenApprove(trf)}
                                     disabled={actionLoading}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
                                   >
                                     <Check className="w-3.5 h-3.5" />
                                     <span>Setujui</span>
@@ -715,26 +717,26 @@ const Transfer = () => {
                                     type="button"
                                     onClick={() => setRejectModal({ isOpen: true, kode_transfer: trf.kode_transfer, reason: '' })}
                                     disabled={actionLoading}
-                                    className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
                                   >
                                     <X className="w-3.5 h-3.5" />
                                     <span>Tolak</span>
                                   </button>
                                 </>
                               ) : (
-                                <span className="text-xs text-amber-400/80 italic">Menunggu Review Pusat</span>
+                                <span className="text-xs text-amber-700 font-semibold italic">Menunggu Review Pusat</span>
                               )
                             ) : isApproved ? (
                               <button
                                 type="button"
                                 onClick={() => handlePrintTransfer(trf)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
                               >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>Cetak Surat Jalan</span>
                               </button>
                             ) : (
-                              <span className="text-xs text-stone-500 italic block">
+                              <span className="text-xs text-muted italic block">
                                 {trf.rejection_reason || 'Ditolak Admin'}
                               </span>
                             )}
@@ -746,8 +748,8 @@ const Transfer = () => {
                 </tbody>
               </table>
             ) : (
-              <div className="py-16 text-center text-stone-500">
-                <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <div className="py-16 text-center text-muted">
+                <FileText className="w-10 h-10 mx-auto mb-2 opacity-30 text-muted" />
                 Tidak ada data transfer pada kategori ini.
               </div>
             )}
@@ -758,7 +760,6 @@ const Transfer = () => {
             totalCount={filteredTransfers.length}
             pageSize={pageSize}
             onPageChange={setCurrentHistoryPage}
-            variant="dark"
           />
         </div>
       )}
@@ -769,68 +770,68 @@ const Transfer = () => {
         const isStockShortage = trf.items?.some(item => (item.from_stock ?? 0) < item.qty);
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-[#2D241E] pb-3">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white border border-line rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4 text-ink">
+              <div className="flex items-center justify-between border-b border-line pb-3">
                 <div>
-                  <h3 className="font-bold text-white text-base flex items-center gap-2">
-                    <CheckCircle2 className="text-emerald-500 w-5 h-5" />
+                  <h3 className="font-bold text-ink text-base flex items-center gap-2">
+                    <CheckCircle2 className="text-emerald-600 w-5 h-5" />
                     Otorisasi Transfer Antar-Cabang
                   </h3>
-                  <div className="text-xs text-[#FFCE00] font-mono mt-0.5">{trf.kode_transfer}</div>
+                  <div className="text-xs text-[#F9610D] font-mono font-bold mt-0.5">{trf.kode_transfer}</div>
                 </div>
                 <button 
                   onClick={() => setApproveModal({ isOpen: false, transfer: null })}
-                  className="text-stone-400 hover:text-white p-1 rounded-lg"
+                  className="text-muted hover:text-ink p-1 rounded-lg hover:bg-cream"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               {/* Rute & Pemohon */}
-              <div className="grid grid-cols-2 gap-2 p-3 bg-[#130E0C] border border-[#241B17] rounded-2xl text-xs">
+              <div className="grid grid-cols-2 gap-2 p-3 bg-cream/50 border border-line rounded-2xl text-xs">
                 <div>
-                  <div className="text-stone-500 text-[11px]">Cabang Pengirim (Asal)</div>
-                  <div className="text-white font-bold">{trf.from_outlet_name}</div>
+                  <div className="text-muted text-[11px]">Cabang Pengirim (Asal)</div>
+                  <div className="text-ink font-bold">{trf.from_outlet_name}</div>
                 </div>
                 <div>
-                  <div className="text-stone-500 text-[11px]">Cabang Penerima (Tujuan)</div>
-                  <div className="text-emerald-400 font-bold">{trf.to_outlet_name}</div>
+                  <div className="text-muted text-[11px]">Cabang Penerima (Tujuan)</div>
+                  <div className="text-emerald-700 font-bold">{trf.to_outlet_name}</div>
                 </div>
                 <div className="mt-1">
-                  <div className="text-stone-500 text-[11px]">Diajukan Oleh</div>
-                  <div className="text-stone-300">{trf.creator_name || '-'}</div>
+                  <div className="text-muted text-[11px]">Diajukan Oleh</div>
+                  <div className="text-ink font-medium">{trf.creator_name || '-'}</div>
                 </div>
                 <div className="mt-1">
-                  <div className="text-stone-500 text-[11px]">Catatan</div>
-                  <div className="text-stone-300 italic">{trf.catatan || '-'}</div>
+                  <div className="text-muted text-[11px]">Catatan</div>
+                  <div className="text-ink italic">{trf.catatan || '-'}</div>
                 </div>
               </div>
 
               {/* Tabel Item & Ketersediaan Stok */}
               <div>
-                <div className="text-xs font-semibold text-stone-300 mb-2">Rincian Barang & Ketersediaan Stok:</div>
-                <div className="max-h-52 overflow-y-auto rounded-xl border border-[#2D241E] divide-y divide-[#241B17]">
+                <div className="text-xs font-semibold text-ink mb-2">Rincian Barang & Ketersediaan Stok:</div>
+                <div className="max-h-52 overflow-y-auto rounded-2xl border border-line divide-y divide-line">
                   {trf.items?.map((item, i) => {
                     const readyStock = item.from_stock ?? 0;
                     const isEnough = readyStock >= item.qty;
                     return (
-                      <div key={i} className="p-3 bg-[#140F0D] flex items-center justify-between text-xs">
+                      <div key={i} className="p-3 bg-white flex items-center justify-between text-xs">
                         <div>
-                          <div className="font-bold text-white">{item.product_name}</div>
-                          <div className="text-stone-500 text-[11px] font-mono">{item.product_kode}</div>
+                          <div className="font-bold text-ink">{item.product_name}</div>
+                          <div className="text-muted text-[11px] font-mono">{item.product_kode}</div>
                         </div>
                         <div className="text-right">
-                          <div className="font-bold text-[#FFCE00]">
+                          <div className="font-bold text-[#F9610D]">
                             Diminta: {item.qty} {item.product_satuan}
                           </div>
                           <div className="text-[11px] mt-0.5">
                             {isEnough ? (
-                              <span className="text-emerald-400 font-medium">
+                              <span className="text-emerald-700 font-bold">
                                 ✓ Stok Ready: {readyStock} {item.product_satuan}
                               </span>
                             ) : (
-                              <span className="text-red-400 font-bold">
+                              <span className="text-rose-700 font-bold">
                                 ⚠️ Stok Asal Kurang ({readyStock} dari {item.qty})
                               </span>
                             )}
@@ -844,19 +845,23 @@ const Transfer = () => {
 
               {/* Status Alert */}
               {isStockShortage ? (
-                <div className="p-3 rounded-2xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-bold text-red-200">Stok Cabang Asal Tidak Mencukupi!</div>
-                    <div>Stok di <strong>{trf.from_outlet_name}</strong> tidak memenuhi jumlah yang diminta. Anda dapat menolak permintaan ini agar cabang memesan ke Central Kitchen.</div>
+                    <div className="font-bold text-rose-950">Stok Cabang Asal Tidak Mencukupi!</div>
+                    <div className="text-rose-800 mt-0.5 leading-relaxed">
+                      Stok di <strong>{trf.from_outlet_name}</strong> tidak memenuhi jumlah yang diminta. Anda dapat menolak permintaan ini agar cabang memesan langsung ke Central Kitchen.
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
-                    <div className="font-bold text-emerald-200">Stok Cabang Asal Mencukupi</div>
-                    <div>Menyetujui akan langsung memotong stok di <strong>{trf.from_outlet_name}</strong> dan menambahkannya ke <strong>{trf.to_outlet_name}</strong>, serta menerbitkan Surat Jalan resmi.</div>
+                    <div className="font-bold text-emerald-950">Stok Cabang Asal Mencukupi</div>
+                    <div className="text-emerald-800 mt-0.5 leading-relaxed">
+                      Menyetujui akan langsung memotong stok di <strong>{trf.from_outlet_name}</strong> dan menambahkannya ke <strong>{trf.to_outlet_name}</strong>, serta mengaktifkan Cetak Surat Jalan resmi.
+                    </div>
                   </div>
                 </div>
               )}
@@ -870,7 +875,7 @@ const Transfer = () => {
                     setApproveModal({ isOpen: false, transfer: null });
                     setRejectModal({ isOpen: true, kode_transfer: kode, reason: 'Stok cabang asal tidak mencukupi untuk memenuhi transfer.' });
                   }}
-                  className="px-3 py-2 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
                   Tolak Pengajuan
                 </button>
@@ -879,7 +884,7 @@ const Transfer = () => {
                   <button
                     type="button"
                     onClick={() => setApproveModal({ isOpen: false, transfer: null })}
-                    className="px-4 py-2 text-xs font-semibold text-stone-400 hover:text-white cursor-pointer"
+                    className="px-4 py-2 text-xs font-semibold text-muted hover:text-ink cursor-pointer"
                   >
                     Batal
                   </button>
@@ -887,7 +892,7 @@ const Transfer = () => {
                     type="button"
                     disabled={actionLoading || isStockShortage}
                     onClick={handleExecuteApprove}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-800 disabled:text-stone-500 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
                   >
                     {actionLoading ? 'Memproses...' : (
                       <>
@@ -910,90 +915,90 @@ const Transfer = () => {
         const isApproved = (trf.status || 'APPROVED') === 'APPROVED';
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-            <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4">
-              <div className="flex items-center justify-between border-b border-[#2D241E] pb-3">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-white border border-line rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4 text-ink">
+              <div className="flex items-center justify-between border-b border-line pb-3">
                 <div>
-                  <h3 className="font-bold text-white text-base flex items-center gap-2">
-                    <FileText className="text-[#FFCE00] w-5 h-5" />
+                  <h3 className="font-bold text-ink text-base flex items-center gap-2">
+                    <FileText className="text-[#F9610D] w-5 h-5" />
                     Rincian Tiket Transfer Antar-Cabang
                   </h3>
-                  <div className="text-xs text-[#FFCE00] font-mono mt-0.5">{trf.kode_transfer}</div>
+                  <div className="text-xs text-[#F9610D] font-mono font-bold mt-0.5">{trf.kode_transfer}</div>
                 </div>
                 <button 
                   onClick={() => setDetailModal({ isOpen: false, transfer: null })}
-                  className="text-stone-400 hover:text-white p-1 rounded-lg"
+                  className="text-muted hover:text-ink p-1 rounded-lg hover:bg-cream"
                 >
                   <X size={18} />
                 </button>
               </div>
 
               {/* Status Badge & Header Info */}
-              <div className="flex items-center justify-between p-3 bg-[#130E0C] border border-[#241B17] rounded-2xl text-xs">
+              <div className="flex items-center justify-between p-3.5 bg-cream/50 border border-line rounded-2xl text-xs">
                 <div>
-                  <div className="text-stone-500 text-[11px]">Waktu Pengajuan</div>
-                  <div className="text-stone-300">
+                  <div className="text-muted text-[11px]">Waktu Pengajuan</div>
+                  <div className="text-ink font-semibold">
                     {new Date(trf.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-stone-500 text-[11px] mb-0.5">Status Tiket</div>
+                  <div className="text-muted text-[11px] mb-0.5">Status Tiket</div>
                   {isPending ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      <Clock className="w-3 h-3" /> Menunggu Admin
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                      <Clock className="w-3.5 h-3.5 text-amber-700" /> Menunggu Admin
                     </span>
                   ) : isApproved ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      <CheckCircle2 className="w-3 h-3" /> Disetujui
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" /> Disetujui
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/30">
-                      <XCircle className="w-3 h-3" /> Ditolak
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                      <XCircle className="w-3.5 h-3.5 text-rose-700" /> Ditolak
                     </span>
                   )}
                 </div>
               </div>
 
               {/* Rute & Pemohon */}
-              <div className="grid grid-cols-2 gap-2 p-3 bg-[#130E0C] border border-[#241B17] rounded-2xl text-xs">
+              <div className="grid grid-cols-2 gap-2 p-3 bg-cream/50 border border-line rounded-2xl text-xs">
                 <div>
-                  <div className="text-stone-500 text-[11px]">Cabang Pengirim (Asal)</div>
-                  <div className="text-white font-bold">{trf.from_outlet_name}</div>
+                  <div className="text-muted text-[11px]">Cabang Pengirim (Asal)</div>
+                  <div className="text-ink font-bold">{trf.from_outlet_name}</div>
                 </div>
                 <div>
-                  <div className="text-stone-500 text-[11px]">Cabang Penerima (Tujuan)</div>
-                  <div className="text-emerald-400 font-bold">{trf.to_outlet_name}</div>
+                  <div className="text-muted text-[11px]">Cabang Penerima (Tujuan)</div>
+                  <div className="text-emerald-700 font-bold">{trf.to_outlet_name}</div>
                 </div>
                 <div className="mt-1">
-                  <div className="text-stone-500 text-[11px]">Diajukan Oleh</div>
-                  <div className="text-stone-300">{trf.creator_name || '-'}</div>
+                  <div className="text-muted text-[11px]">Diajukan Oleh</div>
+                  <div className="text-ink font-medium">{trf.creator_name || '-'}</div>
                 </div>
                 <div className="mt-1">
-                  <div className="text-stone-500 text-[11px]">Disetujui Oleh</div>
-                  <div className="text-stone-300">{trf.approver_name ? `${trf.approver_name}` : '-'}</div>
+                  <div className="text-muted text-[11px]">Disetujui Oleh</div>
+                  <div className="text-ink font-medium">{trf.approver_name ? `${trf.approver_name}` : '-'}</div>
                 </div>
               </div>
 
               {/* Catatan / Alasan Penolakan */}
               {trf.rejection_reason && (
-                <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-2xl text-xs text-red-300">
-                  <div className="font-bold text-red-200 mb-0.5">Alasan Penolakan:</div>
-                  <div>{trf.rejection_reason}</div>
+                <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-2xl text-xs text-rose-900">
+                  <div className="font-bold text-rose-950 mb-0.5">Alasan Penolakan:</div>
+                  <div className="text-rose-800">{trf.rejection_reason}</div>
                 </div>
               )}
 
               {/* Tabel Item */}
               <div>
-                <div className="text-xs font-semibold text-stone-300 mb-2">Daftar Bahan / Produk:</div>
-                <div className="max-h-52 overflow-y-auto rounded-xl border border-[#2D241E] divide-y divide-[#241B17]">
+                <div className="text-xs font-semibold text-ink mb-2">Daftar Bahan / Produk:</div>
+                <div className="max-h-52 overflow-y-auto rounded-2xl border border-line divide-y divide-line">
                   {trf.items?.map((item, i) => (
-                    <div key={i} className="p-3 bg-[#140F0D] flex items-center justify-between text-xs">
+                    <div key={i} className="p-3 bg-white flex items-center justify-between text-xs">
                       <div>
-                        <div className="font-bold text-white">{item.product_name}</div>
-                        <div className="text-stone-500 text-[11px] font-mono">{item.product_kode}</div>
+                        <div className="font-bold text-ink">{item.product_name}</div>
+                        <div className="text-muted text-[11px] font-mono">{item.product_kode}</div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-[#FFCE00]">
+                        <div className="font-bold text-[#F9610D]">
                           {item.qty} {item.product_satuan}
                         </div>
                       </div>
@@ -1012,7 +1017,7 @@ const Transfer = () => {
                         setDetailModal({ isOpen: false, transfer: null });
                         handlePrintTransfer(trf);
                       }}
-                      className="px-3 py-2 bg-[#F9610D]/20 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-2 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
                       <Printer size={15} />
                       <span>Cetak Surat Jalan</span>
@@ -1024,7 +1029,7 @@ const Transfer = () => {
                   <button
                     type="button"
                     onClick={() => setDetailModal({ isOpen: false, transfer: null })}
-                    className="px-4 py-2 bg-[#2D241E] hover:bg-[#3D3028] text-white text-xs font-semibold rounded-xl cursor-pointer"
+                    className="px-4 py-2 bg-cream hover:bg-sand border border-line text-ink text-xs font-semibold rounded-xl cursor-pointer"
                   >
                     Tutup
                   </button>
@@ -1051,21 +1056,21 @@ const Transfer = () => {
 
       {/* Modal Dialog Penolakan Transfer */}
       {rejectModal.isOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-white text-base flex items-center gap-2">
-                <AlertTriangle className="text-red-500 w-5 h-5" />
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-line rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl space-y-4 text-ink">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <h3 className="font-bold text-ink text-base flex items-center gap-2">
+                <AlertTriangle className="text-rose-600 w-5 h-5" />
                 Tolak Pengajuan Transfer
               </h3>
               <button 
                 onClick={() => setRejectModal({ isOpen: false, kode_transfer: '', reason: '' })}
-                className="text-stone-400 hover:text-white p-1 rounded-lg"
+                className="text-muted hover:text-ink p-1 rounded-lg hover:bg-cream"
               >
                 <X size={18} />
               </button>
             </div>
-            <p className="text-xs text-stone-400 mb-4">
+            <p className="text-xs text-muted">
               Pengajuan <strong>{rejectModal.kode_transfer}</strong> akan dibatalkan dan stok kedua cabang tidak akan berpindah. Silakan masukkan alasan penolakan:
             </p>
             <form onSubmit={handleRejectConfirm} className="space-y-4">
@@ -1075,20 +1080,20 @@ const Transfer = () => {
                 placeholder="Contoh: Stok cabang asal tidak mencukupi untuk jam operasional malam, silakan ambil dari Central Kitchen..."
                 value={rejectModal.reason}
                 onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-[#130E0C] border border-[#2D241E] rounded-xl text-white text-xs focus:outline-none focus:border-red-500 placeholder:text-stone-600"
+                className="w-full px-3.5 py-2.5 bg-white border border-line rounded-xl text-ink text-xs focus:outline-none focus:border-rose-500 focus:ring-1 focus:ring-rose-500 placeholder:text-muted"
               />
               <div className="flex justify-end gap-2.5 pt-2">
                 <button
                   type="button"
                   onClick={() => setRejectModal({ isOpen: false, kode_transfer: '', reason: '' })}
-                  className="px-4 py-2 text-xs font-semibold text-stone-400 hover:text-white"
+                  className="px-4 py-2 text-xs font-semibold text-muted hover:text-ink cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {actionLoading ? 'Memproses...' : 'Konfirmasi Tolak Transfer'}
                 </button>

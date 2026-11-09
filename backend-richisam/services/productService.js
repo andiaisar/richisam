@@ -5,25 +5,30 @@ class ProductService {
     const pageNum = parseInt(page) || 1;
     const limitNum = parseInt(limit) || 1000;
     const offset = (pageNum - 1) * limitNum;
-    let query = 'SELECT * FROM products WHERE 1=1';
+    let query = `
+      SELECT p.*, COALESCE(s.qty_current, 0) AS stok_pusat
+      FROM products p
+      LEFT JOIN stocks s ON p.id = s.product_id AND s.outlet_id = 1
+      WHERE 1=1
+    `;
     const params = [];
     let paramIndex = 1;
 
     if (status === 'active') {
-      query += ' AND is_active = true';
+      query += ' AND p.is_active = true';
     } else if (status === 'inactive') {
-      query += ' AND is_active = false';
+      query += ' AND p.is_active = false';
     } else if (status === 'all') {
       // do not filter by is_active
     }
 
     if (search) {
-      query += ` AND (nama ILIKE $${paramIndex} OR kode ILIKE $${paramIndex})`;
+      query += ` AND (p.nama ILIKE $${paramIndex} OR p.kode ILIKE $${paramIndex})`;
       params.push(`%${search}%`);
       paramIndex++;
     }
     if (kategori) {
-      query += ` AND kategori ILIKE $${paramIndex}`;
+      query += ` AND p.kategori ILIKE $${paramIndex}`;
       params.push(`%${kategori}%`);
       paramIndex++;
     }
@@ -31,7 +36,7 @@ class ProductService {
     const countRes = await pool.query(`SELECT COUNT(*) FROM (${query}) AS t`, params);
     const total = parseInt(countRes.rows[0].count);
 
-    query += ` ORDER BY urutan ASC, created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    query += ` ORDER BY p.urutan ASC, p.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
     params.push(limitNum, offset);
 
     const result = await pool.query(query, params);
@@ -39,7 +44,8 @@ class ProductService {
       ...r,
       harga: Math.round(Number(r.harga || 0)),
       urutan: parseInt(r.urutan || 0, 10),
-      konversi: parseInt(r.konversi || 1, 10)
+      konversi: parseInt(r.konversi || 1, 10),
+      stok_pusat: parseFloat(r.stok_pusat || 0)
     }));
     return { data: formattedData, meta: { total, page: pageNum, limit: limitNum } };
   }

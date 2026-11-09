@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
-import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X, AlertTriangle, Check, Printer } from 'lucide-react';
+import { PackagePlus, Search, Plus, Filter, RefreshCw, FileText, X, AlertTriangle, Check, Printer, Trash2, Layers, AlertCircle, Clock, Truck } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import SuratJalanModal from '../components/SuratJalanModal';
@@ -29,8 +29,14 @@ const Permintaan = () => {
   const [isSuratJalanOpen, setIsSuratJalanOpen] = useState(false);
   const [selectedSuratJalan, setSelectedSuratJalan] = useState(null);
 
-  // Form states
-  const [formData, setFormData] = useState({ outlet_id: '', product_id: '', qty_requested: '' });
+  // Form states - Multi item order
+  const [formData, setFormData] = useState({
+    outlet_id: '',
+    items: [{ product_id: '', qty_requested: '' }]
+  });
+
+  // Detail Modal item edit state
+  const [detailItems, setDetailItems] = useState([]);
   const [updateData, setUpdateData] = useState({ status: '', qty_approved: '' });
   
   // Emergency Form State
@@ -56,14 +62,16 @@ const Permintaan = () => {
   const fetchProducts = async () => {
     try {
       const res = await axiosClient.get('/products?limit=1000');
-      setProducts(res?.data?.data || res?.data || []);
+      const list = res?.data?.data || res?.data || [];
+      setProducts(Array.isArray(list) ? list : []);
     } catch (e) {}
   };
 
   const fetchOutlets = async () => {
     try {
       const res = await axiosClient.get('/outlets');
-      setOutlets(res?.data?.data || res?.data || []);
+      const list = res?.data?.data || res?.data || [];
+      setOutlets(Array.isArray(list) ? list : []);
     } catch (e) {}
   };
 
@@ -79,15 +87,18 @@ const Permintaan = () => {
 
   useEffect(() => {
     if (location.state?.openAddModal) {
+      const branchOutlets = outlets.filter(o => Number(o.id) !== 1);
       setFormData({
-        outlet_id: location.state.outlet_id ? String(location.state.outlet_id) : '',
-        product_id: location.state.product_id ? String(location.state.product_id) : '',
-        qty_requested: location.state.qty_needed ? String(location.state.qty_needed) : ''
+        outlet_id: location.state.outlet_id ? String(location.state.outlet_id) : (branchOutlets[0]?.id ? String(branchOutlets[0].id) : ''),
+        items: [{
+          product_id: location.state.product_id ? String(location.state.product_id) : '',
+          qty_requested: location.state.qty_needed ? String(location.state.qty_needed) : ''
+        }]
       });
       setIsModalOpen(true);
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, outlets]);
 
   const openEmergencyModal = () => {
     setEmergencyData({ outlet_id: '', product_id: '', qty: '', password: '' });
@@ -120,18 +131,70 @@ const Permintaan = () => {
     }
   };
 
+  const isCK = user?.role === 'ADMIN_GUDANG';
+  const canManageShipment = user?.role === 'ADMIN_PUSAT' || user?.role === 'ADMIN_GUDANG' || user?.role === 'OWNER';
+  const isOutletStaff = !canManageShipment;
+
   const openAddModal = () => {
     const branchOutlets = outlets.filter(o => Number(o.id) !== 1);
     setFormData({
-      outlet_id: branchOutlets[0]?.id ? String(branchOutlets[0].id) : '',
-      product_id: '',
-      qty_requested: ''
+      outlet_id: isOutletStaff ? String(user?.outlet_id || '') : (branchOutlets[0]?.id ? String(branchOutlets[0].id) : ''),
+      items: [{ product_id: '', qty_requested: '' }]
     });
     setIsModalOpen(true);
   };
 
+  const handleAddItemRow = () => {
+    setFormData(prev => ({
+      ...prev,
+      items: [...prev.items, { product_id: '', qty_requested: '' }]
+    }));
+  };
+
+  const handleRemoveItemRow = (idx) => {
+    if (formData.items.length <= 1) {
+      return toast.error('Minimal harus ada 1 baris bahan');
+    }
+    setFormData(prev => ({
+      ...prev,
+      items: prev.items.filter((_, i) => i !== idx)
+    }));
+  };
+
+  const handleItemChange = (idx, field, val) => {
+    setFormData(prev => {
+      const nextItems = [...prev.items];
+      nextItems[idx] = { ...nextItems[idx], [field]: val };
+      return { ...prev, items: nextItems };
+    });
+  };
+
   const openDetailModal = (ticket) => {
     setSelectedTicket(ticket);
+    const itms = Array.isArray(ticket.items) && ticket.items.length > 0
+      ? ticket.items.map(it => ({
+          id: it.id,
+          product_id: it.product_id,
+          product_name: it.product_name,
+          product_kode: it.product_kode,
+          product_satuan: it.product_satuan,
+          qty_diminta: it.qty_diminta,
+          qty_dikirim: it.qty_dikirim !== null && it.qty_dikirim !== undefined ? it.qty_dikirim : it.qty_diminta,
+          catatan: it.catatan || '',
+          stok_pusat: it.stok_pusat !== undefined ? it.stok_pusat : 0
+        }))
+      : [{
+          id: 1,
+          product_id: ticket.product_id || 1,
+          product_name: ticket.product_name,
+          product_kode: ticket.product_kode,
+          product_satuan: ticket.product_satuan,
+          qty_diminta: ticket.qty_requested || 1,
+          qty_dikirim: ticket.qty_approved || ticket.qty_requested || 1,
+          catatan: '',
+          stok_pusat: 0
+        }];
+    setDetailItems(itms);
     setUpdateData({ 
       status: ticket.status === 'DIAJUKAN' ? 'DIPROSES' : (ticket.status === 'DIPROSES' ? 'DIKIRIM' : 'SELESAI'), 
       qty_approved: ticket.qty_approved || ticket.qty_requested 
@@ -141,18 +204,31 @@ const Permintaan = () => {
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
-    if (!formData.product_id || formData.qty_requested <= 0) return toast.error('Silakan lengkapi form');
+    const validItems = formData.items
+      .filter(it => it.product_id && Number(it.qty_requested) > 0)
+      .map(it => ({
+        product_id: parseInt(it.product_id, 10),
+        qty_requested: parseInt(it.qty_requested, 10)
+      }));
+
+    if (validItems.length === 0) {
+      return toast.error('Harap pilih minimal 1 produk dan masukkan jumlah yang valid');
+    }
+
+    // Check duplicate products
+    const productIds = validItems.map(it => it.product_id);
+    if (new Set(productIds).size !== productIds.length) {
+      return toast.error('Terdapat produk yang duplikat pada formulir. Harap gabungkan baris produk yang sama.');
+    }
+
     setSubmitting(true);
     try {
-      const payload = {
-        product_id: parseInt(formData.product_id, 10),
-        qty_requested: parseInt(formData.qty_requested, 10)
-      };
-      if (formData.outlet_id) {
+      const payload = { items: validItems };
+      if (!isOutletStaff && formData.outlet_id) {
         payload.outlet_id = parseInt(formData.outlet_id, 10);
       }
       await axiosClient.post('/requests', payload);
-      toast.success('Tiket permintaan berhasil dibuat');
+      toast.success(`Tiket permintaan berhasil dibuat dengan ${validItems.length} jenis bahan`);
       setIsModalOpen(false);
       fetchTickets();
     } catch (e) {
@@ -183,13 +259,16 @@ const Permintaan = () => {
     try {
       if (!updateData.status) return toast.error('Silakan pilih status');
       
-      const payload = { status: updateData.status };
-      if (updateData.status === 'DIPROSES' || updateData.status === 'DIKIRIM') {
-         const qty = parseInt(updateData.qty_approved);
-         if (!isNaN(qty)) {
-           payload.qty_approved = qty;
-         }
-      }
+      const payload = { 
+        status: updateData.status,
+        items: detailItems.map(it => ({
+          id: it.id,
+          product_id: it.product_id,
+          qty_dikirim: parseInt(it.qty_dikirim, 10) || 0,
+          catatan: it.catatan || ''
+        }))
+      };
+
       await axiosClient.put(`/requests/${selectedTicket.id}`, payload);
       toast.success(
         updateData.status === 'DIKIRIM' 
@@ -205,17 +284,65 @@ const Permintaan = () => {
     }
   };
 
+  const handleCreateBackorder = async () => {
+    if (!selectedTicket) return;
+    setSubmitting(true);
+    try {
+      const res = await axiosClient.post(`/requests/${selectedTicket.id}/create-backorder`);
+      toast.success(`Tiket pengiriman susulan [${res.data?.data?.kode_tiket}] berhasil dibuat!`);
+      setIsDetailModalOpen(false);
+      fetchTickets();
+    } catch (e) {
+      toast.error(e.response?.data?.message || 'Gagal membuat tiket susulan');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenSuratJalan = (t) => {
+    const rawItems = Array.isArray(t.items) && t.items.length > 0
+      ? t.items.map(it => {
+          const qtyKirim = it.qty_dikirim !== null && it.qty_dikirim !== undefined ? it.qty_dikirim : (it.qty_disetujui || it.qty_diminta);
+          const sisa = it.qty_diminta - qtyKirim;
+          return {
+            product_kode: it.product_kode || 'PRD',
+            product_name: it.product_name,
+            product_satuan: it.product_satuan || 'pcs',
+            qty: qtyKirim,
+            catatan: sisa > 0 ? `Menyusul ${sisa} ${it.product_satuan || ''}` : 'Lengkap'
+          };
+        })
+      : [{
+          product_kode: t.product_kode || 'PRD',
+          product_name: t.product_name,
+          product_satuan: t.product_satuan || 'pcs',
+          qty: t.qty_approved || t.qty_requested || 1,
+          catatan: 'Lengkap'
+        }];
+
+    setSelectedSuratJalan({
+      kode_transfer: t.kode_tiket,
+      created_at: t.created_at,
+      from_outlet_name: 'Gudang Pusat Richisam (Central Kitchen)',
+      from_outlet_address: 'Makassar, Sulawesi Selatan',
+      to_outlet_name: t.outlet_name,
+      to_outlet_address: 'Makassar, Sulawesi Selatan',
+      creator_name: user?.nama || 'Admin/Staf',
+      catatan: `Surat Pengiriman Barang untuk Tiket Permintaan: ${t.kode_tiket}${t.ada_selisih ? ' (Pengiriman Parsial / Ada Susulan)' : ''}`,
+      items: rawItems
+    });
+    setIsSuratJalanOpen(true);
+  };
+
   const filteredTickets = tickets.filter(t => {
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
+    const matchItems = Array.isArray(t.items) && t.items.some(it => it.product_name?.toLowerCase().includes(q));
     return t.kode_tiket?.toLowerCase().includes(q) || 
            t.product_name?.toLowerCase().includes(q) ||
-           t.outlet_name?.toLowerCase().includes(q);
+           t.outlet_name?.toLowerCase().includes(q) ||
+           matchItems;
   });
-
-  const isCK = user?.role === 'ADMIN_GUDANG';
-  const canManageShipment = user?.role === 'ADMIN_PUSAT' || user?.role === 'ADMIN_GUDANG' || user?.role === 'OWNER';
-  const isOutletStaff = !canManageShipment;
 
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl">
@@ -224,14 +351,14 @@ const Permintaan = () => {
         <div>
           <h1 className="text-2xl font-bold text-ink flex items-center gap-2">
             <PackagePlus className="h-6 w-6 text-richisam-orange" />
-            {isCK ? 'Tiket Permintaan Cabang' : isOutletStaff ? 'Permintaan Barang' : 'Manajemen Tiket Permintaan'}
+            {isCK ? 'Tiket Permintaan Cabang' : isOutletStaff ? 'Permintaan Barang Harian' : 'Manajemen Tiket Permintaan'}
           </h1>
           <p className="mt-1 text-sm text-muted">
             {isCK 
-              ? 'Kelola, siapkan, dan kirim pesanan bahan baku dari cabang-cabang outlet.' 
+              ? 'Kelola, siapkan, dan kirim pesanan bahan baku dari cabang-cabang outlet (mendukung pengiriman parsial/susulan).' 
               : isOutletStaff 
-              ? 'Ajukan dan pantau pesanan stok bahan dari Central Kitchen (CK).' 
-              : 'Pantau dan kelola pengadaan bahan baku antar Central Kitchen dan seluruh cabang.'}
+              ? 'Ajukan pesanan seluruh bahan baku harian (pagi) dalam 1 tiket resmi ke Central Kitchen (CK).' 
+              : 'Pantau pengadaan bahan baku harian antar Central Kitchen dan seluruh cabang outlet.'}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -239,15 +366,15 @@ const Permintaan = () => {
             <RefreshCw size={18} className={loading ? 'animate-spin text-muted' : ''} />
           </button>
           {(user?.role === 'ADMIN_PUSAT' || isCK) && (
-            <button onClick={openEmergencyModal} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer">
-              <AlertTriangle size={18} />
+            <button onClick={openEmergencyModal} className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer text-sm">
+              <AlertTriangle size={17} />
               Pengambilan Cito (Darurat)
             </button>
           )}
           {(isOutletStaff || user?.role === 'ADMIN_PUSAT' || user?.role === 'OWNER') && (
-            <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-medium transition-colors shadow-sm cursor-pointer">
+            <button onClick={openAddModal} className="flex items-center gap-2 px-4 py-2 bg-richisam-orange hover:bg-[#d9530a] text-white rounded-lg font-bold transition-colors shadow-sm cursor-pointer text-sm">
               <Plus size={18} />
-              Buat Tiket Permintaan
+              Buat Permintaan Pagi (Multi-Bahan)
             </button>
           )}
         </div>
@@ -257,9 +384,9 @@ const Permintaan = () => {
       <div className="bg-white border border-line rounded-2xl shadow-sm overflow-hidden flex flex-col">
         {/* Toolbar */}
         <div className="p-4 border-b border-line flex flex-col sm:flex-row gap-4 justify-between items-center bg-cream/30">
-          <div className="relative w-full sm:w-72">
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari kode tiket atau produk..." className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all" />
+            <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Cari kode tiket, produk, atau cabang..." className="w-full pl-9 pr-4 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-richisam-orange/20 focus:border-richisam-orange transition-all" />
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Filter size={16} className="text-muted" />
@@ -279,12 +406,12 @@ const Permintaan = () => {
             <thead className="bg-cream/50 text-muted font-semibold border-b border-line">
               <tr>
                 <th className="px-6 py-4">Kode Tiket</th>
-                <th className="px-6 py-4">Produk</th>
+                <th className="px-6 py-4">Rincian Bahan Baku</th>
                 {!isOutletStaff && <th className="px-6 py-4">Cabang Pemohon</th>}
-                <th className="px-6 py-4 text-center">Diminta</th>
-                <th className="px-6 py-4 text-center">Disetujui</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Tanggal</th>
+                <th className="px-6 py-4 text-center">Total Diminta</th>
+                <th className="px-6 py-4 text-center">Total Disetujui</th>
+                <th className="px-6 py-4">Status & Alokasi</th>
+                <th className="px-6 py-4">Tanggal Pengajuan</th>
                 <th className="px-6 py-4 text-right">Aksi</th>
               </tr>
             </thead>
@@ -296,64 +423,76 @@ const Permintaan = () => {
               ) : filteredTickets.length > 0 ? (
                 filteredTickets
                   .slice((currentPage - 1) * pageSize, currentPage * pageSize)
-                  .map((t) => (
-                  <tr key={t.id} className="hover:bg-cream/30 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-ink">{t.kode_tiket}</td>
-                    <td className="px-6 py-4 text-ink/80">{t.product_name}</td>
-                    {!isOutletStaff && <td className="px-6 py-4 text-ink/80">{t.outlet_name}</td>}
-                    <td className="px-6 py-4 text-center font-semibold text-ink">{t.qty_requested}</td>
-                    <td className="px-6 py-4 text-center text-ink/80">{t.qty_approved || '-'}</td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={t.status} />
-                    </td>
-                    <td className="px-6 py-4 text-muted">{new Date(t.created_at).toLocaleDateString('id-ID')}</td>
-                    <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
-                      <button 
-                        onClick={() => openDetailModal(t)} 
-                        className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                          isOutletStaff && t.status === 'DIKIRIM'
-                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                            : !isOutletStaff && t.status === 'DIAJUKAN'
-                            ? 'bg-richisam-orange hover:bg-[#d9530a] text-white shadow-sm'
-                            : !isOutletStaff && t.status === 'DIPROSES'
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
-                            : 'text-richisam-orange hover:text-richisam-merah-muda'
-                        }`}
-                      >
-                        {isOutletStaff 
-                          ? (t.status === 'DIKIRIM' ? 'Terima Barang' : 'Detail') 
-                          : (t.status === 'DIAJUKAN' ? 'Proses Tiket' : t.status === 'DIPROSES' ? 'Kirim Barang' : 'Detail')}
-                      </button>
-                      {!isOutletStaff && (t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
-                        <button 
-                          onClick={() => {
-                            setSelectedSuratJalan({
-                              kode_transfer: t.kode_tiket,
-                              created_at: t.created_at,
-                              from_outlet_name: 'Gudang Pusat Richisam',
-                              from_outlet_address: 'Makassar, Sulawesi Selatan',
-                              to_outlet_name: t.outlet_name,
-                              to_outlet_address: 'Makassar, Sulawesi Selatan',
-                              creator_name: user?.nama || 'Admin/Staf',
-                              catatan: `Surat Pengiriman Barang untuk Tiket Permintaan: ${t.kode_tiket}`,
-                              items: [{
-                                product_kode: t.product_kode || 'PRD',
-                                product_name: t.product_name,
-                                product_satuan: t.product_satuan || 'pcs',
-                                qty: t.qty_approved || t.qty_requested
-                              }]
-                            });
-                            setIsSuratJalanOpen(true);
-                          }}
-                          className="p-1.5 text-stone-500 hover:text-white hover:bg-stone-800 rounded-lg transition-all cursor-pointer"
-                          title="Cetak Surat Jalan"
-                        >
-                          <Printer size={15} />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                  .map((t) => {
+                    const itemCount = t.total_items || (Array.isArray(t.items) ? t.items.length : 1);
+                    return (
+                      <tr key={t.id} className="hover:bg-cream/30 transition-colors group">
+                        <td className="px-6 py-4 font-mono font-medium text-ink">
+                          {t.kode_tiket}
+                          {t.catatan && t.catatan.includes('SUSULAN') && (
+                            <span className="block text-[10px] text-amber-600 font-sans font-bold">Susulan</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-ink">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{t.product_name || 'Bahan Baku'}</span>
+                            {itemCount > 1 && (
+                              <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-[#F9610D]/10 text-[#F9610D] border border-[#F9610D]/20">
+                                +{itemCount - 1} bahan lain
+                              </span>
+                            )}
+                          </div>
+                          {Array.isArray(t.items) && t.items.length > 1 && (
+                            <div className="text-[11px] text-muted truncate max-w-xs mt-0.5">
+                              {t.items.slice(0, 3).map(it => `${it.product_name} (${it.qty_diminta})`).join(', ')}
+                              {t.items.length > 3 ? '...' : ''}
+                            </div>
+                          )}
+                        </td>
+                        {!isOutletStaff && <td className="px-6 py-4 text-ink/80 font-medium">{t.outlet_name}</td>}
+                        <td className="px-6 py-4 text-center font-bold text-ink">{t.qty_requested}</td>
+                        <td className="px-6 py-4 text-center text-ink/80 font-semibold">{t.qty_approved || '-'}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <StatusBadge status={t.status} />
+                            {t.ada_selisih && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-700 border border-amber-500/40">
+                                Ada Susulan
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-muted">{new Date(t.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                        <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => openDetailModal(t)} 
+                            className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                              isOutletStaff && t.status === 'DIKIRIM'
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                                : !isOutletStaff && t.status === 'DIAJUKAN'
+                                ? 'bg-richisam-orange hover:bg-[#d9530a] text-white shadow-sm'
+                                : !isOutletStaff && t.status === 'DIPROSES'
+                                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                                : 'text-richisam-orange hover:text-richisam-merah-muda'
+                            }`}
+                          >
+                            {isOutletStaff 
+                              ? (t.status === 'DIKIRIM' ? 'Terima Barang' : 'Detail') 
+                              : (t.status === 'DIAJUKAN' ? 'Proses Tiket' : t.status === 'DIPROSES' ? 'Kirim Barang' : 'Detail')}
+                          </button>
+                          {!isOutletStaff && (t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
+                            <button 
+                              onClick={() => handleOpenSuratJalan(t)}
+                              className="p-1.5 text-stone-500 hover:text-white hover:bg-stone-800 rounded-lg transition-all cursor-pointer"
+                              title="Cetak Surat Jalan Resmi"
+                            >
+                              <Printer size={15} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
               ) : (
                 <tr>
                   <td colSpan={!isOutletStaff ? 8 : 7} className="px-6 py-16 text-center text-muted"><FileText size={24} className="mx-auto mb-2 opacity-50"/>Tidak ada tiket permintaan.</td>
@@ -371,6 +510,425 @@ const Permintaan = () => {
           onPageChange={setCurrentPage}
         />
       </div>
+
+      {/* Modal Add Request (Multi-Item Store Requisition) */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-line my-8 animate-fade-in">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 sm:p-6 border-b border-line bg-cream/40">
+              <div>
+                <h2 className="font-bold text-ink text-xl flex items-center gap-2">
+                  <PackagePlus className="text-richisam-orange h-6 w-6" />
+                  Form Permintaan Barang Harian (Pagi)
+                </h2>
+                <p className="text-xs text-muted mt-0.5">
+                  Ajukan seluruh daftar kebutuhan bahan baku outlet untuk hari ini dalam 1 tiket resmi.
+                </p>
+              </div>
+              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-ink cursor-pointer p-1.5 rounded-lg hover:bg-cream">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateTicket} className="p-5 sm:p-6 space-y-5">
+              {/* Info Cabang */}
+              {!isOutletStaff ? (
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-muted mb-1.5">
+                    Cabang Pemohon <span className="text-[#F9610D]">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.outlet_id}
+                    onChange={e => setFormData({ ...formData, outlet_id: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-white border border-line rounded-xl text-sm font-medium focus:outline-none focus:border-richisam-orange"
+                  >
+                    <option value="">-- Pilih Cabang Pemohon --</option>
+                    {outlets.filter(o => Number(o.id) !== 1).map(o => (
+                      <option key={o.id} value={o.id}>{o.nama}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="p-3 bg-cream/60 border border-line rounded-xl flex items-center justify-between text-xs text-ink font-medium">
+                  <span>Cabang Pemohon: <strong>{user?.outlet_name || 'Outlet Cabang'}</strong></span>
+                  <span className="text-muted">SOP Pengajuan Pagi (06:00 - 11:00)</span>
+                </div>
+              )}
+
+              {/* Banner Transparansi Stok Pusat */}
+              <div className="p-3.5 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start gap-2.5">
+                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <strong>Transparansi Stok Gudang Pusat (CK):</strong>
+                  <p className="mt-0.5 text-amber-800">
+                    Sistem menampilkan sisa stok fisik di Gudang Pusat untuk setiap bahan baku. Jika stok di Pusat terbatas, Pusat akan membagi secara proporsional dan sisa pesanan akan berstatus <strong>Menyusul (Backorder)</strong>.
+                  </p>
+                </div>
+              </div>
+
+              {/* Multi-Item Table Input */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-ink flex items-center gap-1.5">
+                    <Layers size={14} className="text-richisam-orange" />
+                    Daftar Bahan Baku Yang Diminta ({formData.items.length} Baris)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddItemRow}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#F9610D]/10 hover:bg-[#F9610D]/20 text-richisam-orange text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Tambah Baris Bahan</span>
+                  </button>
+                </div>
+
+                <div className="border border-line rounded-xl overflow-hidden bg-white shadow-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-cream/60 border-b border-line text-muted font-bold">
+                      <tr>
+                        <th className="py-2.5 px-3 w-10 text-center">No</th>
+                        <th className="py-2.5 px-3 min-w-[200px]">Pilih Produk</th>
+                        <th className="py-2.5 px-3 w-28 text-center">Stok Pusat</th>
+                        <th className="py-2.5 px-3 w-36">Jumlah Diminta</th>
+                        <th className="py-2.5 px-3 w-12 text-center">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {formData.items.map((item, idx) => {
+                        const selectedProd = products.find(p => String(p.id) === String(item.product_id));
+                        const stokCK = selectedProd?.stok_pusat !== undefined ? selectedProd.stok_pusat : null;
+
+                        return (
+                          <tr key={idx} className="hover:bg-cream/20">
+                            <td className="py-2.5 px-3 text-center font-bold text-muted">{idx + 1}</td>
+                            <td className="py-2 px-3">
+                              <SearchableProductSelect
+                                products={products}
+                                value={item.product_id}
+                                onChange={(productId) => handleItemChange(idx, 'product_id', productId)}
+                                placeholder="Ketik nama bahan (contoh: Ayam, Beras, Teh)..."
+                                required
+                              />
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {selectedProd ? (
+                                <span className={`px-2 py-1 rounded-md text-[11px] font-bold inline-block ${
+                                  stokCK > 20 
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                                    : stokCK > 0 
+                                    ? 'bg-amber-50 text-amber-700 border border-amber-200' 
+                                    : 'bg-rose-50 text-rose-700 border border-rose-200'
+                                }`}>
+                                  {stokCK} {selectedProd.satuan}
+                                </span>
+                              ) : (
+                                <span className="text-muted text-[11px]">-</span>
+                              )}
+                            </td>
+                            <td className="py-2 px-3">
+                              <div className="flex items-center gap-1.5">
+                                <input
+                                  required
+                                  type="number"
+                                  min="1"
+                                  value={item.qty_requested}
+                                  onChange={e => handleItemChange(idx, 'qty_requested', e.target.value)}
+                                  className="w-full px-2.5 py-1.5 border border-line rounded-lg text-sm font-bold text-ink focus:outline-none focus:border-richisam-orange"
+                                  placeholder="Jml"
+                                />
+                                {selectedProd && (
+                                  <span className="text-xs font-semibold text-muted shrink-0 w-10">
+                                    {selectedProd.satuan}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveItemRow(idx)}
+                                className="p-1.5 text-muted hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Hapus Baris"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex justify-between items-center text-xs text-muted pt-1">
+                  <span>💡 Tip: Anda bisa memasukkan 10 s/d 20 bahan sekaligus dalam 1 pengajuan pagi.</span>
+                  <button
+                    type="button"
+                    onClick={handleAddItemRow}
+                    className="text-richisam-orange font-bold hover:underline cursor-pointer flex items-center gap-1"
+                  >
+                    <Plus size={13} /> Tambah baris lagi
+                  </button>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pt-4 border-t border-line flex items-center justify-between">
+                <span className="text-xs font-semibold text-ink">
+                  Total: <strong className="text-richisam-orange">{formData.items.filter(it => it.product_id).length}</strong> bahan baku akan dipesan
+                </span>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 text-sm font-medium text-muted hover:text-ink cursor-pointer">
+                    Batal
+                  </button>
+                  <button type="submit" disabled={submitting} className="px-6 py-2.5 text-sm font-bold bg-richisam-orange text-white rounded-xl hover:bg-[#d9530a] disabled:opacity-50 transition-colors shadow-md shadow-[#F9610D]/20 cursor-pointer flex items-center gap-2">
+                    {submitting ? <RefreshCw size={16} className="animate-spin" /> : <PackagePlus size={16} />}
+                    <span>Kirim Tiket Permintaan Pagi</span>
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detail / Process / Backorder Handling */}
+      {isDetailModalOpen && selectedTicket && (
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-line my-8 animate-fade-in">
+            {/* Header Modal */}
+            <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30">
+              <div>
+                <h2 className="font-bold text-ink text-xl flex items-center gap-2">
+                  <FileText className="text-richisam-orange h-5 w-5" />
+                  Rincian Tiket {selectedTicket.kode_tiket}
+                </h2>
+                <p className="text-xs text-muted mt-0.5">
+                  Cabang: <strong>{selectedTicket.outlet_name}</strong> • Tanggal: {new Date(selectedTicket.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <button onClick={() => setIsDetailModalOpen(false)} className="text-muted hover:text-ink cursor-pointer p-1.5 rounded-lg hover:bg-cream">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="p-5 sm:p-6 space-y-5">
+              {/* Status Header */}
+              <div className="flex items-center justify-between p-3.5 bg-cream/50 border border-line rounded-xl text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-muted uppercase tracking-wider">Status Tiket:</span>
+                  <StatusBadge status={selectedTicket.status} />
+                </div>
+                {selectedTicket.ada_selisih && (
+                  <span className="px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg font-bold flex items-center gap-1">
+                    <Clock size={13} /> Terdapat Barang Menyusul
+                  </span>
+                )}
+              </div>
+
+              {/* Tabel Rincian Bahan yang Dipesan */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
+                    Rincian Barang Yang Diminta ({detailItems.length} Bahan)
+                  </h3>
+                  {canManageShipment && (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') && (
+                    <span className="text-[11px] text-[#F9610D] font-medium">
+                      *Sesuaikan Qty Dikirim jika stok CK terbatas & sebagian harus menyusul
+                    </span>
+                  )}
+                </div>
+
+                <div className="border border-line rounded-xl overflow-hidden shadow-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-cream/60 border-b border-line text-muted font-bold">
+                      <tr>
+                        <th className="py-2.5 px-3 w-10 text-center">No</th>
+                        <th className="py-2.5 px-3">Nama Produk</th>
+                        <th className="py-2.5 px-3 text-center">Stok Pusat</th>
+                        <th className="py-2.5 px-3 text-center">Diminta</th>
+                        <th className="py-2.5 px-3 text-center w-36">
+                          {canManageShipment && (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? 'Qty Disetujui / Kirim' : 'Disetujui / Kirim'}
+                        </th>
+                        <th className="py-2.5 px-3 text-center">Status Alokasi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-line">
+                      {detailItems.map((item, idx) => {
+                        const qtyDiminta = parseInt(item.qty_diminta, 10) || 0;
+                        const qtyKirim = parseInt(item.qty_dikirim, 10) || 0;
+                        const sisaMenyusul = Math.max(0, qtyDiminta - qtyKirim);
+
+                        return (
+                          <tr key={idx} className="hover:bg-cream/20">
+                            <td className="py-2.5 px-3 text-center font-bold text-muted">{idx + 1}</td>
+                            <td className="py-2.5 px-3">
+                              <span className="font-bold text-ink">{item.product_name}</span>
+                              <span className="block text-[10px] text-muted font-mono">{item.product_kode || 'PRD'} • Satuan: {item.product_satuan || 'pcs'}</span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              <span className="font-bold text-stone-700 bg-stone-100 px-2 py-0.5 rounded-md text-[11px]">
+                                {item.stok_pusat} {item.product_satuan || ''}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-bold text-ink text-sm">
+                              {qtyDiminta}
+                            </td>
+                            <td className="py-2 px-3 text-center">
+                              {canManageShipment && (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? (
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={qtyDiminta}
+                                  value={item.qty_dikirim}
+                                  onChange={(e) => {
+                                    const next = [...detailItems];
+                                    next[idx].qty_dikirim = e.target.value;
+                                    setDetailItems(next);
+                                  }}
+                                  className="w-24 px-2.5 py-1.5 border border-line rounded-lg text-center font-bold text-ink focus:outline-none focus:border-richisam-orange bg-white"
+                                />
+                              ) : (
+                                <span className="font-bold text-sm text-ink">{qtyKirim}</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 text-center">
+                              {sisaMenyusul === 0 ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  Lengkap
+                                </span>
+                              ) : qtyKirim === 0 ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                  Menyusul Semua ({sisaMenyusul})
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                  Menyusul {sisaMenyusul} {item.product_satuan}
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Warning bila ada barang menyusul */}
+                {detailItems.some(it => (parseInt(it.qty_diminta, 10) - (parseInt(it.qty_dikirim, 10) || 0)) > 0) && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 mt-2.5 flex items-center gap-2">
+                    <Clock size={16} className="text-amber-600 shrink-0" />
+                    <span>
+                      Sebagian pesanan dikirim parsial. Sisa kuantitas otomatis ditandai sebagai <strong>Menyusul (Backorder)</strong> dan dapat diantar menyusul begitu stok CK tersedia kembali.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Form Action Berdasarkan Status & Wewenang */}
+              {isOutletStaff ? (
+                selectedTicket.status === 'DIKIRIM' ? (
+                  <form onSubmit={handleConfirmReceipt} className="space-y-4 pt-3 border-t border-line">
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
+                      <strong>Konfirmasi Penerimaan Fisik di Outlet:</strong> Barang telah dikirim dari Central Kitchen. Harap periksa fisik dan hitung kesesuaian barang. Klik tombol di bawah saat barang tiba untuk menambah stok cabang Anda.
+                    </div>
+                    <button type="submit" disabled={submitting} className="w-full px-4 py-2.5 text-sm font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
+                      <Check size={16} />
+                      {submitting ? 'Memproses Penerimaan...' : 'Konfirmasi Selesai (Barang Telah Tiba di Cabang)'}
+                    </button>
+                  </form>
+                ) : selectedTicket.status === 'SELESAI' ? (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 text-center font-medium">
+                    ✓ Seluruh barang yang dikirim pada tiket ini telah diterima lengkap oleh cabang dan stok telah termutasi.
+                  </div>
+                ) : (
+                  <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 text-center">
+                    ⏳ Tiket sedang dipersiapkan oleh Central Kitchen ({selectedTicket.status}). Staf hanya dapat mengonfirmasi selesai setelah barang dikirim dan tiba di cabang.
+                  </div>
+                )
+              ) : (
+                (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? (
+                  <form onSubmit={handleUpdateStatus} className="space-y-4 border-t border-line pt-4">
+                    <div>
+                      <label className="block text-xs font-bold text-ink mb-1.5">Tindakan / Status Pengiriman</label>
+                      <select 
+                        required 
+                        value={updateData.status} 
+                        onChange={e => setUpdateData({...updateData, status: e.target.value})} 
+                        className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange mb-3 font-medium"
+                      >
+                        {selectedTicket.status === 'DIAJUKAN' && (
+                          <option value="DIPROSES">DIPROSES (Sedang Disiapkan di Gudang CK)</option>
+                        )}
+                        <option value="DIKIRIM">DIKIRIM (Kirim ke Cabang & Potong Stok CK)</option>
+                      </select>
+                      
+                      {updateData.status === 'DIKIRIM' && (
+                        <p className="mt-2 text-xs text-stone-500 bg-stone-100 p-2.5 rounded-lg border border-stone-200">
+                          ℹ️ Saat status diubah ke <strong>DIKIRIM</strong>, stok bahan di <strong>Central Kitchen (CK)</strong> akan otomatis dipotong sesuai jumlah dikirim per item di atas.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                      <button 
+                        type="submit" 
+                        disabled={submitting} 
+                        className="w-full px-4 py-2.5 text-sm font-bold bg-richisam-orange text-white rounded-xl hover:bg-[#d9530a] transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {submitting ? 'Menyimpan...' : updateData.status === 'DIKIRIM' ? 'Konfirmasi & Kirim Barang ke Cabang' : 'Simpan Status Diproses'}
+                      </button>
+                    </div>
+                  </form>
+                ) : selectedTicket.status === 'DIKIRIM' ? (
+                  <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800 text-center font-medium mt-3">
+                    🚚 Barang sedang dalam perjalanan ke <strong>{selectedTicket.outlet_name}</strong>. Menunggu Staf Cabang memverifikasi barang tiba.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-green-600 text-center font-medium">✓ Tiket ini telah diselesaikan (barang sudah diterima lengkap oleh staf cabang).</p>
+                    
+                    {/* Tombol Buat Pengiriman Susulan Jika Ada Selisih */}
+                    {selectedTicket.ada_selisih && detailItems.some(it => (parseInt(it.qty_diminta, 10) - (parseInt(it.qty_dikirim, 10) || 0)) > 0) && (
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+                        <div className="text-xs text-amber-900">
+                          <strong className="block text-amber-950 font-bold mb-0.5">Kirim Barang Kekurangan (Susulan)?</strong>
+                          Stok di Central Kitchen sudah tersedia kembali? Klik tombol ini untuk otomatis membuat tiket pengiriman susulan untuk sisa bahan.
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleCreateBackorder}
+                          disabled={submitting}
+                          className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl shadow-xs shrink-0 cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Truck size={14} />
+                          <span>Buat Pengiriman Susulan</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              )}
+
+              {/* Tombol Cetak Surat Jalan */}
+              {!isOutletStaff && (
+                <div className="pt-4 border-t border-line mt-4">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenSuratJalan(selectedTicket)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    <Printer size={16} />
+                    <span>Cetak Surat Jalan Resmi (Delivery Note)</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Emergency Request (CITO) */}
       {isEmergencyModalOpen && (
@@ -420,204 +978,6 @@ const Permintaan = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Add Request */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-visible relative">
-            <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30 rounded-t-2xl">
-              <h2 className="font-bold text-ink text-lg">Buat Tiket Permintaan</h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-ink cursor-pointer"><X size={20} /></button>
-            </div>
-            <form onSubmit={handleCreateTicket} className="p-5 space-y-4">
-              {!isOutletStaff && (
-                <div>
-                  <label className="block text-sm font-medium text-ink mb-1">
-                    Cabang Pemohon <span className="text-[#F9610D]">*</span>
-                  </label>
-                  <select
-                    required
-                    value={formData.outlet_id}
-                    onChange={e => setFormData({ ...formData, outlet_id: e.target.value })}
-                    className="w-full px-4 py-2.5 bg-white border border-line rounded-xl text-sm focus:outline-none focus:border-richisam-orange"
-                  >
-                    <option value="">-- Pilih Cabang Pemohon --</option>
-                    {outlets.filter(o => Number(o.id) !== 1).map(o => (
-                      <option key={o.id} value={o.id}>{o.nama}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Produk <span className="text-[#F9610D]">*</span>
-                </label>
-                <SearchableProductSelect
-                  products={products}
-                  value={formData.product_id}
-                  onChange={(productId) => setFormData({ ...formData, product_id: productId })}
-                  placeholder="Ketik nama atau kode produk... (contoh: Ayam, Beras)"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-ink mb-1">
-                  Jumlah Diminta{' '}
-                  {(() => {
-                    const selected = products.find(p => String(p.id) === String(formData.product_id));
-                    return selected?.satuan ? (
-                      <span className="font-bold text-[#F9610D]">({selected.satuan})</span>
-                    ) : '';
-                  })()} <span className="text-[#F9610D]">*</span>
-                </label>
-                <input
-                  required
-                  type="number"
-                  min="1"
-                  value={formData.qty_requested}
-                  onChange={e => setFormData({...formData, qty_requested: e.target.value})}
-                  className="w-full px-4 py-2.5 bg-white border border-line rounded-xl text-sm focus:outline-none focus:border-richisam-orange"
-                  placeholder="Masukkan jumlah yang dibutuhkan"
-                />
-              </div>
-              <div className="pt-4 border-t border-line flex justify-end gap-3">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2.5 text-sm font-medium text-muted hover:text-ink cursor-pointer">Batal</button>
-                <button type="submit" disabled={submitting} className="px-5 py-2.5 text-sm font-bold bg-richisam-orange text-white rounded-xl hover:bg-[#d9530a] disabled:opacity-50 transition-colors shadow-md shadow-[#F9610D]/20 cursor-pointer">
-                  {submitting ? 'Menyimpan...' : 'Kirim Tiket'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Detail / Process */}
-      {isDetailModalOpen && selectedTicket && (
-        <div className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-line bg-cream/30">
-              <h2 className="font-bold text-ink text-lg">Detail Tiket {selectedTicket.kode_tiket}</h2>
-              <button onClick={() => setIsDetailModalOpen(false)} className="text-muted hover:text-ink"><X size={20} /></button>
-            </div>
-            
-            <div className="p-5">
-              <div className="mb-4 text-sm text-ink/80 space-y-1 bg-cream p-3 rounded-lg border border-line">
-                <p><span className="font-medium text-ink">Cabang:</span> {selectedTicket.outlet_name}</p>
-                <p><span className="font-medium text-ink">Produk:</span> {selectedTicket.product_name}</p>
-                <p><span className="font-medium text-ink">Diminta:</span> {selectedTicket.qty_requested}</p>
-                <p><span className="font-medium text-ink">Disetujui:</span> {selectedTicket.qty_approved || '-'}</p>
-                <p><span className="font-medium text-ink">Status Saat Ini:</span> <StatusBadge status={selectedTicket.status} /></p>
-              </div>
-
-              {/* Tampilkan form update sesuai wewenang role:
-                  - Staf Cabang HANYA bisa mengonfirmasi selesai (barang tiba & lengkap) jika status sudah DIKIRIM.
-                  - Admin Pusat / Gudang CK memproses (DIPROSES) & mengirim barang (DIKIRIM). */}
-              {isOutletStaff ? (
-                selectedTicket.status === 'DIKIRIM' ? (
-                  <form onSubmit={handleConfirmReceipt} className="space-y-4 pt-3 border-t border-line">
-                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800">
-                      <strong>Konfirmasi Barang Tiba & Lengkap:</strong> Barang telah dikirim dari Central Kitchen (Qty: {selectedTicket.qty_approved || selectedTicket.qty_requested}). Klik tombol di bawah jika barang telah tiba dan lengkap untuk menambah stok cabang Anda.
-                    </div>
-                    <button type="submit" disabled={submitting} className="w-full px-4 py-2.5 text-sm font-bold bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2">
-                      <Check size={16} />
-                      {submitting ? 'Memproses Penerimaan...' : 'Konfirmasi Selesai (Barang Telah Tiba & Lengkap)'}
-                    </button>
-                  </form>
-                ) : selectedTicket.status === 'SELESAI' ? (
-                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 text-center font-medium">
-                    ✓ Barang telah diterima lengkap dan stok cabang sudah bertambah.
-                  </div>
-                ) : (
-                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 text-center">
-                    ⏳ Tiket sedang dipersiapkan oleh Central Kitchen ({selectedTicket.status}). Staf hanya dapat mengonfirmasi selesai setelah barang dikirim dan tiba di cabang.
-                  </div>
-                )
-              ) : (
-                (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? (
-                  <form onSubmit={handleUpdateStatus} className="space-y-4 mt-2 border-t border-line pt-4">
-                    <div>
-                      <label className="block text-xs font-bold text-ink mb-1.5">Tindakan / Status Pengiriman</label>
-                      <select 
-                        required 
-                        value={updateData.status} 
-                        onChange={e => setUpdateData({...updateData, status: e.target.value})} 
-                        className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange mb-3 font-medium"
-                      >
-                        {selectedTicket.status === 'DIAJUKAN' && (
-                          <option value="DIPROSES">DIPROSES (Sedang Disiapkan di Gudang CK)</option>
-                        )}
-                        <option value="DIKIRIM">DIKIRIM (Kirim ke Cabang & Kurangi Stok CK)</option>
-                      </select>
-
-                      <label className="block text-xs font-bold text-ink mb-1.5">Jumlah Disetujui (Approved Qty)</label>
-                      <input 
-                        required 
-                        type="number" 
-                        min="1" 
-                        value={updateData.qty_approved} 
-                        onChange={e => setUpdateData({...updateData, qty_approved: e.target.value})} 
-                        className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange font-mono font-bold" 
-                      />
-                      
-                      {updateData.status === 'DIKIRIM' && (
-                        <p className="mt-2 text-xs text-stone-500 bg-stone-100 p-2.5 rounded-lg border border-stone-200">
-                          ℹ️ Saat status diubah ke <strong>DIKIRIM</strong>, stok bahan di <strong>Central Kitchen (CK)</strong> akan otomatis dipotong sesuai jumlah disetujui.
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex justify-end gap-3 pt-2">
-                      <button 
-                        type="submit" 
-                        disabled={submitting} 
-                        className="w-full px-4 py-2.5 text-sm font-bold bg-richisam-orange text-white rounded-xl hover:bg-[#d9530a] transition-colors shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
-                      >
-                        {submitting ? 'Menyimpan...' : updateData.status === 'DIKIRIM' ? 'Konfirmasi & Kirim Barang' : 'Simpan Status Diproses'}
-                      </button>
-                    </div>
-                  </form>
-                ) : selectedTicket.status === 'DIKIRIM' ? (
-                  <div className="p-3 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-800 text-center font-medium mt-3">
-                    🚚 Barang sedang dalam pengiriman ke <strong>{selectedTicket.outlet_name}</strong>. Menunggu Staf Cabang mengonfirmasi barang telah tiba dan lengkap.
-                  </div>
-                ) : (
-                  <p className="text-sm text-green-600 text-center font-medium mt-4">✓ Tiket ini telah diselesaikan (barang sudah diterima lengkap oleh staf cabang).</p>
-                )
-              )}
-
-              {!isOutletStaff && (
-                <div className="pt-4 border-t border-line mt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedSuratJalan({
-                        kode_transfer: selectedTicket.kode_tiket,
-                        created_at: selectedTicket.created_at,
-                        from_outlet_name: 'Gudang Pusat Richisam',
-                        from_outlet_address: 'Makassar, Sulawesi Selatan',
-                        to_outlet_name: selectedTicket.outlet_name,
-                        to_outlet_address: 'Makassar, Sulawesi Selatan',
-                        creator_name: user?.nama || 'Admin/Staf',
-                        catatan: `Surat Pengiriman Barang untuk Tiket Permintaan: ${selectedTicket.kode_tiket}`,
-                        items: [{
-                          product_kode: selectedTicket.product_kode || 'PRD',
-                          product_name: selectedTicket.product_name,
-                          product_satuan: selectedTicket.product_satuan || 'pcs',
-                          qty: selectedTicket.qty_approved || selectedTicket.qty_requested
-                        }]
-                      });
-                      setIsSuratJalanOpen(true);
-                    }}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                  >
-                    <Printer size={16} />
-                    <span>Cetak Surat Jalan (Delivery Note)</span>
-                  </button>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       )}

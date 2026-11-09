@@ -514,9 +514,9 @@ const Permintaan = () => {
       {/* Modal Add Request (Multi-Item Store Requisition) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden border border-line my-8 animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-3xl overflow-visible border border-line my-8 animate-fade-in relative">
             {/* Header */}
-            <div className="flex items-center justify-between p-5 sm:p-6 border-b border-line bg-cream/40">
+            <div className="flex items-center justify-between p-5 sm:p-6 border-b border-line bg-cream/40 rounded-t-3xl">
               <div>
                 <h2 className="font-bold text-ink text-xl flex items-center gap-2">
                   <PackagePlus className="text-richisam-orange h-6 w-6" />
@@ -575,23 +575,15 @@ const Permintaan = () => {
                     <Layers size={14} className="text-richisam-orange" />
                     Daftar Bahan Baku Yang Diminta ({formData.items.length} Baris)
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleAddItemRow}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#F9610D]/10 hover:bg-[#F9610D]/20 text-richisam-orange text-xs font-bold rounded-lg transition-colors cursor-pointer"
-                  >
-                    <Plus size={14} />
-                    <span>Tambah Baris Bahan</span>
-                  </button>
                 </div>
 
-                <div className="border border-line rounded-xl overflow-hidden bg-white shadow-xs">
+                <div className="border border-line rounded-2xl bg-white shadow-xs overflow-visible">
                   <table className="w-full text-left text-xs">
                     <thead className="bg-cream/60 border-b border-line text-muted font-bold">
                       <tr>
                         <th className="py-2.5 px-3 w-10 text-center">No</th>
-                        <th className="py-2.5 px-3 min-w-[200px]">Pilih Produk</th>
-                        <th className="py-2.5 px-3 w-28 text-center">Stok Pusat</th>
+                        <th className="py-2.5 px-3 min-w-[260px]">Pilih Produk</th>
+                        <th className="py-2.5 px-3 w-32 text-center">Stok Pusat</th>
                         <th className="py-2.5 px-3 w-36">Jumlah Diminta</th>
                         <th className="py-2.5 px-3 w-12 text-center">Aksi</th>
                       </tr>
@@ -602,7 +594,7 @@ const Permintaan = () => {
                         const stokCK = selectedProd?.stok_pusat !== undefined ? selectedProd.stok_pusat : null;
 
                         return (
-                          <tr key={idx} className="hover:bg-cream/20">
+                          <tr key={idx} className="hover:bg-cream/20" style={{ position: 'relative', zIndex: formData.items.length - idx + 10 }}>
                             <td className="py-2.5 px-3 text-center font-bold text-muted">{idx + 1}</td>
                             <td className="py-2 px-3">
                               <SearchableProductSelect
@@ -663,16 +655,15 @@ const Permintaan = () => {
                   </table>
                 </div>
 
-                <div className="flex justify-between items-center text-xs text-muted pt-1">
-                  <span>💡 Tip: Anda bisa memasukkan 10 s/d 20 bahan sekaligus dalam 1 pengajuan pagi.</span>
-                  <button
-                    type="button"
-                    onClick={handleAddItemRow}
-                    className="text-richisam-orange font-bold hover:underline cursor-pointer flex items-center gap-1"
-                  >
-                    <Plus size={13} /> Tambah baris lagi
-                  </button>
-                </div>
+                {/* 1 Button Tambah Baris Bahan */}
+                <button
+                  type="button"
+                  onClick={handleAddItemRow}
+                  className="w-full py-2.5 border-2 border-dashed border-[#F9610D]/30 hover:border-[#F9610D] bg-[#F9610D]/5 hover:bg-[#F9610D]/10 text-richisam-orange text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]"
+                >
+                  <Plus size={16} />
+                  <span>Tambah Baris Bahan</span>
+                </button>
               </div>
 
               {/* Footer */}

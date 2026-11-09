@@ -133,19 +133,16 @@ const SearchableProductSelect = ({
               setTimeout(() => inputRef.current?.focus(), 50);
             }
           }}
-          className={`search-select-trigger group flex items-center justify-between gap-2 px-3.5 py-2.5 bg-cream/50 hover:bg-cream border border-line rounded-xl cursor-pointer transition-all ${
+          className={`search-select-trigger group flex items-center justify-between gap-2 px-3 py-2 bg-cream/50 hover:bg-cream border border-line rounded-xl cursor-pointer transition-all ${
             disabled ? 'opacity-60 cursor-not-allowed' : 'hover:border-[#F9610D]/50'
           }`}
         >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="search-select-badge shrink-0 font-mono text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="search-select-badge shrink-0 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#F9610D]/15 text-[#F9610D] border border-[#F9610D]/30">
               {selectedProduct.kode || 'PROD'}
             </span>
-            <span className="search-select-name font-bold text-sm text-ink truncate">
+            <span className="search-select-name font-bold text-xs text-ink truncate">
               {selectedProduct.nama}
-            </span>
-            <span className="search-select-unit shrink-0 text-xs text-muted font-medium bg-sand/60 px-2 py-0.5 rounded border border-line">
-              {selectedProduct.satuan}
             </span>
           </div>
 
@@ -157,17 +154,17 @@ const SearchableProductSelect = ({
                 title="Ganti / Hapus pilihan produk"
                 className="p-1 rounded-lg text-muted hover:text-[#EC1F27] hover:bg-red-500/10 transition-colors cursor-pointer"
               >
-                <X size={15} />
+                <X size={14} />
               </button>
             )}
-            <ChevronDown size={16} className="text-muted group-hover:text-[#F9610D] transition-colors" />
+            <ChevronDown size={15} className="text-muted group-hover:text-[#F9610D] transition-colors" />
           </div>
         </div>
       ) : (
         // State 2: Mode pencarian aktif / Belum ada produk terpilih
         <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted">
-            <Search size={16} className="text-[#F9610D]" />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
+            <Search size={15} className="text-[#F9610D]" />
           </div>
           <input
             ref={inputRef}
@@ -181,9 +178,9 @@ const SearchableProductSelect = ({
               setIsOpen(true);
             }}
             onKeyDown={handleKeyDown}
-            className="search-select-input w-full pl-10 pr-9 py-2.5 bg-cream border border-line rounded-xl text-sm text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[#F9610D]/20 focus:border-[#F9610D] transition-all font-medium"
+            className="search-select-input w-full pl-9 pr-8 py-2 bg-cream border border-line rounded-xl text-xs text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-[#F9610D]/20 focus:border-[#F9610D] transition-all font-medium"
           />
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          <div className="absolute inset-y-0 right-0 pr-2.5 flex items-center">
             {search ? (
               <button
                 type="button"
@@ -193,11 +190,11 @@ const SearchableProductSelect = ({
                 }}
                 className="text-muted hover:text-ink cursor-pointer p-0.5"
               >
-                <X size={14} />
+                <X size={13} />
               </button>
             ) : (
               <ChevronDown
-                size={16}
+                size={15}
                 onClick={() => {
                   setIsOpen(!isOpen);
                   inputRef.current?.focus();
@@ -211,7 +208,7 @@ const SearchableProductSelect = ({
 
       {/* Dropdown Hasil Pencarian */}
       {isOpen && (
-        <div className="search-select-dropdown absolute z-50 left-0 right-0 mt-1.5 bg-[#1C1714] border border-[#2D241E] rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md animate-fade-in">
+        <div className="search-select-dropdown absolute z-[100] left-0 min-w-[320px] sm:min-w-[380px] mt-1 bg-[#1C1714] border border-[#2D241E] rounded-2xl shadow-2xl overflow-hidden backdrop-blur-md animate-fade-in">
           {/* Header info pencarian */}
           <div className="search-select-header flex items-center justify-between px-3.5 py-2 bg-[#140F0D] border-b border-[#241C18] text-[11px] text-muted">
             <span>

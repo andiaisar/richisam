@@ -13,6 +13,10 @@ const transferSchema = z.object({
   password: z.string().min(1, 'Password wajib diisi')
 });
 
+const rejectSchema = z.object({
+  rejection_reason: z.string().optional().default('Ditolak oleh Admin')
+});
+
 exports.createTransfer = async (req, res) => {
   try {
     const parsed = transferSchema.safeParse(req.body);
@@ -31,16 +35,23 @@ exports.createTransfer = async (req, res) => {
     if (!valid) throw new Error('Password salah! Transfer dibatalkan.');
 
     // Ensure the sender is authorized for from_outlet_id (if not ADMIN_PUSAT/OWNER)
-    if (req.user.role === 'STAF_CABANG' && req.user.outlet_id !== parsed.data.from_outlet_id) {
+    if (req.user.role === 'STAF_CABANG' && Number(req.user.outlet_id) !== Number(parsed.data.from_outlet_id)) {
       throw new Error('Anda tidak memiliki akses untuk mentransfer dari cabang ini');
     }
+
+    // Alur Otorisasi:
+    // Jika diajukan oleh Staf Cabang, status WAJIB 'PENDING' menunggu persetujuan Admin Pusat/Owner/Gudang.
+    // Jika diajukan oleh Admin Pusat / Owner langsung, status langsung 'APPROVED'.
+    const isDirectAdmin = req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER';
+    const initialStatus = isDirectAdmin ? 'APPROVED' : 'PENDING';
 
     const result = await TransferService.createTransfer(
       parsed.data.from_outlet_id, 
       parsed.data.to_outlet_id, 
       parsed.data.items, 
       req.user.id,
-      parsed.data.catatan
+      parsed.data.catatan,
+      initialStatus
     );
 
     // Rekam ke AUDIT TRAIL
@@ -48,18 +59,71 @@ exports.createTransfer = async (req, res) => {
       userId: req.user.id,
       outletId: parsed.data.from_outlet_id,
       module: 'TRANSFER',
-      action: 'CREATE',
-      description: `Mengirim transfer stok ${parsed.data.items.length} item ke Cabang #${parsed.data.to_outlet_id}. Catatan: ${parsed.data.catatan || '-'}`,
-      details: { from_outlet_id: parsed.data.from_outlet_id, to_outlet_id: parsed.data.to_outlet_id, items_count: parsed.data.items.length }
+      action: isDirectAdmin ? 'CREATE' : 'REQUEST',
+      description: isDirectAdmin 
+        ? `Mentransfer langsung ${parsed.data.items.length} item ke Cabang #${parsed.data.to_outlet_id}. Catatan: ${parsed.data.catatan || '-'}`
+        : `Mengajukan permohonan transfer stok ${parsed.data.items.length} item ke Cabang #${parsed.data.to_outlet_id} (Menunggu Otorisasi Admin).`,
+      details: { from_outlet_id: parsed.data.from_outlet_id, to_outlet_id: parsed.data.to_outlet_id, items_count: parsed.data.items.length, status: initialStatus }
     });
 
     res.status(201).json({ 
       success: true, 
-      message: 'Transfer Antar Cabang Berhasil!',
+      message: isDirectAdmin 
+        ? 'Transfer Antar Cabang Berhasil Dieksekusi Langsung!' 
+        : 'Pengajuan Transfer Berhasil Dibuat! Menunggu Otorisasi / Persetujuan Admin Pusat.',
       data: result 
     });
   } catch (e) {
     console.error('Transfer Error:', e);
+    res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+exports.approveTransfer = async (req, res) => {
+  try {
+    const { kode_transfer } = req.params;
+    const isAuthorized = req.user && (req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER' || req.user.role === 'ADMIN_GUDANG');
+    if (!isAuthorized) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin Pusat, Owner, atau Admin Gudang yang dapat menyetujui transfer' });
+    }
+
+    const result = await TransferService.approveTransfer(kode_transfer, req.user);
+    AuditService.logAction({
+      userId: req.user.id,
+      module: 'TRANSFER',
+      action: 'APPROVE',
+      description: `Menyetujui transfer antar-cabang [${kode_transfer}]. Stok cabang telah termutasi dan surat jalan resmi diterbitkan.`,
+      details: { kode_transfer }
+    });
+    res.json({ success: true, message: 'Transfer berhasil disetujui & stok cabang telah termutasi!', data: result });
+  } catch (e) {
+    console.error('Approve Transfer Error:', e);
+    res.status(400).json({ success: false, message: e.message });
+  }
+};
+
+exports.rejectTransfer = async (req, res) => {
+  try {
+    const { kode_transfer } = req.params;
+    const isAuthorized = req.user && (req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER' || req.user.role === 'ADMIN_GUDANG');
+    if (!isAuthorized) {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin yang dapat menolak transfer' });
+    }
+
+    const parsed = rejectSchema.safeParse(req.body);
+    const reason = parsed.success && parsed.data.rejection_reason ? parsed.data.rejection_reason : 'Ditolak oleh Admin';
+
+    const result = await TransferService.rejectTransfer(kode_transfer, req.user, reason);
+    AuditService.logAction({
+      userId: req.user.id,
+      module: 'TRANSFER',
+      action: 'REJECT',
+      description: `Menolak permohonan transfer antar-cabang [${kode_transfer}]. Alasan: ${reason}`,
+      details: { kode_transfer, reason }
+    });
+    res.json({ success: true, message: 'Permohonan transfer telah ditolak.', data: result });
+  } catch (e) {
+    console.error('Reject Transfer Error:', e);
     res.status(400).json({ success: false, message: e.message });
   }
 };

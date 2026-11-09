@@ -268,6 +268,7 @@ class TransferService {
         p.nama as product_name,
         p.satuan as product_satuan,
         bt.qty,
+        COALESCE(s_from.qty_current, 0) as from_stock_current,
         bt.created_by,
         u.nama as creator_name,
         u_app.nama as approver_name,
@@ -277,6 +278,7 @@ class TransferService {
       JOIN outlets o_from ON bt.from_outlet_id = o_from.id
       JOIN outlets o_to ON bt.to_outlet_id = o_to.id
       JOIN products p ON bt.product_id = p.id
+      LEFT JOIN stocks s_from ON s_from.outlet_id = bt.from_outlet_id AND s_from.product_id = bt.product_id
       LEFT JOIN users u ON bt.created_by = u.id
       LEFT JOIN users u_app ON bt.approved_by = u_app.id
     `;
@@ -318,7 +320,8 @@ class TransferService {
         product_kode: row.product_kode,
         product_name: row.product_name,
         product_satuan: row.product_satuan,
-        qty: row.qty
+        qty: row.qty,
+        from_stock: parseInt(row.from_stock_current || 0)
       });
     }
 

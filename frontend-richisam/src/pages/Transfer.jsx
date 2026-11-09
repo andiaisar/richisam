@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axiosClient from '../api/axiosClient';
-import { Send, AlertCircle, RefreshCw, Radar, XCircle, Trash2, Printer, History, FileText, CheckCircle2, Clock, Check, X, ShieldAlert, Filter, AlertTriangle } from 'lucide-react';
+import { Send, AlertCircle, RefreshCw, Radar, XCircle, Trash2, Printer, History, FileText, CheckCircle2, Clock, Check, X, ShieldAlert, Filter, AlertTriangle, Eye } from 'lucide-react';
 import useAuthStore from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 import SuratJalanModal from '../components/SuratJalanModal';
@@ -34,6 +34,12 @@ const Transfer = () => {
 
   // Rejection Modal State
   const [rejectModal, setRejectModal] = useState({ isOpen: false, kode_transfer: '', reason: '' });
+
+  // Approve Modal State
+  const [approveModal, setApproveModal] = useState({ isOpen: false, transfer: null });
+
+  // Detail Modal State
+  const [detailModal, setDetailModal] = useState({ isOpen: false, transfer: null });
 
   // Radar State
   const [activeRadar, setActiveRadar] = useState(null); // { index, product_id }
@@ -205,13 +211,19 @@ const Transfer = () => {
     }
   };
 
-  const handleApprove = async (kode_transfer) => {
-    if (!window.confirm(`Setujui permohonan transfer [${kode_transfer}]? Stok cabang asal akan dipotong dan dialokasikan ke cabang tujuan.`)) return;
+  const handleOpenApprove = (trf) => {
+    setApproveModal({ isOpen: true, transfer: trf });
+  };
+
+  const handleExecuteApprove = async () => {
+    if (!approveModal.transfer) return;
+    const kode_transfer = approveModal.transfer.kode_transfer;
     
     setActionLoading(true);
     try {
       const res = await axiosClient.put(`/transfers/${kode_transfer}/approve`);
       toast.success(res.data?.message || 'Transfer berhasil disetujui & stok telah dialokasikan!');
+      setApproveModal({ isOpen: false, transfer: null });
       fetchTransfers();
     } catch (e) {
       toast.error(e.response?.data?.message || 'Gagal menyetujui transfer');
@@ -676,42 +688,57 @@ const Transfer = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {isPending ? (
-                            canApprove ? (
-                              <div className="flex items-center justify-end gap-2">
-                                <button
-                                  onClick={() => handleApprove(trf.kode_transfer)}
-                                  disabled={actionLoading}
-                                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Setujui</span>
-                                </button>
-                                <button
-                                  onClick={() => setRejectModal({ isOpen: true, kode_transfer: trf.kode_transfer, reason: '' })}
-                                  disabled={actionLoading}
-                                  className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                  <span>Tolak</span>
-                                </button>
-                              </div>
-                            ) : (
-                              <span className="text-xs text-amber-400/80 italic">Menunggu Review Pusat</span>
-                            )
-                          ) : isApproved ? (
+                          <div className="flex items-center justify-end gap-2">
                             <button
-                              onClick={() => handlePrintTransfer(trf)}
-                              className="flex items-center gap-1.5 ml-auto px-3 py-1.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                              type="button"
+                              onClick={() => setDetailModal({ isOpen: true, transfer: trf })}
+                              title="Lihat Rincian Barang"
+                              className="px-2.5 py-1.5 bg-[#241B17] hover:bg-[#2D241E] text-stone-300 hover:text-white border border-[#3E3028] rounded-xl text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer"
                             >
-                              <Printer className="w-3.5 h-3.5" />
-                              <span>Cetak Surat Jalan</span>
+                              <Eye className="w-3.5 h-3.5" />
+                              <span className="hidden sm:inline">Rincian</span>
                             </button>
-                          ) : (
-                            <span className="text-xs text-stone-500 italic block text-right">
-                              {trf.rejection_reason || 'Ditolak Admin'}
-                            </span>
-                          )}
+
+                            {isPending ? (
+                              canApprove ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenApprove(trf)}
+                                    disabled={actionLoading}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                    <span>Setujui</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setRejectModal({ isOpen: true, kode_transfer: trf.kode_transfer, reason: '' })}
+                                    disabled={actionLoading}
+                                    className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                    <span>Tolak</span>
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-xs text-amber-400/80 italic">Menunggu Review Pusat</span>
+                              )
+                            ) : isApproved ? (
+                              <button
+                                type="button"
+                                onClick={() => handlePrintTransfer(trf)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                                <span>Cetak Surat Jalan</span>
+                              </button>
+                            ) : (
+                              <span className="text-xs text-stone-500 italic block">
+                                {trf.rejection_reason || 'Ditolak Admin'}
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -735,6 +762,292 @@ const Transfer = () => {
           />
         </div>
       )}
+
+      {/* Modal Dialog Persetujuan Transfer & Pengecekan Stok */}
+      {approveModal.isOpen && approveModal.transfer && (() => {
+        const trf = approveModal.transfer;
+        const isStockShortage = trf.items?.some(item => (item.from_stock ?? 0) < item.qty);
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[#2D241E] pb-3">
+                <div>
+                  <h3 className="font-bold text-white text-base flex items-center gap-2">
+                    <CheckCircle2 className="text-emerald-500 w-5 h-5" />
+                    Otorisasi Transfer Antar-Cabang
+                  </h3>
+                  <div className="text-xs text-[#FFCE00] font-mono mt-0.5">{trf.kode_transfer}</div>
+                </div>
+                <button 
+                  onClick={() => setApproveModal({ isOpen: false, transfer: null })}
+                  className="text-stone-400 hover:text-white p-1 rounded-lg"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Rute & Pemohon */}
+              <div className="grid grid-cols-2 gap-2 p-3 bg-[#130E0C] border border-[#241B17] rounded-2xl text-xs">
+                <div>
+                  <div className="text-stone-500 text-[11px]">Cabang Pengirim (Asal)</div>
+                  <div className="text-white font-bold">{trf.from_outlet_name}</div>
+                </div>
+                <div>
+                  <div className="text-stone-500 text-[11px]">Cabang Penerima (Tujuan)</div>
+                  <div className="text-emerald-400 font-bold">{trf.to_outlet_name}</div>
+                </div>
+                <div className="mt-1">
+                  <div className="text-stone-500 text-[11px]">Diajukan Oleh</div>
+                  <div className="text-stone-300">{trf.creator_name || '-'}</div>
+                </div>
+                <div className="mt-1">
+                  <div className="text-stone-500 text-[11px]">Catatan</div>
+                  <div className="text-stone-300 italic">{trf.catatan || '-'}</div>
+                </div>
+              </div>
+
+              {/* Tabel Item & Ketersediaan Stok */}
+              <div>
+                <div className="text-xs font-semibold text-stone-300 mb-2">Rincian Barang & Ketersediaan Stok:</div>
+                <div className="max-h-52 overflow-y-auto rounded-xl border border-[#2D241E] divide-y divide-[#241B17]">
+                  {trf.items?.map((item, i) => {
+                    const readyStock = item.from_stock ?? 0;
+                    const isEnough = readyStock >= item.qty;
+                    return (
+                      <div key={i} className="p-3 bg-[#140F0D] flex items-center justify-between text-xs">
+                        <div>
+                          <div className="font-bold text-white">{item.product_name}</div>
+                          <div className="text-stone-500 text-[11px] font-mono">{item.product_kode}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold text-[#FFCE00]">
+                            Diminta: {item.qty} {item.product_satuan}
+                          </div>
+                          <div className="text-[11px] mt-0.5">
+                            {isEnough ? (
+                              <span className="text-emerald-400 font-medium">
+                                ✓ Stok Ready: {readyStock} {item.product_satuan}
+                              </span>
+                            ) : (
+                              <span className="text-red-400 font-bold">
+                                ⚠️ Stok Asal Kurang ({readyStock} dari {item.qty})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Status Alert */}
+              {isStockShortage ? (
+                <div className="p-3 rounded-2xl bg-red-950/40 border border-red-500/40 text-red-300 text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-red-200">Stok Cabang Asal Tidak Mencukupi!</div>
+                    <div>Stok di <strong>{trf.from_outlet_name}</strong> tidak memenuhi jumlah yang diminta. Anda dapat menolak permintaan ini agar cabang memesan ke Central Kitchen.</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 rounded-2xl bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 text-xs flex items-start gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-emerald-200">Stok Cabang Asal Mencukupi</div>
+                    <div>Menyetujui akan langsung memotong stok di <strong>{trf.from_outlet_name}</strong> dan menambahkannya ke <strong>{trf.to_outlet_name}</strong>, serta menerbitkan Surat Jalan resmi.</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tombol Aksi */}
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const kode = trf.kode_transfer;
+                    setApproveModal({ isOpen: false, transfer: null });
+                    setRejectModal({ isOpen: true, kode_transfer: kode, reason: 'Stok cabang asal tidak mencukupi untuk memenuhi transfer.' });
+                  }}
+                  className="px-3 py-2 bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Tolak Pengajuan
+                </button>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setApproveModal({ isOpen: false, transfer: null })}
+                    className="px-4 py-2 text-xs font-semibold text-stone-400 hover:text-white cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    disabled={actionLoading || isStockShortage}
+                    onClick={handleExecuteApprove}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-800 disabled:text-stone-500 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                  >
+                    {actionLoading ? 'Memproses...' : (
+                      <>
+                        <Check size={16} />
+                        <span>Ya, Setujui & Alokasikan Stok</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Modal Dialog Rincian Transfer */}
+      {detailModal.isOpen && detailModal.transfer && (() => {
+        const trf = detailModal.transfer;
+        const isPending = (trf.status || 'APPROVED') === 'PENDING';
+        const isApproved = (trf.status || 'APPROVED') === 'APPROVED';
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+            <div className="bg-[#1A1412] border border-[#2D241E] rounded-3xl p-6 sm:p-7 max-w-lg w-full shadow-2xl space-y-4">
+              <div className="flex items-center justify-between border-b border-[#2D241E] pb-3">
+                <div>
+                  <h3 className="font-bold text-white text-base flex items-center gap-2">
+                    <FileText className="text-[#FFCE00] w-5 h-5" />
+                    Rincian Tiket Transfer Antar-Cabang
+                  </h3>
+                  <div className="text-xs text-[#FFCE00] font-mono mt-0.5">{trf.kode_transfer}</div>
+                </div>
+                <button 
+                  onClick={() => setDetailModal({ isOpen: false, transfer: null })}
+                  className="text-stone-400 hover:text-white p-1 rounded-lg"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Status Badge & Header Info */}
+              <div className="flex items-center justify-between p-3 bg-[#130E0C] border border-[#241B17] rounded-2xl text-xs">
+                <div>
+                  <div className="text-stone-500 text-[11px]">Waktu Pengajuan</div>
+                  <div className="text-stone-300">
+                    {new Date(trf.created_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-stone-500 text-[11px] mb-0.5">Status Tiket</div>
+                  {isPending ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      <Clock className="w-3 h-3" /> Menunggu Admin
+                    </span>
+                  ) : isApproved ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <CheckCircle2 className="w-3 h-3" /> Disetujui
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                      <XCircle className="w-3 h-3" /> Ditolak
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Rute & Pemohon */}
+              <div className="grid grid-cols-2 gap-2 p-3 bg-[#130E0C] border border-[#241B17] rounded-2xl text-xs">
+                <div>
+                  <div className="text-stone-500 text-[11px]">Cabang Pengirim (Asal)</div>
+                  <div className="text-white font-bold">{trf.from_outlet_name}</div>
+                </div>
+                <div>
+                  <div className="text-stone-500 text-[11px]">Cabang Penerima (Tujuan)</div>
+                  <div className="text-emerald-400 font-bold">{trf.to_outlet_name}</div>
+                </div>
+                <div className="mt-1">
+                  <div className="text-stone-500 text-[11px]">Diajukan Oleh</div>
+                  <div className="text-stone-300">{trf.creator_name || '-'}</div>
+                </div>
+                <div className="mt-1">
+                  <div className="text-stone-500 text-[11px]">Disetujui Oleh</div>
+                  <div className="text-stone-300">{trf.approver_name ? `${trf.approver_name}` : '-'}</div>
+                </div>
+              </div>
+
+              {/* Catatan / Alasan Penolakan */}
+              {trf.rejection_reason && (
+                <div className="p-3 bg-red-950/30 border border-red-500/30 rounded-2xl text-xs text-red-300">
+                  <div className="font-bold text-red-200 mb-0.5">Alasan Penolakan:</div>
+                  <div>{trf.rejection_reason}</div>
+                </div>
+              )}
+
+              {/* Tabel Item */}
+              <div>
+                <div className="text-xs font-semibold text-stone-300 mb-2">Daftar Bahan / Produk:</div>
+                <div className="max-h-52 overflow-y-auto rounded-xl border border-[#2D241E] divide-y divide-[#241B17]">
+                  {trf.items?.map((item, i) => (
+                    <div key={i} className="p-3 bg-[#140F0D] flex items-center justify-between text-xs">
+                      <div>
+                        <div className="font-bold text-white">{item.product_name}</div>
+                        <div className="text-stone-500 text-[11px] font-mono">{item.product_kode}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-[#FFCE00]">
+                          {item.qty} {item.product_satuan}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tombol Aksi */}
+              <div className="flex items-center justify-between pt-2">
+                <div>
+                  {isApproved && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailModal({ isOpen: false, transfer: null });
+                        handlePrintTransfer(trf);
+                      }}
+                      className="px-3 py-2 bg-[#F9610D]/20 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Printer size={15} />
+                      <span>Cetak Surat Jalan</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDetailModal({ isOpen: false, transfer: null })}
+                    className="px-4 py-2 bg-[#2D241E] hover:bg-[#3D3028] text-white text-xs font-semibold rounded-xl cursor-pointer"
+                  >
+                    Tutup
+                  </button>
+
+                  {isPending && canApprove && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailModal({ isOpen: false, transfer: null });
+                        handleOpenApprove(trf);
+                      }}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Check size={16} />
+                      <span>Review & Setujui</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Modal Dialog Penolakan Transfer */}
       {rejectModal.isOpen && (

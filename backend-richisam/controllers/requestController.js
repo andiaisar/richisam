@@ -23,9 +23,11 @@ const updateSchema = z.object({
   items: z.array(z.object({
     id: z.coerce.number().optional(),
     product_id: z.coerce.number().optional(),
-    qty_dikirim: z.coerce.number().min(0, 'Jumlah dikirim tidak boleh negatif'),
+    qty_dikirim: z.coerce.number().min(0, 'Jumlah dikirim tidak boleh negatif').optional(),
+    qty_diterima: z.coerce.number().min(0, 'Jumlah diterima tidak boleh negatif').optional(),
     catatan: z.string().optional()
-  })).optional()
+  })).optional(),
+  catatan: z.string().optional()
 });
 
 exports.getRequests = async (req, res) => {
@@ -146,10 +148,10 @@ exports.updateStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: msg, data: parsed.error.format() });
     }
 
-    const { status, qty_approved, items } = parsed.data;
+    const { status, qty_approved, items, catatan } = parsed.data;
 
     // Delegasikan validasi RBAC lengkap ke RequestService (isCK, isPusatOrOwner, isBranchStaff)
-    const tiket = await RequestService.updateStatus(id, status, qty_approved, req.user, items);
+    const tiket = await RequestService.updateStatus(id, status, qty_approved, req.user, items, catatan);
     AuditService.logAction({
       userId: req.user?.id,
       userName: req.user?.nama || req.user?.username,

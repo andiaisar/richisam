@@ -110,7 +110,7 @@ class RequestService {
     }
   }
 
-  static async updateStatus(id, newStatus, qty_approved, req_user, itemsPayload) {
+  static async updateStatus(id, newStatus, qty_approved, req_user, itemsPayload, rootCatatan) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -121,6 +121,7 @@ class RequestService {
 
       const isCK = req_user.role === 'ADMIN_GUDANG';
       const isPusatOrOwner = req_user.role === 'ADMIN_PUSAT' || req_user.role === 'OWNER';
+      let hasDiscrepancy = false;
 
       // 1. Memproses atau Mengirim Tiket (DIPROSES atau DIKIRIM)
       // Staf Cabang tidak boleh mengubah status pengiriman; hanya Admin Gudang (CK), Admin Pusat, atau Owner
@@ -197,8 +198,35 @@ class RequestService {
         const tanggal = new Date().toISOString().split('T')[0];
 
         for (const item of items) {
-          const qty = parseInt(item.qty_dikirim || item.qty_diminta, 10) || 0;
-          if (qty <= 0) continue;
+          const itmMatch = itemsPayload && itemsPayload.find(p => Number(p.id) === Number(item.id) || Number(p.product_id) === Number(item.product_id));
+          const qtyKirim = parseInt(item.qty_dikirim !== null && item.qty_dikirim !== undefined ? item.qty_dikirim : item.qty_diminta, 10) || 0;
+          
+          // Qty yang benar-benar diterima fisik oleh staf outlet
+          let qtyDiterima = qtyKirim;
+          if (itmMatch && itmMatch.qty_diterima !== undefined && itmMatch.qty_diterima !== null) {
+            qtyDiterima = Math.max(0, parseInt(itmMatch.qty_diterima, 10) || 0);
+          } else if (item.qty_diterima !== null && item.qty_diterima !== undefined && item.qty_diterima > 0) {
+            qtyDiterima = Math.max(0, parseInt(item.qty_diterima, 10) || 0);
+          }
+
+          const itemCatatan = itmMatch?.catatan !== undefined ? itmMatch.catatan : item.catatan;
+
+          if (qtyDiterima < qtyKirim) {
+            hasDiscrepancy = true;
+          }
+
+          // Update restock_ticket_items jika ada payload checklist atau catatan
+          if (itemsPayload && itemsPayload.length > 0) {
+            await client.query(
+              `UPDATE restock_ticket_items 
+               SET qty_diterima = $1, 
+                   catatan = COALESCE($2, catatan) 
+               WHERE id = $3`,
+              [qtyDiterima, itemCatatan || null, item.id]
+            );
+          }
+
+          if (qtyDiterima <= 0) continue;
           
           const prevMut = await client.query(
            `SELECT sak FROM stock_mutations
@@ -218,7 +246,7 @@ class RequestService {
             saw = stock.rows.length > 0 ? stock.rows[0].qty_current : 0;
           }
 
-          const sak = saw + qty;
+          const sak = saw + qtyDiterima;
 
           await client.query(
             `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
@@ -228,7 +256,7 @@ class RequestService {
                masuk = stock_mutations.masuk + EXCLUDED.masuk,
                sak = EXCLUDED.sak,
                ticket_id = EXCLUDED.ticket_id`,
-            [item.product_id, tiket.outlet_id, tanggal, shift, saw, qty, 0, sak, req_user.id, tiket.id]
+            [item.product_id, tiket.outlet_id, tanggal, shift, saw, qtyDiterima, 0, sak, req_user.id, tiket.id]
           );
 
           await client.query('UPDATE stocks SET qty_current = $1 WHERE outlet_id = $2 AND product_id = $3', [sak, tiket.outlet_id, item.product_id]);
@@ -236,40 +264,48 @@ class RequestService {
         }
       }
 
-      // Update per item dari itemsPayload atau qty_approved
-      let hasBackorder = false;
-      if (itemsPayload && Array.isArray(itemsPayload) && itemsPayload.length > 0) {
-        for (const itm of itemsPayload) {
-          const itmQty = parseInt(itm.qty_dikirim, 10);
-          if (!isNaN(itmQty)) {
-            await client.query(
-              `UPDATE restock_ticket_items 
-               SET qty_dikirim = $1, 
-                   qty_disetujui = $1, 
-                   catatan = COALESCE($2, catatan) 
-               WHERE (id = $3 OR product_id = $4) AND ticket_id = $5`,
-              [itmQty, itm.catatan || null, itm.id || 0, itm.product_id || 0, id]
-            );
+      // Update per item dari itemsPayload atau qty_approved saat status DIPROSES / DIKIRIM
+      if (newStatus !== 'SELESAI') {
+        if (itemsPayload && Array.isArray(itemsPayload) && itemsPayload.length > 0) {
+          for (const itm of itemsPayload) {
+            const itmQty = parseInt(itm.qty_dikirim, 10);
+            if (!isNaN(itmQty)) {
+              await client.query(
+                `UPDATE restock_ticket_items 
+                 SET qty_dikirim = $1, 
+                     qty_disetujui = $1, 
+                     catatan = COALESCE($2, catatan) 
+                 WHERE (id = $3 OR product_id = $4) AND ticket_id = $5`,
+                [itmQty, itm.catatan || null, itm.id || 0, itm.product_id || 0, id]
+              );
+            }
           }
-        }
-      } else if (qty_approved !== undefined) {
-        const itemsRes = await client.query('SELECT id FROM restock_ticket_items WHERE ticket_id = $1 LIMIT 1', [id]);
-        if (itemsRes.rows.length > 0) {
-          await client.query('UPDATE restock_ticket_items SET qty_dikirim = $1 WHERE id = $2', [qty_approved, itemsRes.rows[0].id]);
+        } else if (qty_approved !== undefined) {
+          const itemsRes = await client.query('SELECT id FROM restock_ticket_items WHERE ticket_id = $1 LIMIT 1', [id]);
+          if (itemsRes.rows.length > 0) {
+            await client.query('UPDATE restock_ticket_items SET qty_dikirim = $1, qty_disetujui = $1 WHERE id = $2', [qty_approved, itemsRes.rows[0].id]);
+          }
         }
       }
 
       const resUpdate = await client.query(
         `UPDATE restock_tickets 
          SET status = $1::ticket_status_enum, 
+             ada_selisih = CASE WHEN $1::text = 'SELESAI' THEN $5 ELSE ada_selisih END,
+             catatan = CASE 
+               WHEN $4::text IS NOT NULL AND $4::text != '' THEN 
+                 CASE WHEN catatan IS NOT NULL AND catatan != '' THEN catatan || ' | ' || $4::text ELSE $4::text END
+               ELSE catatan 
+             END,
              processed_by = CASE WHEN $1::text IN ('DIPROSES', 'DIKIRIM') AND processed_by IS NULL THEN $3 ELSE processed_by END,
              processed_at = CASE WHEN $1::text IN ('DIPROSES', 'DIKIRIM') AND processed_at IS NULL THEN CURRENT_TIMESTAMP ELSE processed_at END,
              received_by = CASE WHEN $1::text = 'SELESAI' THEN $3 ELSE received_by END,
              received_at = CASE WHEN $1::text = 'SELESAI' AND received_at IS NULL THEN CURRENT_TIMESTAMP ELSE received_at END,
              updated_at = CURRENT_TIMESTAMP 
          WHERE id = $2 RETURNING *`,
-        [newStatus, id, req_user.id]
+        [newStatus, id, req_user.id, rootCatatan || null, hasDiscrepancy]
       );
+      const updatedTicket = resUpdate.rows[0];
 
       // Notifikasi status tiket & pengiriman surat jalan
       const outInfo = await client.query('SELECT nama FROM outlets WHERE id = $1', [tiket.outlet_id]);
@@ -279,7 +315,10 @@ class RequestService {
         const pesan = `Surat Jalan Dikirim: Tiket [${tiket.kode_tiket}] sedang dalam pengiriman ke ${outletName}. Mohon staf verifikasi fisik & terima stok saat tiba.`;
         await NotificationService.notifyOutlet({ outlet_id: tiket.outlet_id, product_id: null, tipe: 'TIKET', pesan }, client);
       } else if (newStatus === 'SELESAI') {
-        const pesan = `Penerimaan Selesai: Tiket [${tiket.kode_tiket}] telah diterima & diverifikasi lengkap oleh ${outletName}. Stok cabang telah bertambah.`;
+        const isDiscrepancy = updatedTicket?.ada_selisih;
+        const pesan = isDiscrepancy
+          ? `Penerimaan dengan Selisih: Tiket [${tiket.kode_tiket}] diterima oleh ${outletName} dengan catatan fisik tidak lengkap/rusak. Stok cabang telah disesuaikan dengan fisik diterima.`
+          : `Penerimaan Selesai: Tiket [${tiket.kode_tiket}] telah diterima & diverifikasi lengkap oleh ${outletName}. Stok cabang telah bertambah.`;
         await NotificationService.notifyPusat({ product_id: null, tipe: 'TIKET', pesan }, client);
       }
 
@@ -418,7 +457,12 @@ class RequestService {
          WHERE rti.ticket_id = $1`,
         [parentTicketId]
       );
-      const backorderItems = itemsRes.rows.filter(it => (it.qty_diminta - (it.qty_dikirim !== null ? it.qty_dikirim : 0)) > 0);
+      const backorderItems = itemsRes.rows.filter(it => {
+        const received = it.qty_diterima !== null && it.qty_diterima !== undefined 
+          ? it.qty_diterima 
+          : (it.qty_dikirim !== null ? it.qty_dikirim : 0);
+        return (it.qty_diminta - received) > 0;
+      });
 
       if (backorderItems.length === 0) {
         throw new Error('Tidak ada barang susulan yang tersisa pada tiket ini');
@@ -433,7 +477,10 @@ class RequestService {
       const newTicket = newTicketRes.rows[0];
 
       for (const item of backorderItems) {
-        const sisa = item.qty_diminta - (item.qty_dikirim !== null ? item.qty_dikirim : 0);
+        const received = item.qty_diterima !== null && item.qty_diterima !== undefined 
+          ? item.qty_diterima 
+          : (item.qty_dikirim !== null ? item.qty_dikirim : 0);
+        const sisa = item.qty_diminta - received;
         await client.query(
           `INSERT INTO restock_ticket_items (ticket_id, product_id, qty_diminta, qty_dikirim, catatan)
            VALUES ($1, $2, $3, $3, $4)`,

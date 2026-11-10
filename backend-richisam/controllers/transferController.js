@@ -34,9 +34,14 @@ exports.createTransfer = async (req, res) => {
     const valid = await bcrypt.compare(parsed.data.password, user.rows[0].password_hash);
     if (!valid) throw new Error('Password salah! Transfer dibatalkan.');
 
-    // Ensure the sender is authorized for from_outlet_id (if not ADMIN_PUSAT/OWNER)
-    if (req.user.role === 'STAF_CABANG' && Number(req.user.outlet_id) !== Number(parsed.data.from_outlet_id)) {
-      throw new Error('Anda tidak memiliki akses untuk mentransfer dari cabang ini');
+    // Ensure the branch staff only transfers involving their own outlet (as sender or receiver)
+    if (req.user.role === 'STAF_CABANG') {
+      const userOutlet = Number(req.user.outlet_id);
+      const fromOutlet = Number(parsed.data.from_outlet_id);
+      const toOutlet = Number(parsed.data.to_outlet_id);
+      if (userOutlet !== fromOutlet && userOutlet !== toOutlet) {
+        throw new Error('Anda hanya dapat mengajukan permohonan transfer yang melibatkan cabang Anda');
+      }
     }
 
     // Alur Otorisasi:

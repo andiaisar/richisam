@@ -23,6 +23,7 @@ const Transfer = () => {
   
   const [fromOutlet, setFromOutlet] = useState('');
   const [toOutlet, setToOutlet] = useState('');
+  const [transferMode, setTransferMode] = useState('request'); // 'request' (minta bantuan dari cabang lain) | 'send' (kirim ke cabang lain)
   const [transferItems, setTransferItems] = useState([{ product_id: '', qty: '' }]);
   const [catatan, setCatatan] = useState('');
   const [password, setPassword] = useState('');
@@ -70,9 +71,10 @@ const Transfer = () => {
       setOutlets(outletsData);
       setProducts(resProducts?.data?.data || resProducts?.data || []);
       
-      // Auto set fromOutlet if user is branch staff
+      // Auto set default outlets if user is branch staff
       if (user?.role === 'STAF_CABANG' && user?.outlet_id) {
-        setFromOutlet(user.outlet_id.toString());
+        setToOutlet(user.outlet_id.toString());
+        setFromOutlet('');
       }
     } catch {
       toast.error('Gagal memuat data master');
@@ -352,16 +354,58 @@ const Transfer = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Arah Pengajuan Transfer untuk Staf Cabang */}
+            {isBranchStaff && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-cream/40 border border-line rounded-2xl">
+                <div>
+                  <span className="text-xs font-bold text-ink block">Arah Pengajuan Transfer:</span>
+                  <span className="text-[11px] text-muted">Tentukan apakah cabang Anda meminta pasokan atau mengirim bantuan stok</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTransferMode('request');
+                      setToOutlet(user.outlet_id?.toString() || '');
+                      setFromOutlet('');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      transferMode === 'request'
+                        ? 'bg-[#F9610D] text-white shadow-xs'
+                        : 'bg-white text-muted hover:text-ink border border-line'
+                    }`}
+                  >
+                    📥 Minta Stok dari Cabang Lain
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTransferMode('send');
+                      setFromOutlet(user.outlet_id?.toString() || '');
+                      setToOutlet('');
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      transferMode === 'send'
+                        ? 'bg-[#F9610D] text-white shadow-xs'
+                        : 'bg-white text-muted hover:text-ink border border-line'
+                    }`}
+                  >
+                    📤 Kirim Bantuan ke Cabang Lain
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* From Outlet */}
               <div>
                 <label className="block text-xs sm:text-sm font-semibold text-ink mb-2">
-                  Cabang Asal (Pengirim)
+                  Cabang Asal (Pengirim / Sumber Stok)
                 </label>
                 <select
                   value={fromOutlet}
                   onChange={(e) => setFromOutlet(e.target.value)}
-                  disabled={user?.role === 'STAF_CABANG'}
+                  disabled={isBranchStaff && transferMode === 'send'}
                   className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] disabled:opacity-60"
                 >
                   <option value="">Pilih Cabang Asal</option>
@@ -379,7 +423,8 @@ const Transfer = () => {
                 <select
                   value={toOutlet}
                   onChange={(e) => setToOutlet(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D]"
+                  disabled={isBranchStaff && transferMode === 'request'}
+                  className="w-full px-4 py-3 bg-white border border-line rounded-xl text-ink text-sm focus:outline-none focus:border-[#F9610D] focus:ring-1 focus:ring-[#F9610D] disabled:opacity-60"
                 >
                   <option value="">Pilih Cabang Tujuan</option>
                   {outlets.map(o => (

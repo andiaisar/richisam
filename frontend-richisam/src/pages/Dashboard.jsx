@@ -375,7 +375,7 @@ const Dashboard = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="card-par-stock rounded-2xl sm:rounded-3xl p-5 bg-gradient-to-br from-[#BA4F18] via-[#A03E15] to-[#782810] text-white shadow-xl shadow-[#F9610D]/20 border border-white/10 relative overflow-hidden flex flex-col justify-between group transition-all duration-300">
             <div>
               <div className="flex items-center justify-between">
@@ -452,7 +452,8 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Kartu 3: Inventaris Peralatan Fisik */}
+          {/* Kartu 3: Inventaris Peralatan Fisik (Disembunyikan sementara untuk fokus ruang lingkup skripsi) */}
+          {/*
           <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] hover:border-[#FFCE00]/40 transition-all flex flex-col justify-between group">
             <div>
               <div className="flex items-center justify-between">
@@ -500,6 +501,7 @@ const Dashboard = () => {
               </Link>
             </div>
           </div>
+          */}
 
           {/* Kartu 4: Status Audit Stok Opname & Kepatuhan Shift */}
           <div className="rounded-2xl sm:rounded-3xl p-5 bg-[#1A1412] border border-[#2D241E] hover:border-emerald-500/40 transition-all flex flex-col justify-between group">

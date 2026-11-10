@@ -21,7 +21,7 @@ const MENUS = {
         { to: '/mutasi', label: 'Mutasi Stok', icon: ArrowLeftRight },
         { to: '/transfer', label: 'Transfer Cabang', icon: Send },
         { to: '/kadaluarsa', label: 'Masa Kadaluarsa', icon: CalendarClock },
-        { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
+        // { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench }, // Ditutup sementara untuk ruang lingkup Skripsi
         { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Laporan Defect', icon: PackageX },
         { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
@@ -47,7 +47,7 @@ const MENUS = {
         { to: '/permintaan', label: 'Tiket Permintaan', icon: ClipboardList },
         { to: '/transfer', label: 'Transfer Cabang', icon: Send },
         { to: '/kadaluarsa', label: 'Masa Kadaluarsa', icon: CalendarClock },
-        { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
+        // { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench }, // Ditutup sementara untuk ruang lingkup Skripsi
         { to: '/opname', label: 'Stok Opname', icon: ClipboardCheck },
         { to: '/defect', label: 'Defect & Retur', icon: PackageX },
         { to: '/shift-closing', label: 'Tutup Shift', icon: Lock },
@@ -76,7 +76,7 @@ const MENUS = {
         { to: '/permintaan', label: 'Tiket Permintaan', icon: ClipboardList },
         { to: '/transfer', label: 'Transfer Cabang', icon: Send },
         { to: '/kadaluarsa', label: 'Masa Kadaluarsa (FEFO)', icon: CalendarClock },
-        { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
+        // { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench }, // Ditutup sementara untuk ruang lingkup Skripsi
         { to: '/mutasi', label: 'Mutasi Stok Harian', icon: ArrowLeftRight },
       ],
     },
@@ -99,7 +99,7 @@ const MENUS = {
         { to: '/permintaan', label: 'Tiket Permintaan Cabang', icon: ClipboardList },
         { to: '/mutasi', label: 'Mutasi Stok CK', icon: ArrowLeftRight },
         { to: '/kadaluarsa', label: 'Masa Kadaluarsa', icon: CalendarClock },
-        { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench },
+        // { to: '/assets', label: 'Inventaris Peralatan', icon: Wrench }, // Ditutup sementara untuk ruang lingkup Skripsi
         { to: '/opname', label: 'Stok Opname CK', icon: ClipboardCheck },
         { to: '/defect', label: 'Defect & Retur', icon: PackageX },
         { to: '/shift-closing', label: 'Tutup Shift CK', icon: Lock },

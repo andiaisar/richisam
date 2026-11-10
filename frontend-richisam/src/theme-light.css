@@ -1032,6 +1032,15 @@ html[data-theme="light"] .transfer-tab-active {
   box-shadow: 0 2px 4px rgba(249, 97, 13, 0.25) !important;
 }
 
+html[data-theme="light"] :is([class*="bg-[#F9610D]"], .transfer-tab-active) :is(span.transfer-pending-badge, .transfer-pending-badge),
+html[data-theme="light"] .transfer-pending-badge,
+html[data-theme="light"] span.transfer-pending-badge,
+.transfer-pending-badge {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+  font-weight: 900 !important;
+}
+
 html[data-theme="light"] .transfer-table-wrap {
   background-color: #FFFFFF !important;
   border-color: #E8DED3 !important;

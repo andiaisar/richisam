@@ -309,14 +309,17 @@ const Transfer = () => {
             onClick={() => { setActiveTab('riwayat'); fetchTransfers(); }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer relative ${
               activeTab === 'riwayat'
-                ? 'bg-[#F9610D] text-white shadow-xs'
+                ? 'bg-[#F9610D] text-white shadow-xs transfer-tab-active'
                 : 'text-muted hover:text-ink'
             }`}
           >
             <History className="w-3.5 h-3.5" />
             <span>Riwayat & Otorisasi</span>
             {pendingCount > 0 && (
-              <span className="px-2 py-0.5 text-[10px] rounded-full font-black bg-black/30 text-white border border-white/25 shadow-xs">
+              <span
+                style={{ backgroundColor: '#FFFFFF', color: '#000000', fontWeight: 900 }}
+                className="px-2.5 py-0.5 text-[10px] rounded-full shadow-xs border border-black/10 transfer-pending-badge ml-1 inline-block"
+              >
                 {pendingCount} Pending
               </span>
             )}

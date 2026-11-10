@@ -318,3 +318,14 @@ table tr:hover td {
     margin: 8mm 10mm 10mm 10mm;
   }
 }
+
+/* ── Cegah panah spinner bawaan browser pada input number & rapikan UI ── */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

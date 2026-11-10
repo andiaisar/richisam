@@ -111,6 +111,57 @@ div[role="dialog"] .bg-white {
   border-color: #382E28 !important;
 }
 
+/* ── Transfer Cabang Component Classes (Dark Mode Defaults) ── */
+.badge-transfer-pending {
+  background-color: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #FCD34D;
+}
+.badge-transfer-approved {
+  background-color: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #6EE7B7;
+}
+.badge-transfer-rejected {
+  background-color: rgba(244, 63, 94, 0.2);
+  border: 1px solid rgba(244, 63, 94, 0.4);
+  color: #FDA4AF;
+}
+
+.btn-transfer-approve {
+  background-color: #059669;
+  color: #FFFFFF;
+}
+.btn-transfer-approve:hover {
+  background-color: #047857;
+}
+
+.btn-transfer-reject {
+  background-color: #DC2626;
+  color: #FFFFFF;
+}
+.btn-transfer-reject:hover {
+  background-color: #B91C1C;
+}
+
+.btn-transfer-detail {
+  background-color: #241B17;
+  border: 1px solid #3E3028;
+  color: #FAF7F4;
+}
+.btn-transfer-detail:hover {
+  background-color: #2D241E;
+  color: #FFFFFF;
+}
+
+.btn-transfer-print {
+  background-color: #F9610D;
+  color: #FFFFFF;
+}
+.btn-transfer-print:hover {
+  background-color: #E0560C;
+}
+
 /* Form controls & inputs */
 input, select, textarea {
   color-scheme: dark;

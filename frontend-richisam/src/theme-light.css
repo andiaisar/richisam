@@ -1020,6 +1020,125 @@ html[data-theme="light"] .product-status-tabs button[class*="bg-richisam-orange"
   box-shadow: 0 1px 3px rgba(249, 97, 13, 0.35) !important;
 }
 
+/* ── Halaman Transfer Cabang (Mode Terang) ── */
+html[data-theme="light"] .transfer-tab-bar {
+  background-color: #EFE8DE !important;
+  border-color: #E0D4C5 !important;
+}
+
+html[data-theme="light"] .transfer-tab-active {
+  background-color: #F9610D !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 2px 4px rgba(249, 97, 13, 0.25) !important;
+}
+
+html[data-theme="light"] .transfer-table-wrap {
+  background-color: #FFFFFF !important;
+  border-color: #E8DED3 !important;
+}
+
+html[data-theme="light"] .transfer-table thead th {
+  background-color: #F8F4EF !important;
+  color: #4A3E36 !important;
+  border-bottom: 1px solid #E8DED3 !important;
+}
+
+html[data-theme="light"] .transfer-table tbody tr {
+  background-color: #FFFFFF !important;
+}
+
+html[data-theme="light"] .transfer-table tbody tr:hover td {
+  background-color: #FBF8F5 !important;
+}
+
+/* Status Badges */
+html[data-theme="light"] .badge-transfer-pending {
+  background-color: #FEF3C7 !important;
+  border: 1px solid #F59E0B !important;
+  color: #92400E !important;
+}
+html[data-theme="light"] .badge-transfer-pending * {
+  color: #92400E !important;
+  stroke: #92400E !important;
+}
+
+html[data-theme="light"] .badge-transfer-approved {
+  background-color: #D1FAE5 !important;
+  border: 1px solid #10B981 !important;
+  color: #065F46 !important;
+}
+html[data-theme="light"] .badge-transfer-approved * {
+  color: #065F46 !important;
+  stroke: #065F46 !important;
+}
+
+html[data-theme="light"] .badge-transfer-rejected {
+  background-color: #FFE4E6 !important;
+  border: 1px solid #F43F5E !important;
+  color: #9F1239 !important;
+}
+html[data-theme="light"] .badge-transfer-rejected * {
+  color: #9F1239 !important;
+  stroke: #9F1239 !important;
+}
+
+/* Action Buttons */
+html[data-theme="light"] .btn-transfer-approve {
+  background-color: #059669 !important;
+  border-color: #059669 !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="light"] .btn-transfer-approve:hover {
+  background-color: #047857 !important;
+  border-color: #047857 !important;
+}
+html[data-theme="light"] .btn-transfer-approve * {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+html[data-theme="light"] .btn-transfer-reject {
+  background-color: #DC2626 !important;
+  border-color: #DC2626 !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="light"] .btn-transfer-reject:hover {
+  background-color: #B91C1C !important;
+  border-color: #B91C1C !important;
+}
+html[data-theme="light"] .btn-transfer-reject * {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
+html[data-theme="light"] .btn-transfer-detail {
+  background-color: #FFFFFF !important;
+  border: 1px solid #D4C5B5 !important;
+  color: #140F0D !important;
+}
+html[data-theme="light"] .btn-transfer-detail:hover {
+  background-color: #F5EFE6 !important;
+  color: #140F0D !important;
+}
+html[data-theme="light"] .btn-transfer-detail * {
+  color: #4A3E36 !important;
+  stroke: #4A3E36 !important;
+}
+
+html[data-theme="light"] .btn-transfer-print {
+  background-color: #F9610D !important;
+  border-color: #F9610D !important;
+  color: #FFFFFF !important;
+}
+html[data-theme="light"] .btn-transfer-print:hover {
+  background-color: #E0560C !important;
+  border-color: #E0560C !important;
+}
+html[data-theme="light"] .btn-transfer-print * {
+  color: #FFFFFF !important;
+  stroke: #FFFFFF !important;
+}
+
 /* Transisi halus saat berganti mode */
 html.theme-switching,
 html.theme-switching * {

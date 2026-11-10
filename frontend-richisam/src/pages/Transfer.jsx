@@ -316,9 +316,7 @@ const Transfer = () => {
             <History className="w-3.5 h-3.5" />
             <span>Riwayat & Otorisasi</span>
             {pendingCount > 0 && (
-              <span className={`px-2 py-0.5 text-[10px] rounded-full font-extrabold ${
-                activeTab === 'riwayat' ? 'bg-white text-[#F9610D] shadow-xs' : 'bg-amber-500 text-white'
-              }`}>
+              <span className="px-2 py-0.5 text-[10px] rounded-full font-black bg-black/30 text-white border border-white/25 shadow-xs">
                 {pendingCount} Pending
               </span>
             )}
@@ -670,16 +668,16 @@ const Transfer = () => {
                         </td>
                         <td className="px-6 py-4 text-center">
                           {isPending ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 shadow-xs">
-                              <Clock className="w-3.5 h-3.5 text-amber-700" /> Menunggu Admin
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold badge-transfer-pending shadow-xs">
+                              <Clock className="w-3.5 h-3.5" /> Menunggu Admin
                             </span>
                           ) : isApproved ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" /> Disetujui
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold badge-transfer-approved shadow-xs">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Disetujui
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-xs" title={trf.rejection_reason}>
-                              <XCircle className="w-3.5 h-3.5 text-rose-700" /> Ditolak
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold badge-transfer-rejected shadow-xs" title={trf.rejection_reason}>
+                              <XCircle className="w-3.5 h-3.5" /> Ditolak
                             </span>
                           )}
                         </td>
@@ -695,9 +693,9 @@ const Transfer = () => {
                               type="button"
                               onClick={() => setDetailModal({ isOpen: true, transfer: trf })}
                               title="Lihat Rincian Barang"
-                              className="px-2.5 py-1.5 bg-white hover:bg-cream text-ink border border-line rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 cursor-pointer transition-all"
+                              className="px-2.5 py-1.5 btn-transfer-detail rounded-xl text-xs font-bold shadow-xs flex items-center gap-1 cursor-pointer transition-all"
                             >
-                              <Eye className="w-3.5 h-3.5 text-muted" />
+                              <Eye className="w-3.5 h-3.5" />
                               <span className="hidden sm:inline">Rincian</span>
                             </button>
 
@@ -708,7 +706,7 @@ const Transfer = () => {
                                     type="button"
                                     onClick={() => handleOpenApprove(trf)}
                                     disabled={actionLoading}
-                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                    className="px-3 py-1.5 btn-transfer-approve rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
                                   >
                                     <Check className="w-3.5 h-3.5" />
                                     <span>Setujui</span>
@@ -717,7 +715,7 @@ const Transfer = () => {
                                     type="button"
                                     onClick={() => setRejectModal({ isOpen: true, kode_transfer: trf.kode_transfer, reason: '' })}
                                     disabled={actionLoading}
-                                    className="px-3 py-1.5 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                    className="px-3 py-1.5 btn-transfer-reject rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer disabled:opacity-50"
                                   >
                                     <X className="w-3.5 h-3.5" />
                                     <span>Tolak</span>
@@ -730,7 +728,7 @@ const Transfer = () => {
                               <button
                                 type="button"
                                 onClick={() => handlePrintTransfer(trf)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                                className="flex items-center gap-1.5 px-3 py-1.5 btn-transfer-print rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
                               >
                                 <Printer className="w-3.5 h-3.5" />
                                 <span>Cetak Surat Jalan</span>
@@ -875,7 +873,7 @@ const Transfer = () => {
                     setApproveModal({ isOpen: false, transfer: null });
                     setRejectModal({ isOpen: true, kode_transfer: kode, reason: 'Stok cabang asal tidak mencukupi untuk memenuhi transfer.' });
                   }}
-                  className="px-3.5 py-2 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
+                  className="px-3.5 py-2 btn-transfer-reject rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs"
                 >
                   Tolak Pengajuan
                 </button>
@@ -892,7 +890,7 @@ const Transfer = () => {
                     type="button"
                     disabled={actionLoading || isStockShortage}
                     onClick={handleExecuteApprove}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-stone-200 disabled:text-stone-400 disabled:cursor-not-allowed text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                    className="px-4 py-2 btn-transfer-approve disabled:opacity-50 disabled:cursor-not-allowed font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
                   >
                     {actionLoading ? 'Memproses...' : (
                       <>
@@ -1017,7 +1015,7 @@ const Transfer = () => {
                         setDetailModal({ isOpen: false, transfer: null });
                         handlePrintTransfer(trf);
                       }}
-                      className="px-3.5 py-2 bg-[#F9610D]/10 hover:bg-[#F9610D] text-[#F9610D] hover:text-white border border-[#F9610D]/30 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      className="px-3.5 py-2 btn-transfer-print rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
                     >
                       <Printer size={15} />
                       <span>Cetak Surat Jalan</span>
@@ -1041,7 +1039,7 @@ const Transfer = () => {
                         setDetailModal({ isOpen: false, transfer: null });
                         handleOpenApprove(trf);
                       }}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                      className="px-4 py-2 btn-transfer-approve font-bold text-xs rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
                     >
                       <Check size={16} />
                       <span>Review & Setujui</span>
@@ -1093,7 +1091,7 @@ const Transfer = () => {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer disabled:opacity-50"
+                  className="px-4 py-2 btn-transfer-reject font-bold text-xs rounded-xl shadow-md cursor-pointer disabled:opacity-50"
                 >
                   {actionLoading ? 'Memproses...' : 'Konfirmasi Tolak Transfer'}
                 </button>

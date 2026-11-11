@@ -99,8 +99,8 @@ const BeritaAcaraOpnameModal = ({ isOpen, onClose, opname, items = [] }) => {
           <div className="border-b-2 border-black pb-4 mb-5">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-xl bg-[#F9610D] text-white flex items-center justify-center font-black text-2xl shadow-sm print:bg-black">
-                  R
+                <div className="h-12 w-12 rounded-xl bg-white p-1 flex items-center justify-center border border-gray-200 shadow-sm print:border-gray-400 shrink-0">
+                  <img src="/logo.png" alt="Logo Richisam" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight uppercase text-black">

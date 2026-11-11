@@ -72,8 +72,8 @@ const SuratJalanModal = ({ isOpen, onClose, data }) => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-[#3D302A] pb-6 gap-4 print:border-black">
             <div>
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-[#F9610D] flex items-center justify-center text-white font-black text-xl shadow-md print:bg-black print:text-white">
-                  R
+                <div className="h-12 w-12 rounded-xl bg-white/10 p-1 flex items-center justify-center border border-white/15 shadow-sm print:bg-white print:border-gray-300 shrink-0">
+                  <img src="/logo.png" alt="Logo Richisam" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white print:text-black uppercase">

@@ -174,7 +174,14 @@ const Permintaan = () => {
     setSelectedTicket(ticket);
     const itms = Array.isArray(ticket.items) && ticket.items.length > 0
       ? ticket.items.map(it => {
-          const qtyKirim = it.qty_dikirim !== null && it.qty_dikirim !== undefined ? it.qty_dikirim : it.qty_diminta;
+          const stokCK = it.stok_pusat !== undefined && it.stok_pusat !== null ? Number(it.stok_pusat) : null;
+          let qtyKirim = it.qty_diminta;
+          if (it.qty_dikirim !== null && it.qty_dikirim !== undefined) {
+            qtyKirim = it.qty_dikirim;
+          } else if (stokCK !== null) {
+            qtyKirim = Math.min(it.qty_diminta, Math.max(0, stokCK));
+          }
+
           return {
             id: it.id,
             product_id: it.product_id,
@@ -185,7 +192,7 @@ const Permintaan = () => {
             qty_dikirim: qtyKirim,
             qty_diterima: it.qty_diterima !== null && it.qty_diterima !== undefined ? it.qty_diterima : qtyKirim,
             catatan: it.catatan || '',
-            stok_pusat: it.stok_pusat !== undefined ? it.stok_pusat : 0
+            stok_pusat: stokCK !== null ? stokCK : 0
           };
         })
       : [{
@@ -304,6 +311,19 @@ const Permintaan = () => {
     try {
       if (!updateData.status) return toast.error('Silakan pilih status');
       
+      // Validasi: Qty Kirim tidak boleh melebihi stok fisik Gudang Pusat (CK) saat status DIKIRIM
+      if (updateData.status === 'DIKIRIM') {
+        const overStockItem = detailItems.find(it => {
+          const kirim = parseInt(it.qty_dikirim, 10) || 0;
+          const stok = it.stok_pusat !== undefined && it.stok_pusat !== null ? Number(it.stok_pusat) : Infinity;
+          return kirim > stok;
+        });
+        if (overStockItem) {
+          setSubmitting(false);
+          return toast.error(`Jumlah kirim "${overStockItem.product_name}" (${overStockItem.qty_dikirim}) melebihi stok Gudang Pusat (${overStockItem.stok_pusat})!`);
+        }
+      }
+
       const payload = { 
         status: updateData.status,
         items: detailItems.map(it => ({
@@ -682,6 +702,11 @@ const Permintaan = () => {
                                   </span>
                                 )}
                               </div>
+                              {selectedProd && item.qty_requested && Number(item.qty_requested) > (stokCK || 0) && (
+                                <span className="block text-[10px] text-amber-600 font-bold mt-1 leading-tight">
+                                  ⚠️ Melebihi stok CK ({stokCK}). Sisa akan berstatus menyusul.
+                                </span>
+                              )}
                             </td>
                             <td className="py-2 px-3 text-center">
                               <button
@@ -952,13 +977,13 @@ const Permintaan = () => {
                 ) : (
                   /* KONDISI 2: TAMPILAN RINCIAN UNTUK STATUS LAIN (DIAJUKAN, DIPROSES, SELESAI, ATAU DIKIRIM OLEH CK) */
                   <div>
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-ink">
                         {selectedTicket.status === 'SELESAI' ? 'Rincian Realisasi Penerimaan Barang' : `Rincian Barang Yang Diminta (${detailItems.length} Bahan)`}
                       </h3>
                       {canManageShipment && (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') && (
-                        <span className="text-[11px] text-[#F9610D] font-medium">
-                          *Sesuaikan Qty Dikirim jika stok CK terbatas & sebagian harus menyusul
+                        <span className="text-[11px] text-amber-700 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 font-medium">
+                          💡 Qty Kirim dibatasi maksimal stok CK. Berikan catatan jika barang menyusul.
                         </span>
                       )}
                     </div>
@@ -976,7 +1001,9 @@ const Permintaan = () => {
                             </th>
                             {selectedTicket.status === 'SELESAI' && <th className="py-2.5 px-3 text-center w-32">Diterima Fisik</th>}
                             <th className="py-2.5 px-3 text-center">Status Alokasi / Penerimaan</th>
-                            {selectedTicket.status === 'SELESAI' && <th className="py-2.5 px-3 min-w-[140px]">Catatan Fisik</th>}
+                            <th className="py-2.5 px-3 min-w-[170px]">
+                              {selectedTicket.status === 'SELESAI' ? 'Catatan Fisik' : 'Catatan Central Kitchen (CK)'}
+                            </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-line">
@@ -985,6 +1012,7 @@ const Permintaan = () => {
                             const qtyKirim = parseInt(item.qty_dikirim !== null && item.qty_dikirim !== undefined ? item.qty_dikirim : item.qty_diminta, 10) || 0;
                             const qtyTerima = item.qty_diterima !== null && item.qty_diterima !== undefined ? parseInt(item.qty_diterima, 10) : qtyKirim;
                             const sisaMenyusul = Math.max(0, qtyDiminta - (selectedTicket.status === 'SELESAI' ? qtyTerima : qtyKirim));
+                            const stokPusatNum = item.stok_pusat !== undefined && item.stok_pusat !== null ? Number(item.stok_pusat) : null;
 
                             return (
                               <tr key={idx} className="hover:bg-cream/20">
@@ -1005,18 +1033,28 @@ const Permintaan = () => {
                                 </td>
                                 <td className="py-2 px-3 text-center">
                                   {canManageShipment && (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? (
-                                    <input
-                                      type="number"
-                                      min="0"
-                                      max={qtyDiminta}
-                                      value={item.qty_dikirim}
-                                      onChange={(e) => {
-                                        const next = [...detailItems];
-                                        next[idx].qty_dikirim = e.target.value;
-                                        setDetailItems(next);
-                                      }}
-                                      className="w-24 px-2.5 py-1.5 border border-line rounded-lg text-center font-bold text-ink focus:outline-none focus:border-richisam-orange bg-white"
-                                    />
+                                    <div>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        max={stokPusatNum !== null ? Math.min(qtyDiminta, stokPusatNum) : qtyDiminta}
+                                        value={item.qty_dikirim}
+                                        onChange={(e) => {
+                                          const val = e.target.value === '' ? '' : parseInt(e.target.value, 10);
+                                          const maxCap = stokPusatNum !== null ? Math.min(qtyDiminta, stokPusatNum) : qtyDiminta;
+                                          const clamped = val === '' ? '' : Math.min(maxCap, Math.max(0, val));
+                                          const next = [...detailItems];
+                                          next[idx].qty_dikirim = clamped;
+                                          setDetailItems(next);
+                                        }}
+                                        className="w-24 px-2.5 py-1.5 border border-line rounded-lg text-center font-bold text-ink focus:outline-none focus:border-richisam-orange bg-white"
+                                      />
+                                      {stokPusatNum !== null && stokPusatNum < qtyDiminta && (
+                                        <span className="block text-[10px] text-amber-600 font-bold mt-0.5">
+                                          Maks: {stokPusatNum}
+                                        </span>
+                                      )}
+                                    </div>
                                   ) : (
                                     <span className="font-bold text-sm text-ink">{qtyKirim}</span>
                                   )}
@@ -1053,9 +1091,36 @@ const Permintaan = () => {
                                     )
                                   )}
                                 </td>
-                                {selectedTicket.status === 'SELESAI' && (
+                                {selectedTicket.status === 'SELESAI' ? (
                                   <td className="py-2.5 px-3 text-muted text-xs">
                                     {item.catatan || '-'}
+                                  </td>
+                                ) : (
+                                  <td className="py-2 px-3">
+                                    {canManageShipment && (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? (
+                                      <input
+                                        type="text"
+                                        placeholder={sisaMenyusul > 0 ? "Alasan menyusul & estimasi..." : "Catatan CK (opsional)..."}
+                                        value={item.catatan || ''}
+                                        onChange={(e) => {
+                                          const next = [...detailItems];
+                                          next[idx].catatan = e.target.value;
+                                          setDetailItems(next);
+                                        }}
+                                        className={`w-full px-2.5 py-1.5 border rounded-lg text-xs ${
+                                          sisaMenyusul > 0 && !item.catatan
+                                            ? 'border-amber-400 bg-amber-50/50 text-amber-950 placeholder:text-amber-700/60 font-medium'
+                                            : 'border-line text-ink bg-white'
+                                        }`}
+                                      />
+                                    ) : item.catatan ? (
+                                      <div className="flex items-start gap-1 p-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 font-medium">
+                                        <span className="shrink-0">📢</span>
+                                        <span>{item.catatan}</span>
+                                      </div>
+                                    ) : (
+                                      <span className="text-muted text-xs italic">-</span>
+                                    )}
                                   </td>
                                 )}
                               </tr>

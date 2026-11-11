@@ -162,6 +162,11 @@ class RequestService {
               const stock = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [CK_OUTLET_ID, item.product_id]);
               saw = stock.rows.length > 0 ? stock.rows[0].qty_current : 0;
             }
+            if (saw < qty) {
+              const prodInfo = await client.query('SELECT nama FROM products WHERE id = $1', [item.product_id]);
+              const prodName = prodInfo.rows[0]?.nama || `Produk #${item.product_id}`;
+              throw new Error(`Stok "${prodName}" di Gudang Pusat (CK) tidak mencukupi untuk dikirim (Tersedia di CK: ${saw}, Hendak dikirim: ${qty}). Silakan sesuaikan jumlah kirim atau isi catatan pengiriman susulan.`);
+            }
             const sak = Math.max(0, saw - qty);
 
             await client.query(

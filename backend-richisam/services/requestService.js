@@ -82,10 +82,16 @@ class RequestService {
       for (const item of items) {
         const pId = parseInt(item.product_id, 10);
         const qty = parseInt(item.qty_diminta || item.qty_requested || item.qty, 10) || 1;
+        
+        // Cek ketersediaan stok fisik di Central Kitchen (outlet_id = 1)
+        const ckStockRes = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = 1 AND product_id = $1', [pId]);
+        const ckStock = ckStockRes.rows.length > 0 ? Number(ckStockRes.rows[0].qty_current) : 0;
+        const initialKirim = Math.min(qty, Math.max(0, ckStock));
+
         await client.query(
           `INSERT INTO restock_ticket_items (ticket_id, product_id, qty_diminta, qty_dikirim) 
-           VALUES ($1, $2, $3, $3)`,
-          [ticket.id, pId, qty]
+           VALUES ($1, $2, $3, $4)`,
+          [ticket.id, pId, qty, initialKirim]
         );
       }
 

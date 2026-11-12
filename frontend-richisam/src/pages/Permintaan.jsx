@@ -175,11 +175,13 @@ const Permintaan = () => {
     const itms = Array.isArray(ticket.items) && ticket.items.length > 0
       ? ticket.items.map(it => {
           const stokCK = it.stok_pusat !== undefined && it.stok_pusat !== null ? Number(it.stok_pusat) : null;
-          let qtyKirim = it.qty_diminta;
-          if (it.qty_dikirim !== null && it.qty_dikirim !== undefined) {
-            qtyKirim = it.qty_dikirim;
-          } else if (stokCK !== null) {
-            qtyKirim = Math.min(it.qty_diminta, Math.max(0, stokCK));
+          let qtyKirim = it.qty_dikirim !== null && it.qty_dikirim !== undefined ? Number(it.qty_dikirim) : Number(it.qty_diminta);
+          
+          // Jika status tiket masih DIAJUKAN atau DIPROSES, batasi qty_dikirim agar tidak pernah melebihi stok CK saat ini!
+          if (ticket.status === 'DIAJUKAN' || ticket.status === 'DIPROSES') {
+            if (stokCK !== null) {
+              qtyKirim = Math.min(qtyKirim, Math.max(0, stokCK));
+            }
           }
 
           return {
@@ -1050,8 +1052,10 @@ const Permintaan = () => {
                                         className="w-24 px-2.5 py-1.5 border border-line rounded-lg text-center font-bold text-ink focus:outline-none focus:border-richisam-orange bg-white"
                                       />
                                       {stokPusatNum !== null && stokPusatNum < qtyDiminta && (
-                                        <span className="block text-[10px] text-amber-600 font-bold mt-0.5">
-                                          Maks: {stokPusatNum}
+                                        <span className={`block text-[10px] font-bold mt-1 leading-tight ${
+                                          stokPusatNum === 0 ? 'text-rose-600' : 'text-amber-600'
+                                        }`}>
+                                          {stokPusatNum === 0 ? '⚠️ Stok CK Kosong (0)' : `Maksimal: ${stokPusatNum} (Sesuai Stok CK)`}
                                         </span>
                                       )}
                                     </div>

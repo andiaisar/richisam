@@ -886,6 +886,7 @@ const Permintaan = () => {
                             const qtyTerima = item.qty_diterima !== undefined && item.qty_diterima !== '' ? parseInt(item.qty_diterima, 10) : qtyKirim;
                             const isLengkapSesuaiPermintaan = qtyTerima >= qtyDiminta && qtyDiminta > 0;
                             const isLengkapSesuaiKirim = qtyTerima >= qtyKirim && qtyKirim > 0;
+                            const isComplete = qtyTerima >= qtyKirim;
                             const isZero = qtyTerima === 0;
                             const selisih = qtyKirim - qtyTerima;
 

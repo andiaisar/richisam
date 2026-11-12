@@ -141,6 +141,19 @@ class RequestService {
           const CK_OUTLET_ID = 1;
           const itemsRes = await client.query('SELECT * FROM restock_ticket_items WHERE ticket_id = $1', [id]);
           const items = itemsRes.rows || [];
+
+          // Validasi: Total kuantitas barang yang dikirim TIDAK BOLEH 0!
+          let totalKirim = 0;
+          for (const item of items) {
+            const itmMatch = itemsPayload && itemsPayload.find(p => Number(p.id) === Number(item.id) || Number(p.product_id) === Number(item.product_id));
+            const qty = parseInt(itmMatch?.qty_dikirim !== undefined ? itmMatch.qty_dikirim : (qty_approved || item.qty_dikirim || item.qty_diminta), 10) || 0;
+            totalKirim += qty;
+          }
+
+          if (totalKirim <= 0) {
+            throw new Error('Tidak dapat mengubah status ke DIKIRIM: Semua kuantitas barang bernilai 0 (tidak ada fisik yang dikirim). Harap biarkan status tetap DIPROSES sampai bahan baku siap di Gudang Pusat.');
+          }
+
           const hour = new Date().getHours();
           let shift = 'MIDNIGHT';
           if (hour >= 6 && hour < 14) shift = 'PAGI';

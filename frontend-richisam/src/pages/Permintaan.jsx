@@ -313,8 +313,14 @@ const Permintaan = () => {
     try {
       if (!updateData.status) return toast.error('Silakan pilih status');
       
-      // Validasi: Qty Kirim tidak boleh melebihi stok fisik Gudang Pusat (CK) saat status DIKIRIM
+      // Validasi: Qty Kirim tidak boleh 0 dan tidak boleh melebihi stok fisik Gudang Pusat (CK) saat status DIKIRIM
       if (updateData.status === 'DIKIRIM') {
+        const totalKirim = detailItems.reduce((acc, it) => acc + (parseInt(it.qty_dikirim, 10) || 0), 0);
+        if (totalKirim <= 0) {
+          setSubmitting(false);
+          return toast.error('Tidak dapat mengirim barang: Semua kuantitas kirim bernilai 0 (tidak ada barang fisik yang dikirim)! Harap biarkan status tetap DIPROSES sampai bahan baku siap di Gudang Pusat.');
+        }
+
         const overStockItem = detailItems.find(it => {
           const kirim = parseInt(it.qty_dikirim, 10) || 0;
           const stok = it.stok_pusat !== undefined && it.stok_pusat !== null ? Number(it.stok_pusat) : Infinity;
@@ -762,14 +768,16 @@ const Permintaan = () => {
       {isDetailModalOpen && selectedTicket && (() => {
         const canConfirmReceipt = (isOutletStaff || user?.role === 'OWNER' || user?.role === 'ADMIN_PUSAT') && selectedTicket.status === 'DIKIRIM';
         const hasReceivingDiscrepancy = detailItems.some(it => {
+          const minta = parseInt(it.qty_diminta, 10) || 0;
           const kirim = parseInt(it.qty_dikirim !== null && it.qty_dikirim !== undefined ? it.qty_dikirim : it.qty_diminta, 10) || 0;
           const terima = parseInt(it.qty_diterima !== undefined && it.qty_diterima !== null ? it.qty_diterima : kirim, 10) || 0;
-          return terima < kirim;
+          return terima < kirim || (minta > 0 && terima < minta);
         });
         const discrepancyCount = detailItems.filter(it => {
+          const minta = parseInt(it.qty_diminta, 10) || 0;
           const kirim = parseInt(it.qty_dikirim !== null && it.qty_dikirim !== undefined ? it.qty_dikirim : it.qty_diminta, 10) || 0;
           const terima = parseInt(it.qty_diterima !== undefined && it.qty_diterima !== null ? it.qty_diterima : kirim, 10) || 0;
-          return terima < kirim;
+          return terima < kirim || (minta > 0 && terima < minta);
         }).length;
 
         return (
@@ -844,14 +852,16 @@ const Permintaan = () => {
                         </thead>
                         <tbody className="divide-y divide-line">
                           {detailItems.map((item, idx) => {
+                            const qtyDiminta = parseInt(item.qty_diminta, 10) || 0;
                             const qtyKirim = parseInt(item.qty_dikirim !== null && item.qty_dikirim !== undefined ? item.qty_dikirim : item.qty_diminta, 10) || 0;
                             const qtyTerima = item.qty_diterima !== undefined && item.qty_diterima !== '' ? parseInt(item.qty_diterima, 10) : qtyKirim;
-                            const isComplete = qtyTerima >= qtyKirim;
+                            const isLengkapSesuaiPermintaan = qtyTerima >= qtyDiminta && qtyDiminta > 0;
+                            const isLengkapSesuaiKirim = qtyTerima >= qtyKirim && qtyKirim > 0;
                             const isZero = qtyTerima === 0;
                             const selisih = qtyKirim - qtyTerima;
 
                             return (
-                              <tr key={idx} className={`transition-colors ${!isComplete ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-cream/20'}`}>
+                              <tr key={idx} className={`transition-colors ${!isLengkapSesuaiPermintaan ? 'bg-amber-50/40 hover:bg-amber-50/70' : 'hover:bg-cream/20'}`}>
                                 <td className="py-2.5 px-3 text-center font-bold text-muted">{idx + 1}</td>
                                 <td className="py-2.5 px-3">
                                   <span className="font-bold text-ink">{item.product_name}</span>
@@ -874,7 +884,7 @@ const Permintaan = () => {
                                         setDetailItems(next);
                                       }}
                                       className={`w-20 px-2 py-1.5 border rounded-lg text-center font-bold text-sm focus:outline-none transition-all ${
-                                        !isComplete
+                                        !isLengkapSesuaiPermintaan
                                           ? 'border-amber-400 bg-amber-50 text-amber-950 focus:border-amber-500 ring-2 ring-amber-300/50'
                                           : 'border-line bg-white text-ink focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
                                       }`}
@@ -883,13 +893,21 @@ const Permintaan = () => {
                                   </div>
                                 </td>
                                 <td className="py-2.5 px-3 text-center">
-                                  {isComplete ? (
+                                  {isLengkapSesuaiPermintaan ? (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                                       <Check size={12} /> Lengkap
                                     </span>
+                                  ) : qtyKirim === 0 ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                      <X size={12} /> Belum Dikirim (0/{qtyDiminta})
+                                    </span>
                                   ) : isZero ? (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                                      <X size={12} /> Belum Tiba
+                                      <X size={12} /> Belum Tiba (0/{qtyKirim})
+                                    </span>
+                                  ) : isLengkapSesuaiKirim ? (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                      <AlertTriangle size={12} /> Parsial ({qtyTerima}/{qtyDiminta})
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
@@ -1150,23 +1168,38 @@ const Permintaan = () => {
                         <form onSubmit={handleUpdateStatus} className="space-y-4 border-t border-line pt-4 mt-4">
                           <div>
                             <label className="block text-xs font-bold text-ink mb-1.5">Tindakan / Status Pengiriman</label>
-                            <select 
-                              required 
-                              value={updateData.status} 
-                              onChange={e => setUpdateData({...updateData, status: e.target.value})} 
-                              className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange mb-3 font-medium"
-                            >
-                              {selectedTicket.status === 'DIAJUKAN' && (
-                                <option value="DIPROSES">DIPROSES (Sedang Disiapkan di Gudang CK)</option>
-                              )}
-                              <option value="DIKIRIM">DIKIRIM (Kirim ke Cabang & Potong Stok CK)</option>
-                            </select>
-                            
-                            {updateData.status === 'DIKIRIM' && (
-                              <p className="mt-2 text-xs text-stone-500 bg-stone-100 p-2.5 rounded-lg border border-stone-200">
-                                ℹ️ Saat status diubah ke <strong>DIKIRIM</strong>, stok bahan di <strong>Central Kitchen (CK)</strong> akan otomatis dipotong sesuai jumlah dikirim per item di atas.
-                              </p>
-                            )}
+                            {(() => {
+                              const totalKirim = detailItems.reduce((acc, it) => acc + (parseInt(it.qty_dikirim, 10) || 0), 0);
+                              return (
+                                <>
+                                  <select 
+                                    required 
+                                    value={updateData.status} 
+                                    onChange={e => setUpdateData({...updateData, status: e.target.value})} 
+                                    className="w-full px-3 py-2 bg-white border border-line rounded-lg text-sm focus:outline-none focus:border-richisam-orange mb-3 font-medium"
+                                  >
+                                    {selectedTicket.status === 'DIAJUKAN' && (
+                                      <option value="DIPROSES">DIPROSES (Sedang Disiapkan / Menunggu Stok di Gudang CK)</option>
+                                    )}
+                                    <option value="DIKIRIM" disabled={totalKirim === 0}>
+                                      {totalKirim === 0 ? 'DIKIRIM (Terkunci: Semua Barang 0 / Stok Kosong)' : 'DIKIRIM (Kirim ke Cabang & Potong Stok CK)'}
+                                    </option>
+                                  </select>
+                                  
+                                  {totalKirim === 0 && (
+                                    <p className="mt-2 text-xs text-rose-700 bg-rose-50 p-2.5 rounded-lg border border-rose-200 font-medium">
+                                      ⚠️ Tidak dapat mengirim barang karena jumlah semua barang yang dikirim bernilai 0. Simpan status sebagai <strong>DIPROSES</strong> sampai bahan baku siap di Gudang Pusat.
+                                    </p>
+                                  )}
+
+                                  {updateData.status === 'DIKIRIM' && totalKirim > 0 && (
+                                    <p className="mt-2 text-xs text-stone-500 bg-stone-100 p-2.5 rounded-lg border border-stone-200">
+                                      ℹ️ Saat status diubah ke <strong>DIKIRIM</strong>, stok bahan di <strong>Central Kitchen (CK)</strong> akan otomatis dipotong sesuai jumlah dikirim per item di atas.
+                                    </p>
+                                  )}
+                                </>
+                              );
+                            })()}
                           </div>
                           <div className="flex justify-end gap-3 pt-2">
                             <button 

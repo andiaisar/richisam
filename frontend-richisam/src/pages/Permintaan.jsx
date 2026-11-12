@@ -528,6 +528,11 @@ const Permintaan = () => {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <StatusBadge status={t.status} />
+                            {t.status !== 'SELESAI' && t.qty_approved && Number(t.qty_approved) < Number(t.qty_requested) && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                                Parsial ({Number(t.qty_requested) - Number(t.qty_approved)} Menyusul)
+                              </span>
+                            )}
                             {t.ada_selisih && (
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-700 border border-amber-500/40">
                                 Ada Susulan

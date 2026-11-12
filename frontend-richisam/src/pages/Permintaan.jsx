@@ -170,7 +170,7 @@ const Permintaan = () => {
     });
   };
 
-  const openDetailModal = (ticket) => {
+  const populateTicketModal = (ticket) => {
     setSelectedTicket(ticket);
     const itms = Array.isArray(ticket.items) && ticket.items.length > 0
       ? ticket.items.map(it => {
@@ -216,6 +216,24 @@ const Permintaan = () => {
       qty_approved: ticket.qty_approved || ticket.qty_requested 
     });
     setIsDetailModalOpen(true);
+  };
+
+  const openDetailModal = async (ticket) => {
+    populateTicketModal(ticket);
+    // Refresh background to sync latest ticket status from server
+    try {
+      const res = await axiosClient.get(`/requests?limit=100${filter !== 'ALL' ? `&status=${filter}` : ''}`);
+      const raw = res?.data?.data?.data || res?.data?.data || res?.data || [];
+      if (Array.isArray(raw)) {
+        setTickets(raw);
+        const fresh = raw.find(t => t.id === ticket.id);
+        if (fresh && fresh.status !== ticket.status) {
+          populateTicketModal(fresh);
+        }
+      }
+    } catch (e) {
+      // ignore network glitch on background sync
+    }
   };
 
   const handleCheckAllComplete = () => {
@@ -524,11 +542,17 @@ const Permintaan = () => {
                         </td>
                         {!isOutletStaff && <td className="px-6 py-4 text-ink/80 font-medium">{t.outlet_name}</td>}
                         <td className="px-6 py-4 text-center font-bold text-ink">{t.qty_requested}</td>
-                        <td className="px-6 py-4 text-center text-ink/80 font-semibold">{t.qty_approved || '-'}</td>
+                        <td className="px-6 py-4 text-center text-ink/80 font-semibold">
+                          {t.status === 'DIAJUKAN' ? (
+                            <span className="text-muted text-xs italic">-</span>
+                          ) : (
+                            t.qty_approved || '-'
+                          )}
+                        </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <StatusBadge status={t.status} />
-                            {t.status !== 'SELESAI' && t.qty_approved && Number(t.qty_approved) < Number(t.qty_requested) && (
+                            {t.status !== 'SELESAI' && t.status !== 'DIAJUKAN' && t.qty_approved && Number(t.qty_approved) < Number(t.qty_requested) && (
                               <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                                 Parsial ({Number(t.qty_requested) - Number(t.qty_approved)} Menyusul)
                               </span>
@@ -1022,7 +1046,9 @@ const Permintaan = () => {
                             {selectedTicket.status !== 'SELESAI' && <th className="py-2.5 px-3 text-center">Stok Pusat</th>}
                             <th className="py-2.5 px-3 text-center">Diminta</th>
                             <th className="py-2.5 px-3 text-center w-36">
-                              {canManageShipment && (selectedTicket.status === 'DIAJUKAN' || selectedTicket.status === 'DIPROSES') ? 'Qty Disetujui / Kirim' : 'Disetujui / Kirim'}
+                              {selectedTicket.status === 'DIAJUKAN'
+                                ? (canManageShipment ? 'Rencana Kirim (CK)' : 'Disetujui / Kirim')
+                                : (canManageShipment && selectedTicket.status === 'DIPROSES' ? 'Qty Disetujui / Kirim' : 'Disetujui / Kirim')}
                             </th>
                             {selectedTicket.status === 'SELESAI' && <th className="py-2.5 px-3 text-center w-32">Diterima Fisik</th>}
                             <th className="py-2.5 px-3 text-center">Status Alokasi / Penerimaan</th>
@@ -1082,6 +1108,8 @@ const Permintaan = () => {
                                         </span>
                                       )}
                                     </div>
+                                  ) : selectedTicket.status === 'DIAJUKAN' ? (
+                                    <span className="font-medium text-xs text-muted italic">- (Menunggu Review)</span>
                                   ) : (
                                     <span className="font-bold text-sm text-ink">{qtyKirim}</span>
                                   )}
@@ -1100,6 +1128,24 @@ const Permintaan = () => {
                                     ) : (
                                       <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
                                         ⚠ Kurang ({qtyKirim - qtyTerima})
+                                      </span>
+                                    )
+                                  ) : selectedTicket.status === 'DIAJUKAN' && !canManageShipment ? (
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                      ⏳ Menunggu Review CK
+                                    </span>
+                                  ) : selectedTicket.status === 'DIAJUKAN' && canManageShipment ? (
+                                    sisaMenyusul === 0 ? (
+                                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                        Rencana Lengkap
+                                      </span>
+                                    ) : qtyKirim === 0 ? (
+                                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
+                                        Menyusul Semua ({sisaMenyusul})
+                                      </span>
+                                    ) : (
+                                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300">
+                                        Menyusul {sisaMenyusul} {item.product_satuan}
                                       </span>
                                     )
                                   ) : (
@@ -1218,7 +1264,9 @@ const Permintaan = () => {
                         </form>
                       ) : (
                         <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 text-center mt-4">
-                          ⏳ Tiket sedang dipersiapkan oleh Central Kitchen ({selectedTicket.status}). Staf hanya dapat mengonfirmasi selesai setelah barang dikirim dan tiba di cabang.
+                          {selectedTicket.status === 'DIAJUKAN'
+                            ? '⏳ Tiket sedang menunggu peninjauan & persetujuan alokasi dari Central Kitchen (DIAJUKAN). Staf cabang akan menerima notifikasi begitu barang disetujui & dikirim.'
+                            : `⏳ Tiket sedang dipersiapkan oleh Central Kitchen (${selectedTicket.status}). Staf hanya dapat mengonfirmasi selesai setelah barang dikirim dan tiba di cabang.`}
                         </div>
                       )
                     ) : selectedTicket.status === 'DIKIRIM' ? (

@@ -32,7 +32,12 @@ class RequestService {
              (SELECT p.kode FROM restock_ticket_items rti JOIN products p ON rti.product_id = p.id WHERE rti.ticket_id = t.id ORDER BY rti.id ASC LIMIT 1) AS product_kode,
              (SELECT p.satuan FROM restock_ticket_items rti JOIN products p ON rti.product_id = p.id WHERE rti.ticket_id = t.id ORDER BY rti.id ASC LIMIT 1) AS product_satuan,
              (SELECT SUM(qty_diminta) FROM restock_ticket_items WHERE ticket_id = t.id) AS qty_requested,
-             (SELECT NULLIF(SUM(qty_dikirim), 0) FROM restock_ticket_items WHERE ticket_id = t.id) AS qty_approved
+             (
+               CASE 
+                 WHEN t.status = 'DIAJUKAN' THEN NULL 
+                 ELSE (SELECT NULLIF(SUM(qty_dikirim), 0) FROM restock_ticket_items WHERE ticket_id = t.id)
+               END
+             ) AS qty_approved
       FROM restock_tickets t
       JOIN outlets o ON t.outlet_id = o.id
       JOIN users u ON t.requested_by = u.id

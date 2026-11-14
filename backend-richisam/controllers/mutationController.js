@@ -1,6 +1,7 @@
 const { z } = require('zod');
 const MutationService = require('../services/mutationService');
 const pool = require('../config/db'); // Needed for opening balance if we put it here
+const { isValidDateString, isBlank, isIntAtLeast, isPositiveId } = require('../utils/validators');
 
 const mutationItemSchema = z.object({
   product_id: z.number(),
@@ -9,7 +10,7 @@ const mutationItemSchema = z.object({
 });
 
 const createMutationSchema = z.object({
-  tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD'),
+  tanggal: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Format tanggal harus YYYY-MM-DD').refine(isValidDateString, 'Tanggal tidak valid (tidak ada di kalender)'),
   shift: z.enum(['MIDNIGHT', 'PAGI', 'SORE']),
   items: z.array(mutationItemSchema).min(1, 'Minimal satu produk')
 });
@@ -117,6 +118,12 @@ exports.createOpeningBalances = async (req, res) => {
       return res.status(400).json({ success: false, message: 'outlet_id dan items diperlukan' });
     }
     
+    // Stok awal adalah jumlah fisik: harus bilangan bulat >= 0 (kosong dianggap 0 seperti sebelumnya)
+    const invalidItem = items.find(it => !isPositiveId(it.product_id) || (!isBlank(it.qty) && !isIntAtLeast(it.qty, 0)));
+    if (invalidItem) {
+      return res.status(400).json({ success: false, message: `Qty stok awal harus bilangan bulat dan tidak boleh negatif (produk #${invalidItem.product_id}, qty: ${invalidItem.qty})` });
+    }
+
     const outletIdInt = parseInt(outlet_id, 10);
     const productIds = items.map(it => parseInt(it.product_id, 10));
     const qtys = items.map(it => parseInt(it.qty, 10) || 0);

@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { currentShift } = require('../utils/shiftClock');
 const NotificationService = require('./notificationService');
 
 class DefectService {
@@ -64,11 +65,7 @@ class DefectService {
       if (defect.status === 'SELESAI' || defect.status === 'DISETUJUI') throw new Error('Defect sudah diproses final');
 
       if (newStatus === 'DISETUJUI') {
-         const hour = new Date().getHours();
-         let shift = 'MIDNIGHT';
-         if (hour >= 6 && hour < 14) shift = 'PAGI';
-         else if (hour >= 14 && hour < 22) shift = 'SORE';
-         const tanggal = new Date().toISOString().split('T')[0];
+         const { tanggal, shift } = currentShift(); // tanggal & shift operasional WITA
 
          const prevMut = await client.query(
           'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',

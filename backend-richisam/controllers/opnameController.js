@@ -1,5 +1,6 @@
 const OpnameService = require('../services/opnameService');
 const AuditService = require('../services/auditService');
+const { isBlank, isIntAtLeast } = require('../utils/validators');
 
 exports.createOpname = async (req, res) => {
   try {
@@ -28,8 +29,14 @@ exports.updateOpnameItems = async (req, res) => {
   try {
     const { items, asset_items } = req.body;
     const { id } = req.params;
-    if (!items) {
+    if (!items || !Array.isArray(items)) {
       return res.status(400).json({ success: false, message: 'items diperlukan' });
+    }
+    // Hasil hitung fisik harus bilangan bulat >= 0
+    const badItem = [...items, ...(Array.isArray(asset_items) ? asset_items : [])]
+      .find(it => !isBlank(it.qty_fisik) && !isIntAtLeast(it.qty_fisik, 0));
+    if (badItem) {
+      return res.status(400).json({ success: false, message: `Qty fisik harus bilangan bulat dan tidak boleh negatif (nilai: ${badItem.qty_fisik})` });
     }
     const existing = await OpnameService.getOpnameById(id);
     if (!existing) {

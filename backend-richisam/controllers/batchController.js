@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const AuditService = require('../services/auditService');
 const NotificationService = require('../services/notificationService');
+const { isValidDateString, isIntAtLeast, isPositiveId } = require('../utils/validators');
 
 exports.getBatches = async (req, res) => {
   try {
@@ -99,7 +100,19 @@ exports.createBatch = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Pilih Outlet/Cabang penyimpanan' });
     }
 
+    if (!isPositiveId(product_id)) {
+      return res.status(400).json({ success: false, message: 'Produk tidak valid' });
+    }
+    if (!isIntAtLeast(qty, 1)) {
+      return res.status(400).json({ success: false, message: 'Jumlah batch harus bilangan bulat lebih dari 0' });
+    }
     const tglMasuk = tanggal_masuk || new Date().toISOString().split('T')[0];
+    if (!isValidDateString(tglMasuk) || !isValidDateString(expired_date)) {
+      return res.status(400).json({ success: false, message: 'Tanggal masuk / tanggal kadaluarsa tidak valid (format YYYY-MM-DD)' });
+    }
+    if (expired_date < tglMasuk) {
+      return res.status(400).json({ success: false, message: 'Tanggal kadaluarsa tidak boleh lebih awal dari tanggal masuk' });
+    }
 
     const result = await pool.query(
       `INSERT INTO product_batches (product_id, outlet_id, batch_no, qty, tanggal_masuk, expired_date, catatan, created_by)

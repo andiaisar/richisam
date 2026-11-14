@@ -43,6 +43,28 @@ const upload = multer({
 });
 exports.upload = upload;
 
+// Cek tanda tangan biner (magic bytes) file gambar yang diunggah
+const hasImageSignature = (filePath) => {
+  try {
+    const fd = fs.openSync(filePath, 'r');
+    const head = Buffer.alloc(12);
+    fs.readSync(fd, head, 0, 12, 0);
+    fs.closeSync(fd);
+    const isJpeg = head[0] === 0xFF && head[1] === 0xD8 && head[2] === 0xFF;
+    const isPng = head.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]));
+    const isWebp = head.toString('ascii', 0, 4) === 'RIFF' && head.toString('ascii', 8, 12) === 'WEBP';
+    return isJpeg || isPng || isWebp;
+  } catch (_) {
+    return false;
+  }
+};
+
+const removeUploaded = (file) => {
+  if (file && file.path) {
+    try { fs.unlinkSync(file.path); } catch (_) {}
+  }
+};
+
 const defectSchema = z.object({
   product_id: z.coerce.number().int().positive(),
   qty: z.coerce.number().int().positive(),
@@ -74,7 +96,16 @@ exports.reportDefect = async (req, res) => {
     if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
 
     const parsed = defectSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+    if (!parsed.success) {
+      removeUploaded(req.file);
+      return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
+    }
+
+    // Ekstensi & MIME bisa dipalsukan: pastikan ISI file benar-benar gambar JPG/PNG/WEBP
+    if (req.file && !hasImageSignature(req.file.path)) {
+      removeUploaded(req.file);
+      return res.status(400).json({ success: false, message: 'File foto tidak valid: isi file bukan gambar JPG, PNG, atau WEBP.' });
+    }
 
     let foto_url = '';
     if (req.file) {

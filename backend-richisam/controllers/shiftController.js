@@ -136,7 +136,7 @@ exports.unlockShift = async (req, res) => {
     });
   } catch (err) {
     console.error('shiftController.unlockShift error:', err);
-    res.status(403).json({
+    res.status(err.status || 403).json({
       success: false,
       message: err.message || 'Gagal membuka kunci shift.'
     });

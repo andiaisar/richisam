@@ -1,6 +1,6 @@
 import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import toast, { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/useAuthStore';
 
 // Core Layout & Auth
@@ -45,6 +45,20 @@ const Analytics = lazyWithRetry(() => import('./pages/Analytics'));
 const Kadaluarsa = lazyWithRetry(() => import('./pages/Kadaluarsa'));
 const ShiftClosing = lazyWithRetry(() => import('./pages/ShiftClosing'));
 const AuditTrail = lazyWithRetry(() => import('./pages/AuditTrail'));
+
+// Pembatas halaman berdasarkan role: halaman admin tidak boleh terbuka lewat URL langsung
+const ADMIN_ROLES = ['ADMIN_PUSAT', 'OWNER'];
+const RoleRoute = ({ roles, children }) => {
+  const user = useAuthStore((state) => state.user);
+  const denied = Boolean(user) && !roles.includes(user.role);
+
+  useEffect(() => {
+    if (denied) toast.error('Akses ditolak: Anda tidak memiliki hak untuk membuka halaman tersebut.', { id: 'akses-ditolak' });
+  }, [denied]);
+
+  if (denied) return <Navigate to="/" replace />;
+  return children;
+};
 
 const PageLoader = () => (
   <div className="min-h-[40vh] flex items-center justify-center">
@@ -91,18 +105,18 @@ const App = () => {
             <Route path="transfer" element={<Transfer />} />
             <Route path="permintaan" element={<Permintaan />} />
             <Route path="defect" element={<Defect />} />
-            <Route path="users" element={<Users />} />
-            <Route path="outlets" element={<Outlets />} />
-            <Route path="products" element={<Products />} />
-            <Route path="opening-balance" element={<OpeningBalance />} />
+            <Route path="users" element={<RoleRoute roles={ADMIN_ROLES}><Users /></RoleRoute>} />
+            <Route path="outlets" element={<RoleRoute roles={ADMIN_ROLES}><Outlets /></RoleRoute>} />
+            <Route path="products" element={<RoleRoute roles={ADMIN_ROLES}><Products /></RoleRoute>} />
+            <Route path="opening-balance" element={<RoleRoute roles={ADMIN_ROLES}><OpeningBalance /></RoleRoute>} />
             <Route path="assets" element={<Assets />} />
             <Route path="opname" element={<Opname />} />
-            <Route path="par-stock" element={<ParStock />} />
+            <Route path="par-stock" element={<RoleRoute roles={[...ADMIN_ROLES, 'ADMIN_GUDANG']}><ParStock /></RoleRoute>} />
             <Route path="laporan" element={<Laporan />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="kadaluarsa" element={<Kadaluarsa />} />
             <Route path="shift-closing" element={<ShiftClosing />} />
-            <Route path="audit-trail" element={<AuditTrail />} />
+            <Route path="audit-trail" element={<RoleRoute roles={ADMIN_ROLES}><AuditTrail /></RoleRoute>} />
             <Route path="*" element={<ComingSoon />} />
           </Route>
         </Routes>

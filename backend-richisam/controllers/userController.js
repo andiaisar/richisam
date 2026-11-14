@@ -28,6 +28,9 @@ const updateUserSchema = z.object({
   path: ['outlet_id']
 });
 
+// ID pada URL harus bilangan bulat positif; selain itu ditolak (400) alih-alih error database (500)
+const parseUserId = (raw) => (/^\d+$/.test(String(raw)) && Number(raw) > 0 ? Number(raw) : null);
+
 exports.getUsers = async (req, res) => {
   try {
     const { page, limit, role, outlet_id, search } = req.query;
@@ -68,7 +71,8 @@ exports.createUser = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseUserId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: 'ID pengguna tidak valid' });
     const parsed = updateUserSchema.safeParse(req.body);
     if (!parsed.success) {
       const msg = parsed.error.issues?.[0]?.message || 'Validasi gagal';
@@ -88,7 +92,8 @@ exports.updateUser = async (req, res) => {
 
 exports.updateStatus = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseUserId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: 'ID pengguna tidak valid' });
     const { is_active } = req.body;
     
     if (typeof is_active !== 'boolean') {
@@ -113,7 +118,8 @@ exports.updateStatus = async (req, res) => {
 
 exports.resetPassword = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseUserId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: 'ID pengguna tidak valid' });
     const schema = z.object({ password: z.string().min(6, 'Password minimal 6 karakter') });
     const parsed = schema.safeParse(req.body);
     
@@ -137,7 +143,8 @@ exports.resetPassword = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseUserId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: 'ID pengguna tidak valid' });
 
     // Admin tidak boleh menghapus akunnya sendiri
     if (req.user.id === id) {
@@ -147,6 +154,15 @@ exports.deleteUser = async (req, res) => {
     const targetUser = await UserService.getUserById(id);
     if (!targetUser) {
       return res.status(404).json({ success: false, message: 'Pengguna tidak ditemukan' });
+    }
+
+    // User yang sudah memiliki riwayat transaksi tidak dihapus fisik agar jejak transaksinya tetap utuh
+    if (await UserService.hasTransactionHistory(id)) {
+      await UserService.updateStatus(id, false);
+      return res.json({
+        success: true,
+        message: `Pengguna ${targetUser.nama} memiliki riwayat transaksi dalam sistem sehingga tidak dapat dihapus fisik. Akun telah dinonaktifkan.`
+      });
     }
 
     try {

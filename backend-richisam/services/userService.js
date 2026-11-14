@@ -101,6 +101,27 @@ class UserService {
     return result.rows[0];
   }
 
+  /**
+   * Apakah user memiliki riwayat transaksi? Relasi FK ke tabel transaksi memakai ON DELETE SET NULL,
+   * sehingga penghapusan fisik TIDAK memicu error FK — jejak pelaku transaksi akan hilang diam-diam.
+   */
+  static async hasTransactionHistory(id) {
+    const result = await pool.query(
+      `SELECT (
+         EXISTS (SELECT 1 FROM stock_mutations WHERE created_by = $1)
+         OR EXISTS (SELECT 1 FROM restock_tickets WHERE requested_by = $1 OR created_by = $1 OR processed_by = $1 OR received_by = $1)
+         OR EXISTS (SELECT 1 FROM defect_reports WHERE reported_by = $1 OR created_by = $1 OR approved_by = $1)
+         OR EXISTS (SELECT 1 FROM opening_balances WHERE created_by = $1)
+         OR EXISTS (SELECT 1 FROM stock_opnames WHERE created_by = $1 OR finalized_by = $1)
+         OR EXISTS (SELECT 1 FROM product_batches WHERE created_by = $1)
+         OR EXISTS (SELECT 1 FROM branch_transfers WHERE created_by = $1 OR approved_by = $1)
+         OR EXISTS (SELECT 1 FROM shift_closings WHERE closed_by_id = $1 OR unlocked_by_id = $1)
+       ) AS has_history`,
+      [id]
+    );
+    return Boolean(result.rows[0]?.has_history);
+  }
+
   static async deleteUser(id) {
     const result = await pool.query('DELETE FROM users WHERE id = $1 RETURNING id, username', [id]);
     return result.rows[0];

@@ -1,5 +1,13 @@
 const ReportService = require('../services/reportService');
 
+// bulan (1–12) dan tahun (2000–2100) opsional; bila dikirim harus valid agar tidak diam-diam diganti / memicu error 500
+const invalidPeriod = (bulan, tahun) => {
+  const filled = (v) => v !== undefined && v !== null && v !== '';
+  if (filled(bulan) && !(/^\d{1,2}$/.test(String(bulan)) && Number(bulan) >= 1 && Number(bulan) <= 12)) return 'Bulan harus berupa angka 1–12';
+  if (filled(tahun) && !(/^\d{4}$/.test(String(tahun)) && Number(tahun) >= 2000 && Number(tahun) <= 2100)) return 'Tahun tidak valid (2000–2100)';
+  return null;
+};
+
 exports.getMutationsReport = async (req, res) => {
   try {
     const { start_date, end_date } = req.query;
@@ -38,6 +46,8 @@ exports.getDashboardStats = async (req, res) => {
 
 exports.getMonthlyRecap = async (req, res) => {
   try {
+    const periodError = invalidPeriod(req.query.bulan, req.query.tahun);
+    if (periodError) return res.status(400).json({ success: false, message: periodError });
     const now = new Date();
     const bulan = parseInt(req.query.bulan) || (now.getMonth() + 1);
     const tahun = parseInt(req.query.tahun) || now.getFullYear();
@@ -73,6 +83,8 @@ exports.exportMonthlyExcel = async (req, res) => {
   try {
     const { bulan, tahun } = req.query;
     if (!bulan || !tahun) return res.status(400).json({ success: false, message: 'bulan dan tahun diperlukan' });
+    const periodError = invalidPeriod(bulan, tahun);
+    if (periodError) return res.status(400).json({ success: false, message: periodError });
 
     const outlet_id = req.query.outlet_id || req.body?.outlet_id || req.user?.outlet_id || 1;
     if (!outlet_id) return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });

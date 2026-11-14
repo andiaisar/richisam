@@ -220,6 +220,70 @@ class MutationService {
     });
   }
 
+  /**
+   * Setelah satu shift dicatat/dikoreksi, sinkronkan shift-shift SESUDAHNYA agar rantai
+   * SAW(shift n) = SAK(shift n-1) tetap konsisten, lalu set saldo berjalan = SAK shift terakhir.
+   * - Baris input manual/impor: SAK adalah hasil hitung fisik (dipertahankan), Keluar dihitung ulang.
+   * - Baris tiket/transfer: jumlah barang yang berpindah (Masuk/Keluar) dipertahankan, SAK dihitung ulang.
+   * Koreksi ditolak bila membuat shift berikutnya bernilai negatif atau mengubah shift yang sudah dikunci.
+   */
+  static async _resyncFollowingShifts(client, outlet_id, product_id, tanggal, shift, errors) {
+    const rowsRes = await client.query(
+      `SELECT id, tanggal::text AS tgl, shift::text AS shift, saw, masuk, keluar, sak, sumber_masuk
+       FROM stock_mutations
+       WHERE outlet_id = $1 AND product_id = $2
+       ORDER BY tanggal ASC,
+                (CASE shift WHEN 'PAGI' THEN 1 WHEN 'SORE' THEN 2 WHEN 'MIDNIGHT' THEN 3 ELSE 0 END) ASC,
+                id ASC
+       FOR UPDATE`,
+      [outlet_id, product_id]
+    );
+    const rows = rowsRes.rows;
+    const startIdx = rows.findIndex((r) => r.tgl === tanggal && r.shift === shift);
+
+    if (startIdx >= 0) {
+      for (let j = startIdx + 1; j < rows.length; j++) {
+        const row = rows[j];
+        const newSaw = Number(rows[j - 1].sak);
+        if (Number(row.saw) === newSaw) break; // rantai sudah konsisten mulai titik ini
+
+        const locked = await client.query(
+          `SELECT 1 FROM shift_closings WHERE outlet_id = $1 AND shift_date = $2::date AND shift_name = $3 AND status = 'CLOSED'`,
+          [outlet_id, row.tgl, row.shift]
+        );
+        if (locked.rows.length > 0) {
+          errors.push({ product_id, message: `Koreksi mengubah shift ${row.shift} ${row.tgl} yang sudah ditutup & dikunci. Minta Admin Pusat membuka kunci shift tersebut terlebih dahulu.` });
+          return;
+        }
+
+        const isTransaksiSistem = row.sumber_masuk === 'TIKET' || row.sumber_masuk === 'TRANSFER';
+        if (isTransaksiSistem) {
+          const newSak = newSaw + Number(row.masuk) - Number(row.keluar);
+          if (newSak < 0) {
+            errors.push({ product_id, message: `Koreksi membuat stok shift ${row.shift} ${row.tgl} menjadi negatif (SAW: ${newSaw}, M: ${row.masuk}, K: ${row.keluar}).` });
+            return;
+          }
+          await client.query('UPDATE stock_mutations SET saw = $1, sak = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [newSaw, newSak, row.id]);
+          row.sak = newSak;
+        } else {
+          const newKeluar = newSaw + Number(row.masuk) - Number(row.sak);
+          if (newKeluar < 0) {
+            errors.push({ product_id, message: `Koreksi membuat Keluar shift ${row.shift} ${row.tgl} negatif (SAW: ${newSaw}, M: ${row.masuk}, SAK: ${row.sak}). Koreksi shift tersebut terlebih dahulu.` });
+            return;
+          }
+          await client.query('UPDATE stock_mutations SET saw = $1, keluar = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3', [newSaw, newKeluar, row.id]);
+        }
+        row.saw = newSaw;
+      }
+    }
+
+    const latestSak = rows.length > 0 ? Number(rows[rows.length - 1].sak) : 0;
+    await client.query(
+      'INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (outlet_id, product_id) DO UPDATE SET qty_current = EXCLUDED.qty_current, updated_at = EXCLUDED.updated_at',
+      [outlet_id, product_id, latestSak]
+    );
+  }
+
   static async createMutations(outlet_id, tanggal, shift, items, user_id) {
     // 1. Cek Kunci Shift (Pilar 3: Data Immutability Locking)
     const isLocked = await ShiftService.isShiftLocked(outlet_id, tanggal, shift);
@@ -280,10 +344,7 @@ class MutationService {
             [item.masuk, keluar, item.sak, existingMut.id]
           );
 
-          await client.query(
-            'INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (outlet_id, product_id) DO UPDATE SET qty_current = EXCLUDED.qty_current, updated_at = EXCLUDED.updated_at',
-            [outlet_id, item.product_id, item.sak]
-          );
+          await this._resyncFollowingShifts(client, outlet_id, item.product_id, tanggal, shift, errors);
           continue;
         }
 
@@ -353,10 +414,7 @@ class MutationService {
           [item.product_id, outlet_id, tanggal, shift, saw, item.masuk, keluar, item.sak, harga_snapshot, user_id]
         );
 
-        await client.query(
-          'INSERT INTO stocks (outlet_id, product_id, qty_current, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) ON CONFLICT (outlet_id, product_id) DO UPDATE SET qty_current = EXCLUDED.qty_current, updated_at = EXCLUDED.updated_at',
-          [outlet_id, item.product_id, item.sak]
-        );
+        await this._resyncFollowingShifts(client, outlet_id, item.product_id, tanggal, shift, errors);
       }
       
       if (errors.length > 0) {
@@ -398,12 +456,13 @@ class MutationService {
      try {
        await client.query('BEGIN');
        
-       const mut = await client.query('SELECT * FROM stock_mutations WHERE id = $1 FOR UPDATE', [id]);
+       const mut = await client.query('SELECT *, tanggal::text AS tanggal_str FROM stock_mutations WHERE id = $1 FOR UPDATE', [id]);
        if (mut.rows.length === 0) throw new Error('Mutasi tidak ditemukan');
        const m = mut.rows[0];
 
        // Cek Kunci Shift
-       const dateStr = typeof m.tanggal === 'string' ? m.tanggal : m.tanggal.toISOString().split('T')[0];
+       // Gunakan representasi teks dari DB: `Date#toISOString()` menggeser tanggal ke hari sebelumnya pada server WITA (UTC+8)
+       const dateStr = m.tanggal_str;
        const isLocked = await ShiftService.isShiftLocked(m.outlet_id, dateStr, m.shift);
        if (isLocked) {
          throw new Error(`Shift ${m.shift} pada tanggal ${dateStr} telah ditutup & dikunci. Tidak dapat diubah.`);
@@ -435,7 +494,7 @@ class MutationService {
               )
             ) 
           LIMIT 1`,
-         [m.outlet_id, m.product_id, m.tanggal, m.shift]
+         [m.outlet_id, m.product_id, m.tanggal_str, m.shift]
        );
        
        const anyNewer = await client.query('SELECT id FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 AND id > $3 LIMIT 1', [m.outlet_id, m.product_id, id]);

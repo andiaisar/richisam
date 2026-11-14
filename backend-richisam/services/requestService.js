@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { currentShift } = require('../utils/shiftClock');
 const NotificationService = require('./notificationService');
 
 class RequestService {
@@ -40,7 +41,7 @@ class RequestService {
              ) AS qty_approved
       FROM restock_tickets t
       JOIN outlets o ON t.outlet_id = o.id
-      JOIN users u ON t.requested_by = u.id
+      LEFT JOIN users u ON t.requested_by = u.id
       WHERE 1=1
     `;
     const params = [];
@@ -130,6 +131,23 @@ class RequestService {
       if (tiketRes.rows.length === 0) throw new Error('Tiket tidak ditemukan');
       const tiket = tiketRes.rows[0];
 
+      // Validasi transisi status: alur satu arah DIAJUKAN → DIPROSES → DIKIRIM → SELESAI.
+      // DIPROSES → DIPROSES diizinkan untuk menyimpan alokasi qty; tiket SELESAI bersifat final
+      // (mencegah barang yang sama dipotong dari CK / ditambahkan ke cabang dua kali).
+      const ALLOWED_TRANSITIONS = {
+        DIAJUKAN: ['DIPROSES', 'DIKIRIM'],
+        DIPROSES: ['DIPROSES', 'DIKIRIM'],
+        DIKIRIM: ['SELESAI'],
+        SELESAI: []
+      };
+      if (!(ALLOWED_TRANSITIONS[tiket.status] || []).includes(newStatus)) {
+        if (tiket.status === 'SELESAI') {
+          throw new Error('Tiket sudah SELESAI (final) dan tidak dapat diubah lagi. Gunakan tiket susulan bila ada kekurangan barang.');
+        }
+        if (newStatus === 'SELESAI') throw new Error('Tiket belum dikirim oleh Central Kitchen');
+        throw new Error(`Perubahan status dari ${tiket.status} ke ${newStatus} tidak diizinkan.`);
+      }
+
       const isCK = req_user.role === 'ADMIN_GUDANG';
       const isPusatOrOwner = req_user.role === 'ADMIN_PUSAT' || req_user.role === 'OWNER';
       let hasDiscrepancy = false;
@@ -159,11 +177,7 @@ class RequestService {
             throw new Error('Tidak dapat mengubah status ke DIKIRIM: Semua kuantitas barang bernilai 0 (tidak ada fisik yang dikirim). Harap biarkan status tetap DIPROSES sampai bahan baku siap di Gudang Pusat.');
           }
 
-          const hour = new Date().getHours();
-          let shift = 'MIDNIGHT';
-          if (hour >= 6 && hour < 14) shift = 'PAGI';
-          else if (hour >= 14 && hour < 22) shift = 'SORE';
-          const tanggal = new Date().toISOString().split('T')[0];
+          const { tanggal, shift } = currentShift(); // tanggal & shift operasional WITA
 
           for (const item of items) {
             const itmMatch = itemsPayload && itemsPayload.find(p => Number(p.id) === Number(item.id) || Number(p.product_id) === Number(item.product_id));
@@ -220,11 +234,7 @@ class RequestService {
         const itemsRes = await client.query('SELECT * FROM restock_ticket_items WHERE ticket_id = $1', [id]);
         const items = itemsRes.rows || [];
 
-        const hour = new Date().getHours();
-        let shift = 'MIDNIGHT';
-        if (hour >= 6 && hour < 14) shift = 'PAGI';
-        else if (hour >= 14 && hour < 22) shift = 'SORE';
-        const tanggal = new Date().toISOString().split('T')[0];
+        const { tanggal, shift } = currentShift(); // tanggal & shift operasional WITA
 
         for (const item of items) {
           const itmMatch = itemsPayload && itemsPayload.find(p => Number(p.id) === Number(item.id) || Number(p.product_id) === Number(item.product_id));
@@ -374,11 +384,7 @@ class RequestService {
       );
       const ticket = ticketResult.rows[0];
 
-      const hour = new Date().getHours();
-      let shift = 'PAGI';
-      if (hour >= 6 && hour < 14) shift = 'PAGI';
-      else if (hour >= 14 && hour < 22) shift = 'SORE';
-      const tanggal = new Date().toISOString().split('T')[0];
+      const { tanggal, shift } = currentShift(); // tanggal & shift operasional WITA
 
       for (const item of items) {
         await client.query(
@@ -389,6 +395,33 @@ class RequestService {
 
         const qtyToOutlet = parseInt(item.qty, 10) || 0;
 
+        // Pastikan stok Central Kitchen mencukupi SEBELUM menambah stok cabang
+        // (pengambilan darurat tidak boleh menciptakan stok tanpa sumber).
+        const CK_OUTLET_ID = 1;
+        let sawCK = 0;
+        if (Number(outlet_id) !== CK_OUTLET_ID) {
+          const prevMutCK = await client.query(
+            `SELECT sak FROM stock_mutations
+             WHERE outlet_id = $1 AND product_id = $2
+             ORDER BY tanggal DESC,
+                      CASE shift WHEN 'MIDNIGHT' THEN 3 WHEN 'SORE' THEN 2 WHEN 'PAGI' THEN 1 ELSE 0 END DESC,
+                      id DESC
+             LIMIT 1`,
+            [CK_OUTLET_ID, item.product_id]
+          );
+          if (prevMutCK.rows.length > 0) {
+            sawCK = prevMutCK.rows[0].sak;
+          } else {
+            const stockCK = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [CK_OUTLET_ID, item.product_id]);
+            sawCK = stockCK.rows.length > 0 ? stockCK.rows[0].qty_current : 0;
+          }
+          if (Number(sawCK) < qtyToOutlet) {
+            const prodInfo = await client.query('SELECT nama FROM products WHERE id = $1', [item.product_id]);
+            const prodName = prodInfo.rows[0]?.nama || `Produk #${item.product_id}`;
+            throw new Error(`Stok "${prodName}" di Gudang Pusat (CK) tidak mencukupi untuk pengambilan darurat (Tersedia di CK: ${sawCK}, Diminta: ${qtyToOutlet}).`);
+          }
+        }
+
         const prevMut = await client.query(
          `SELECT sak FROM stock_mutations
           WHERE outlet_id = $1 AND product_id = $2
@@ -398,7 +431,7 @@ class RequestService {
           LIMIT 1`,
          [outlet_id, item.product_id]
         );
-        
+
         let saw = 0;
         if (prevMut.rows.length > 0) {
           saw = prevMut.rows[0].sak;
@@ -424,20 +457,9 @@ class RequestService {
         await NotificationService.checkParStock(outlet_id, item.product_id);
 
         // Potong stok Central Kitchen (outlet_id = 1) jika pengiriman ditujukan ke cabang lain
-        const CK_OUTLET_ID = 1;
+        // (ketersediaan stok CK sudah divalidasi di atas)
         if (Number(outlet_id) !== CK_OUTLET_ID) {
-          const prevMutCK = await client.query(
-            'SELECT sak FROM stock_mutations WHERE outlet_id = $1 AND product_id = $2 ORDER BY id DESC LIMIT 1',
-            [CK_OUTLET_ID, item.product_id]
-          );
-          let sawCK = 0;
-          if (prevMutCK.rows.length > 0) {
-            sawCK = prevMutCK.rows[0].sak;
-          } else {
-            const stockCK = await client.query('SELECT qty_current FROM stocks WHERE outlet_id = $1 AND product_id = $2', [CK_OUTLET_ID, item.product_id]);
-            sawCK = stockCK.rows.length > 0 ? stockCK.rows[0].qty_current : 0;
-          }
-          const sakCK = Math.max(0, sawCK - qtyToOutlet);
+          const sakCK = Number(sawCK) - qtyToOutlet;
 
           await client.query(
             `INSERT INTO stock_mutations (product_id, outlet_id, tanggal, shift, saw, masuk, keluar, sak, created_by, sumber_masuk, ticket_id) 
@@ -478,6 +500,11 @@ class RequestService {
       const parentRes = await client.query('SELECT * FROM restock_tickets WHERE id = $1 FOR UPDATE', [parentTicketId]);
       if (parentRes.rows.length === 0) throw new Error('Tiket utama tidak ditemukan');
       const parent = parentRes.rows[0];
+
+      // Kekurangan barang baru diketahui setelah penerimaan dikonfirmasi (status SELESAI).
+      if (parent.status !== 'SELESAI') {
+        throw new Error('Tiket susulan hanya dapat dibuat dari tiket yang sudah diterima (SELESAI) dan memiliki kekurangan barang.');
+      }
 
       if (req_user.role === 'STAF_CABANG' && Number(req_user.outlet_id) !== Number(parent.outlet_id)) {
         throw new Error('Anda tidak memiliki akses untuk membuat susulan untuk cabang lain');

@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { currentShift } = require('../utils/shiftClock');
 
 class TransferService {
   static async createTransfer(from_outlet_id, to_outlet_id, items, user_id, catatan = '', status = 'APPROVED') {
@@ -8,11 +9,7 @@ class TransferService {
     try {
       await client.query('BEGIN');
       
-      const hour = new Date().getHours();
-      let shift = 'PAGI';
-      if (hour >= 6 && hour < 14) shift = 'PAGI';
-      else if (hour >= 14 && hour < 22) shift = 'SORE';
-      const tanggal = new Date().toISOString().split('T')[0];
+      const { tanggal, shift } = currentShift(); // tanggal & shift operasional WITA
       const dateStr = tanggal.replace(/-/g, '');
 
       // Generate unique transfer / delivery note code: SJ-TRF-YYYYMMDD-XXX
@@ -126,11 +123,7 @@ class TransferService {
       if (firstRow.status === 'APPROVED') throw new Error('Transfer ini sudah disetujui sebelumnya');
       if (firstRow.status === 'REJECTED') throw new Error('Transfer ini sudah ditolak dan tidak dapat disetujui');
 
-      const hour = new Date().getHours();
-      let shift = 'PAGI';
-      if (hour >= 6 && hour < 14) shift = 'PAGI';
-      else if (hour >= 14 && hour < 22) shift = 'SORE';
-      const tanggal = new Date().toISOString().split('T')[0];
+      const { tanggal, shift } = currentShift(); // tanggal & shift operasional WITA
 
       // Verifikasi ketersediaan stok di cabang asal
       for (const item of rowsRes.rows) {

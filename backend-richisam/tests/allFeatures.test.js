@@ -91,7 +91,7 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
-    it('Middleware authenticate memvalidasi JWT dan authorize membatasi role', () => {
+    it('Middleware authenticate memvalidasi JWT dan authorize membatasi role', async () => {
       const token = jwt.sign(
         { id: 5, role: 'STAF_CABANG', outlet_id: 2 },
         process.env.JWT_SECRET || 'secret123'
@@ -100,7 +100,8 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
       const res = mockRes();
       const next = jest.fn();
 
-      authenticate(req, res, next);
+      pool.query.mockResolvedValueOnce({ rows: [{ role: 'STAF_CABANG', outlet_id: 2, is_active: true }] });
+      await authenticate(req, res, next);
       expect(next).toHaveBeenCalled();
       expect(req.user.outlet_id).toBe(2);
 
@@ -108,6 +109,21 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
       authorize('ADMIN_PUSAT', 'OWNER')(req, res, nextAdmin);
       expect(res.status).toHaveBeenCalledWith(403);
       expect(nextAdmin).not.toHaveBeenCalled();
+    });
+
+    it('Middleware authenticate menolak token milik akun yang sudah dinonaktifkan', async () => {
+      const token = jwt.sign(
+        { id: 9, role: 'STAF_CABANG', outlet_id: 2 },
+        process.env.JWT_SECRET || 'secret123'
+      );
+      const req = { headers: { authorization: `Bearer ${token}` } };
+      const res = mockRes();
+      const next = jest.fn();
+
+      pool.query.mockResolvedValueOnce({ rows: [{ role: 'STAF_CABANG', outlet_id: 2, is_active: false }] });
+      await authenticate(req, res, next);
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
     });
 
     it('Middleware enforceOutletScope mengunci outlet_id staf cabang tetapi mengizinkan Staf CK di rute /api/requests', () => {
@@ -179,7 +195,8 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 99, saw: 100 }] }) // exist check returns existing row
         .mockResolvedValueOnce({}) // UPDATE stock_mutations
-        .mockResolvedValueOnce({}) // INSERT/UPDATE stocks
+        .mockResolvedValueOnce({ rows: [{ id: 99, tgl: '2026-10-30', shift: 'PAGI', saw: 100, masuk: 20, keluar: 30, sak: 90, sumber_masuk: 'MANUAL' }] }) // rantai shift (tidak ada shift sesudahnya)
+        .mockResolvedValueOnce({}) // INSERT/UPDATE stocks = SAK shift terakhir
         .mockResolvedValueOnce({}); // COMMIT
 
       await MutationService.createMutations(2, '2026-10-30', 'PAGI', [{ product_id: 1, masuk: 20, sak: 90 }], 5);
@@ -187,6 +204,9 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
       const updateCall = client.query.mock.calls.find(c => c[0].includes('UPDATE stock_mutations SET masuk'));
       expect(updateCall).toBeDefined();
       expect(updateCall[1]).toEqual([20, 30, 90, 99]); // masuk=20, keluar=100+20-90=30, sak=90, id=99
+
+      const stockCall = client.query.mock.calls.find(c => c[0].includes('INSERT INTO stocks'));
+      expect(stockCall[1]).toEqual([2, 1, 90]); // saldo berjalan = SAK shift terakhir
     });
 
     it('Menolak mutasi jika shift sudah ditutup (CLOSED)', async () => {
@@ -213,13 +233,13 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         .mockResolvedValueOnce({}) // BEGIN
         .mockResolvedValueOnce({ rows: [{ id: 50, kode_tiket: 'CITO-123', outlet_id: 3 }] }) // INSERT ticket
         .mockResolvedValueOnce({}) // INSERT ticket item
+        .mockResolvedValueOnce({ rows: [{ sak: 100 }] }) // prevMut CK (sawCK = 100) — dicek lebih dulu
         .mockResolvedValueOnce({ rows: [{ sak: 5 }] }) // prevMut cabang (saw = 5)
         .mockResolvedValueOnce({}) // INSERT mutation cabang (masuk = 2, sak = 7)
         .mockResolvedValueOnce({}) // UPDATE stocks cabang
         .mockResolvedValueOnce({}) // checkParStock cabang BEGIN
         .mockResolvedValueOnce({ rows: [] }) // checkParStock cabang SELECT
         .mockResolvedValueOnce({}) // checkParStock cabang COMMIT
-        .mockResolvedValueOnce({ rows: [{ sak: 100 }] }) // prevMut CK (sawCK = 100)
         .mockResolvedValueOnce({}) // INSERT mutation CK (keluar = 2, sakCK = 98)
         .mockResolvedValueOnce({}) // UPDATE stocks CK
         .mockResolvedValueOnce({}) // checkParStock CK BEGIN
@@ -236,6 +256,31 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
       );
       expect(ckStockUpdate).toBeDefined();
       expect(ckStockUpdate[1][0]).toBe(98); // 100 - 2 = 98
+    });
+
+    it('Menolak pengambilan Cito bila stok CK tidak mencukupi (tidak menambah stok cabang)', async () => {
+      client.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 51, kode_tiket: 'CITO-124', outlet_id: 3 }] }) // INSERT ticket
+        .mockResolvedValueOnce({}) // INSERT ticket item
+        .mockResolvedValueOnce({ rows: [{ sak: 1 }] }) // prevMut CK (sawCK = 1)
+        .mockResolvedValueOnce({ rows: [{ nama: 'BERAS' }] }); // SELECT nama produk
+
+      await expect(
+        RequestService.createEmergencyRequest(3, [{ product_id: 1, qty: 2 }], { id: 2, role: 'ADMIN_GUDANG', outlet_id: 1 })
+      ).rejects.toThrow(/tidak mencukupi/);
+      const branchStockUpdate = client.query.mock.calls.find(c => c[0].includes('UPDATE stocks SET qty_current') && c[1][1] === 3);
+      expect(branchStockUpdate).toBeUndefined();
+    });
+
+    it('Menolak perubahan status tiket yang sudah SELESAI (final)', async () => {
+      client.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 16, kode_tiket: 'REQ-16', outlet_id: 2, status: 'SELESAI' }] }); // SELECT ticket
+
+      await expect(
+        RequestService.updateStatus(16, 'DIPROSES', undefined, { id: 3, role: 'ADMIN_GUDANG', outlet_id: 1 })
+      ).rejects.toThrow(/SELESAI/);
     });
   });
 

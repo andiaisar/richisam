@@ -215,7 +215,9 @@ class ShiftService {
     );
 
     if (cRes.rows.length === 0) {
-      throw new Error('Data tutup buku shift tidak ditemukan.');
+      const notFound = new Error('Data tutup buku shift tidak ditemukan.');
+      notFound.status = 404;
+      throw notFound;
     }
 
     const closing = cRes.rows[0];

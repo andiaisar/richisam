@@ -299,7 +299,12 @@ CREATE TABLE branch_transfers (
     qty INTEGER NOT NULL,
     catatan TEXT,
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    -- Alur persetujuan transfer: PENDING (diajukan staf cabang) -> APPROVED / REJECTED
+    status VARCHAR(20) DEFAULT 'APPROVED',
+    approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL, -- admin yang menyetujui/menolak
+    approved_at TIMESTAMP,
+    rejection_reason TEXT
 );
 
 -- 17. TABEL SHIFT_CLOSINGS (TUTUP BUKU SHIFT)

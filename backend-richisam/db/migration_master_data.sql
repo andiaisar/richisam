@@ -157,6 +157,12 @@ CREATE TABLE IF NOT EXISTS branch_transfers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Kolom alur persetujuan transfer (PENDING -> APPROVED / REJECTED), dipakai services/transferService.js
+ALTER TABLE branch_transfers ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'APPROVED';
+ALTER TABLE branch_transfers ADD COLUMN IF NOT EXISTS approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE branch_transfers ADD COLUMN IF NOT EXISTS approved_at TIMESTAMP;
+ALTER TABLE branch_transfers ADD COLUMN IF NOT EXISTS rejection_reason TEXT;
+
 -- 11. Tabel shift_closings (Tutup Buku Shift)
 CREATE TABLE IF NOT EXISTS shift_closings (
     id SERIAL PRIMARY KEY,

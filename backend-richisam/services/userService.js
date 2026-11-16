@@ -109,7 +109,7 @@ class UserService {
     const result = await pool.query(
       `SELECT (
          EXISTS (SELECT 1 FROM stock_mutations WHERE created_by = $1)
-         OR EXISTS (SELECT 1 FROM restock_tickets WHERE requested_by = $1 OR created_by = $1 OR processed_by = $1 OR received_by = $1)
+         OR EXISTS (SELECT 1 FROM restock_tickets WHERE requested_by = $1 OR processed_by = $1 OR received_by = $1)
          OR EXISTS (SELECT 1 FROM defect_reports WHERE reported_by = $1 OR created_by = $1 OR approved_by = $1)
          OR EXISTS (SELECT 1 FROM opening_balances WHERE created_by = $1)
          OR EXISTS (SELECT 1 FROM stock_opnames WHERE created_by = $1 OR finalized_by = $1)

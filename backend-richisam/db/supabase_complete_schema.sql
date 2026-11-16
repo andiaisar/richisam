@@ -117,7 +117,6 @@ CREATE TABLE stock_mutations (
     sak INTEGER DEFAULT 0,
     masuk INTEGER DEFAULT 0,
     keluar INTEGER DEFAULT 0,
-    sisa INTEGER DEFAULT 0,
     sumber_masuk sumber_masuk_enum,
     ticket_id INTEGER,
     keterangan TEXT,
@@ -132,12 +131,10 @@ CREATE TABLE stock_mutations (
 -- 9. TABEL RESTOCK_TICKETS & ITEMS
 CREATE TABLE restock_tickets (
     id SERIAL PRIMARY KEY,
-    nomor_tiket VARCHAR(50) UNIQUE,
     kode_tiket VARCHAR(50),
     outlet_id INTEGER NOT NULL REFERENCES outlets(id) ON DELETE CASCADE,
     status ticket_status_enum DEFAULT 'DIAJUKAN',
     catatan TEXT,
-    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     requested_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     processed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     processed_at TIMESTAMP,
@@ -175,7 +172,6 @@ CREATE TABLE defect_reports (
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     reported_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     approved_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    batch_number VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -188,7 +184,6 @@ CREATE TABLE notifications (
     tipe notif_tipe_enum NOT NULL,
     pesan TEXT NOT NULL,
     is_read BOOLEAN DEFAULT false,
-    reference_id INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

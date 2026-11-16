@@ -447,7 +447,8 @@ const Dashboard = () => {
                 <span className="text-xs font-semibold text-white">Logistik & Restock</span>
               </div>
               <Link to="/permintaan" className="text-xs font-semibold text-[#F9610D] hover:underline">
-                {reqSummary.total_aktif > 0 ? 'Proses' : 'Buka'}
+                {/* Hanya Staf CK yang memproses tiket; peran lain membuka untuk memantau */}
+                {reqSummary.total_aktif > 0 && user?.role === 'ADMIN_GUDANG' ? 'Proses' : 'Buka'}
               </Link>
             </div>
           </div>

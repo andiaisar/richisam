@@ -160,21 +160,24 @@ const Transfer = () => {
         }))
       };
 
+      // axiosClient sudah membuka response.data: res = { success, message, data: { kode_transfer, status } }
       const res = await axiosClient.post('/transfers', payload);
-      
+      const result = res?.data || {};
+
       const fromObj = outlets.find(o => o.id === parseInt(fromOutlet));
       const toObj = outlets.find(o => o.id === parseInt(toOutlet));
 
-      if (isBranchStaff) {
-        toast.success(res.data?.message || 'Pengajuan transfer berhasil dikirim! Menunggu persetujuan Admin Pusat.');
+      // Status dari server menentukan alur: hanya transfer APPROVED yang langsung memindahkan stok
+      if (result.status !== 'APPROVED') {
+        toast.success(res?.message || 'Pengajuan transfer berhasil dikirim! Menunggu persetujuan Admin Pusat.');
         // Switch to history tab to view pending request
         setActiveTab('riwayat');
       } else {
-        toast.success('Transfer berhasil dieksekusi langsung! Surat Jalan siap dicetak.');
-        
+        toast.success(res?.message || 'Transfer berhasil dieksekusi langsung! Surat Jalan siap dicetak.');
+
         // Prepare data for immediate printing for Admin
         const suratData = {
-          kode_transfer: res?.data?.data?.kode_transfer || `SJ-TRF-${Date.now()}`,
+          kode_transfer: result.kode_transfer,
           created_at: new Date().toISOString(),
           from_outlet_name: fromObj?.nama || 'Cabang Asal',
           from_outlet_address: fromObj?.alamat || '',
@@ -224,7 +227,7 @@ const Transfer = () => {
     setActionLoading(true);
     try {
       const res = await axiosClient.put(`/transfers/${kode_transfer}/approve`);
-      toast.success(res.data?.message || 'Transfer berhasil disetujui & stok telah dialokasikan!');
+      toast.success(res?.message || 'Transfer berhasil disetujui & stok telah dialokasikan!');
       setApproveModal({ isOpen: false, transfer: null });
       fetchTransfers();
     } catch (e) {
@@ -246,7 +249,7 @@ const Transfer = () => {
       const res = await axiosClient.put(`/transfers/${rejectModal.kode_transfer}/reject`, {
         rejection_reason: rejectModal.reason
       });
-      toast.success(res.data?.message || 'Permohonan transfer telah ditolak');
+      toast.success(res?.message || 'Permohonan transfer telah ditolak');
       setRejectModal({ isOpen: false, kode_transfer: '', reason: '' });
       fetchTransfers();
     } catch (e) {

@@ -35,11 +35,15 @@ const OpeningBalance = () => {
       prodList.sort((a,b) => (a.urutan || 0) - (b.urutan || 0));
       setProducts(prodList);
       
-      const savedBalances = balRes?.data?.data || [];
+      // axiosClient sudah membuka response.data, sehingga daftar saldo ada di balRes.data
+      const savedBalances = Array.isArray(balRes?.data) ? balRes.data : [];
       const balMap = {};
       savedBalances.forEach(b => {
         balMap[b.product_id] = b.qty;
       });
+      // Tampilkan tanggal stok awal yang tersimpan (terbaru); jika belum ada, pakai hari ini
+      const savedDates = savedBalances.map(b => b.tanggal).filter(Boolean).sort();
+      setTanggal(savedDates.length ? savedDates[savedDates.length - 1] : new Date().toISOString().split('T')[0]);
 
       const initialItems = {};
       prodList.forEach(p => {

@@ -98,8 +98,8 @@ exports.getOpeningBalances = async (req, res) => {
       return res.status(400).json({ success: false, message: 'outlet_id diperlukan' });
     }
     const result = await pool.query(
-      `SELECT ob.product_id, ob.qty, ob.tanggal 
-       FROM opening_balances ob 
+      `SELECT ob.product_id, ob.qty, to_char(ob.tanggal, 'YYYY-MM-DD') AS tanggal
+       FROM opening_balances ob
        WHERE ob.outlet_id = $1`,
       [parseInt(outlet_id)]
     );
@@ -110,14 +110,19 @@ exports.getOpeningBalances = async (req, res) => {
 };
 
 exports.createOpeningBalances = async (req, res) => {
-  // Body: { outlet_id, items: [{ product_id, qty }] }
+  // Body: { outlet_id, tanggal?: 'YYYY-MM-DD', items: [{ product_id, qty }] }
   const client = await pool.connect();
   try {
-    const { outlet_id, items } = req.body;
+    const { outlet_id, items, tanggal } = req.body;
     if (!outlet_id || !items || !items.length) {
       return res.status(400).json({ success: false, message: 'outlet_id dan items diperlukan' });
     }
-    
+    // Tanggal stok awal mengikuti pilihan pengguna; bila tidak dikirim, pakai tanggal hari ini.
+    if (!isBlank(tanggal) && !isValidDateString(tanggal)) {
+      return res.status(400).json({ success: false, message: 'Format tanggal stok awal tidak valid (gunakan YYYY-MM-DD)' });
+    }
+    const tanggalStokAwal = isBlank(tanggal) ? null : tanggal;
+
     // Stok awal adalah jumlah fisik: harus bilangan bulat >= 0 (kosong dianggap 0 seperti sebelumnya)
     const invalidItem = items.find(it => !isPositiveId(it.product_id) || (!isBlank(it.qty) && !isIntAtLeast(it.qty, 0)));
     if (invalidItem) {
@@ -133,11 +138,11 @@ exports.createOpeningBalances = async (req, res) => {
     // 1. Bulk UPSERT ke opening_balances
     await client.query(
       `INSERT INTO opening_balances (outlet_id, product_id, qty, tanggal, created_by)
-       SELECT $1::int, u.product_id, u.qty, CURRENT_DATE, $4::int
+       SELECT $1::int, u.product_id, u.qty, COALESCE($5::date, CURRENT_DATE), $4::int
        FROM UNNEST($2::int[], $3::int[]) AS u(product_id, qty)
        ON CONFLICT (product_id, outlet_id)
-       DO UPDATE SET qty = EXCLUDED.qty, tanggal = CURRENT_DATE, updated_at = CURRENT_TIMESTAMP`,
-      [outletIdInt, productIds, qtys, req.user.id]
+       DO UPDATE SET qty = EXCLUDED.qty, tanggal = EXCLUDED.tanggal, updated_at = CURRENT_TIMESTAMP`,
+      [outletIdInt, productIds, qtys, req.user.id, tanggalStokAwal]
     );
 
     // 2. Sinkronkan tabel stocks (qty_current) untuk produk yang belum memiliki riwayat mutasi shift

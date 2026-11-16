@@ -282,6 +282,50 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         RequestService.updateStatus(16, 'DIPROSES', undefined, { id: 3, role: 'ADMIN_GUDANG', outlet_id: 1 })
       ).rejects.toThrow(/SELESAI/);
     });
+
+    it('Menolak konfirmasi penerimaan (SELESAI) oleh Staf CK tanpa mengubah stok', async () => {
+      client.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 17, kode_tiket: 'REQ-17', outlet_id: 2, status: 'DIKIRIM' }] }); // SELECT ticket
+
+      await expect(
+        RequestService.updateStatus(17, 'SELESAI', undefined, { id: 3, role: 'ADMIN_GUDANG', outlet_id: 1 })
+      ).rejects.toThrow(/hanya dapat dilakukan oleh Staf Outlet pemohon/);
+      const stockUpdate = client.query.mock.calls.find(c => typeof c[0] === 'string' && c[0].includes('UPDATE stocks'));
+      expect(stockUpdate).toBeUndefined();
+    });
+
+    it.each([['ADMIN_PUSAT'], ['OWNER']])('Menolak proses/kirim tiket oleh %s (hanya Staf CK)', async (role) => {
+      client.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 19, kode_tiket: 'REQ-19', outlet_id: 2, status: 'DIAJUKAN' }] }); // SELECT ticket
+
+      await expect(
+        RequestService.updateStatus(19, 'DIKIRIM', undefined, { id: 1, role, outlet_id: 1 })
+      ).rejects.toThrow(/Hanya Staf Central Kitchen/);
+      const stockUpdate = client.query.mock.calls.find(c => typeof c[0] === 'string' && c[0].includes('UPDATE stocks'));
+      expect(stockUpdate).toBeUndefined();
+    });
+
+    it.each([['ADMIN_PUSAT'], ['OWNER']])('Menolak konfirmasi penerimaan oleh %s (hanya Staf Outlet pemohon)', async (role) => {
+      client.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 20, kode_tiket: 'REQ-20', outlet_id: 2, status: 'DIKIRIM' }] }); // SELECT ticket
+
+      await expect(
+        RequestService.updateStatus(20, 'SELESAI', undefined, { id: 1, role, outlet_id: null })
+      ).rejects.toThrow(/hanya dapat dilakukan oleh Staf Outlet pemohon/);
+    });
+
+    it('Menolak konfirmasi penerimaan oleh Staf Outlet dari cabang lain', async () => {
+      client.query
+        .mockResolvedValueOnce({}) // BEGIN
+        .mockResolvedValueOnce({ rows: [{ id: 18, kode_tiket: 'REQ-18', outlet_id: 2, status: 'DIKIRIM' }] }); // SELECT ticket
+
+      await expect(
+        RequestService.updateStatus(18, 'SELESAI', undefined, { id: 5, role: 'STAF_CABANG', outlet_id: 3 })
+      ).rejects.toThrow(/cabang lain/);
+    });
   });
 
   describe('5. Transfer Stok Antar Cabang', () => {
@@ -475,7 +519,7 @@ describe('Pengujian Menyeluruh Seluruh Fitur & Keamanan RichiStock', () => {
         .mockResolvedValueOnce({}) // notifyOutlet
         .mockResolvedValueOnce({}); // COMMIT
 
-      const sent = await RequestService.updateStatus(15, 'DIKIRIM', 3, { id: 1, role: 'ADMIN_PUSAT' });
+      const sent = await RequestService.updateStatus(15, 'DIKIRIM', 3, { id: 1, role: 'ADMIN_GUDANG', outlet_id: 1 });
       expect(sent.status).toBe('DIKIRIM');
 
       // 2. SELESAI oleh Staf Cabang 2

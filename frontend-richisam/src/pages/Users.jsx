@@ -168,7 +168,8 @@ const Users = () => {
     setSubmitting(true);
     try {
       const res = await axiosClient.delete(`/users/${userToDelete.id}`);
-      toast.success(res?.data?.message || 'Pengguna berhasil dihapus');
+      // axiosClient sudah membuka response.data; pesan backend membedakan "dihapus" vs "dinonaktifkan"
+      toast.success(res?.message || 'Pengguna berhasil dihapus');
       setIsDeleteModalOpen(false);
       setUserToDelete(null);
       fetchUsers();

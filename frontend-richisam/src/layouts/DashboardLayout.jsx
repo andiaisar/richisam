@@ -386,7 +386,7 @@ const DashboardLayout = () => {
       }
       const res = await axiosClient.put('/auth/profile', payload);
       updateUser({ nama: profileForm.nama.trim() });
-      toast.success(res?.data?.message || 'Profil berhasil diperbarui');
+      toast.success(res?.message || 'Profil berhasil diperbarui');
       setProfileModalOpen(false);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Gagal memperbarui profil');

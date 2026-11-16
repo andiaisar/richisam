@@ -133,8 +133,10 @@ const Permintaan = () => {
   };
 
   const isCK = user?.role === 'ADMIN_GUDANG';
-  const canManageShipment = user?.role === 'ADMIN_PUSAT' || user?.role === 'ADMIN_GUDANG' || user?.role === 'OWNER';
-  const isOutletStaff = !canManageShipment;
+  // Validasi dua arah: proses & kirim tiket hanya oleh Staf CK; konfirmasi penerimaan hanya oleh Staf Outlet pemohon.
+  // Admin Pusat & Owner hanya memantau (Detail) tiket.
+  const canManageShipment = isCK;
+  const isOutletStaff = user?.role === 'STAF_CABANG';
 
   const openAddModal = () => {
     const branchOutlets = outlets.filter(o => Number(o.id) !== 1);
@@ -380,7 +382,8 @@ const Permintaan = () => {
     setSubmitting(true);
     try {
       const res = await axiosClient.post(`/requests/${selectedTicket.id}/create-backorder`);
-      toast.success(`Tiket pengiriman susulan [${res.data?.data?.kode_tiket}] berhasil dibuat!`);
+      // axiosClient sudah membuka response.data: res.data = tiket susulan baru
+      toast.success(`Tiket pengiriman susulan [${res?.data?.kode_tiket || '-'}] berhasil dibuat!`);
       setIsDetailModalOpen(false);
       fetchTickets();
     } catch (e) {
@@ -571,16 +574,18 @@ const Permintaan = () => {
                             className={`font-semibold text-xs px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
                               isOutletStaff && t.status === 'DIKIRIM'
                                 ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                                : !isOutletStaff && t.status === 'DIAJUKAN'
+                                : canManageShipment && t.status === 'DIAJUKAN'
                                 ? 'bg-richisam-orange hover:bg-[#d9530a] text-white shadow-sm'
-                                : !isOutletStaff && t.status === 'DIPROSES'
+                                : canManageShipment && t.status === 'DIPROSES'
                                 ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
                                 : 'text-richisam-orange hover:text-richisam-merah-muda'
                             }`}
                           >
                             {isOutletStaff 
                               ? (t.status === 'DIKIRIM' ? 'Terima Barang' : 'Detail') 
-                              : (t.status === 'DIAJUKAN' ? 'Proses Tiket' : t.status === 'DIPROSES' ? 'Kirim Barang' : 'Detail')}
+                              : canManageShipment
+                              ? (t.status === 'DIAJUKAN' ? 'Proses Tiket' : t.status === 'DIPROSES' ? 'Kirim Barang' : 'Detail')
+                              : 'Detail'}
                           </button>
                           {!isOutletStaff && (t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
                             <button 
@@ -795,7 +800,7 @@ const Permintaan = () => {
 
       {/* Modal Detail / Process / Backorder Handling */}
       {isDetailModalOpen && selectedTicket && (() => {
-        const canConfirmReceipt = (isOutletStaff || user?.role === 'OWNER' || user?.role === 'ADMIN_PUSAT') && selectedTicket.status === 'DIKIRIM';
+        const canConfirmReceipt = isOutletStaff && selectedTicket.status === 'DIKIRIM';
         const hasReceivingDiscrepancy = detailItems.some(it => {
           const minta = parseInt(it.qty_diminta, 10) || 0;
           const kirim = parseInt(it.qty_dikirim !== null && it.qty_dikirim !== undefined ? it.qty_dikirim : it.qty_diminta, 10) || 0;

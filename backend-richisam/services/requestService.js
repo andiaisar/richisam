@@ -148,15 +148,16 @@ class RequestService {
         throw new Error(`Perubahan status dari ${tiket.status} ke ${newStatus} tidak diizinkan.`);
       }
 
+      // Validasi dua arah: proses & kirim hanya oleh Staf CK, konfirmasi penerimaan hanya oleh Staf Outlet pemohon.
+      // Admin Pusat dan Owner dapat memantau tiket, tetapi tidak ikut memproses maupun mengonfirmasinya.
       const isCK = req_user.role === 'ADMIN_GUDANG';
-      const isPusatOrOwner = req_user.role === 'ADMIN_PUSAT' || req_user.role === 'OWNER';
       let hasDiscrepancy = false;
 
       // 1. Memproses atau Mengirim Tiket (DIPROSES atau DIKIRIM)
-      // Staf Cabang tidak boleh mengubah status pengiriman; hanya Admin Gudang (CK), Admin Pusat, atau Owner
+      // Hanya Staf Central Kitchen (ADMIN_GUDANG) yang boleh memproses dan mengirim tiket
       if (newStatus === 'DIPROSES' || newStatus === 'DIKIRIM') {
-        if (!isCK && !isPusatOrOwner) {
-          throw new Error('Staf tidak dapat mengubah status pengiriman. Hanya Admin Pusat atau Admin Gudang (CK) yang berhak memproses dan mengirim barang.');
+        if (!isCK) {
+          throw new Error('Hanya Staf Central Kitchen (CK) yang dapat memproses dan mengirim tiket permintaan.');
         }
 
         // Potong stok Central Kitchen (outlet_id = 1) saat status diubah menjadi DIKIRIM
@@ -224,9 +225,12 @@ class RequestService {
       }
 
       // 2. Mengonfirmasi Penerimaan Tiket di Cabang (SELESAI)
-      // Hanya boleh dilakukan oleh Staf Cabang Pemohon (yang menerima fisik di outlet), Admin Pusat, atau Owner
+      // Hanya boleh dilakukan oleh Staf Outlet pemohon yang menerima fisik barang di cabangnya
       if (newStatus === 'SELESAI') {
-        if (req_user.role === 'STAF_CABANG' && !isCK && Number(tiket.outlet_id) !== Number(req_user.outlet_id)) {
+        if (req_user.role !== 'STAF_CABANG') {
+          throw new Error('Konfirmasi penerimaan hanya dapat dilakukan oleh Staf Outlet pemohon setelah barang diterima.');
+        }
+        if (Number(tiket.outlet_id) !== Number(req_user.outlet_id)) {
           throw new Error('Anda tidak memiliki akses untuk menerima tiket cabang lain');
         }
         if (tiket.status !== 'DIKIRIM') throw new Error('Tiket belum dikirim oleh Central Kitchen');

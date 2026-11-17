@@ -244,10 +244,11 @@ const ParStock = () => {
                           {item.nama}
                         </div>
                         <div className="col-span-4">
-                          <input 
-                            type="number" 
+                          {/* Tidak "required": nilai 0 ditampilkan kosong dan kolom kosong disimpan sebagai 0.
+                              Dengan "required", produk baru (par stock 0) membuat form tidak bisa disimpan. */}
+                          <input
+                            type="number"
                             min="0"
-                            required
                             value={item.min_qty === 0 || item.min_qty == null ? '' : item.min_qty}
                             placeholder="0"
                             onChange={e => handleQtyChange(item.product_id, e.target.value)}

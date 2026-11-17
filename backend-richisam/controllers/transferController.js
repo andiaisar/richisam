@@ -45,9 +45,10 @@ exports.createTransfer = async (req, res) => {
     }
 
     // Alur Otorisasi:
-    // Jika diajukan oleh Staf Cabang, status WAJIB 'PENDING' menunggu persetujuan Admin Pusat/Owner/Gudang.
-    // Jika diajukan oleh Admin Pusat / Owner langsung, status langsung 'APPROVED'.
-    const isDirectAdmin = req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER';
+    // Persetujuan transfer antar-cabang HANYA oleh Admin Pusat.
+    // Pengajuan dari peran lain (Staf Outlet, Owner) berstatus 'PENDING' menunggu persetujuan Admin Pusat.
+    // Transfer yang dibuat langsung oleh Admin Pusat berstatus 'APPROVED'.
+    const isDirectAdmin = req.user.role === 'ADMIN_PUSAT';
     const initialStatus = isDirectAdmin ? 'APPROVED' : 'PENDING';
 
     const result = await TransferService.createTransfer(
@@ -87,9 +88,9 @@ exports.createTransfer = async (req, res) => {
 exports.approveTransfer = async (req, res) => {
   try {
     const { kode_transfer } = req.params;
-    const isAuthorized = req.user && (req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER' || req.user.role === 'ADMIN_GUDANG');
+    const isAuthorized = req.user && req.user.role === 'ADMIN_PUSAT';
     if (!isAuthorized) {
-      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin Pusat, Owner, atau Admin Gudang yang dapat menyetujui transfer' });
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin Pusat yang dapat menyetujui transfer' });
     }
 
     const result = await TransferService.approveTransfer(kode_transfer, req.user);
@@ -110,9 +111,9 @@ exports.approveTransfer = async (req, res) => {
 exports.rejectTransfer = async (req, res) => {
   try {
     const { kode_transfer } = req.params;
-    const isAuthorized = req.user && (req.user.role === 'ADMIN_PUSAT' || req.user.role === 'OWNER' || req.user.role === 'ADMIN_GUDANG');
+    const isAuthorized = req.user && req.user.role === 'ADMIN_PUSAT';
     if (!isAuthorized) {
-      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin yang dapat menolak transfer' });
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin Pusat yang dapat menolak transfer' });
     }
 
     const parsed = rejectSchema.safeParse(req.body);

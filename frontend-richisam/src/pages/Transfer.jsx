@@ -51,7 +51,8 @@ const Transfer = () => {
   const [isSuratJalanOpen, setIsSuratJalanOpen] = useState(false);
   const [selectedSuratJalan, setSelectedSuratJalan] = useState(null);
 
-  const canApprove = user?.role === 'ADMIN_PUSAT' || user?.role === 'OWNER' || user?.role === 'ADMIN_GUDANG';
+  // Persetujuan transfer antar-cabang hanya oleh Admin Pusat; Owner hanya memantau.
+  const canApprove = user?.role === 'ADMIN_PUSAT';
   const isBranchStaff = user?.role === 'STAF_CABANG';
 
   useEffect(() => {
@@ -636,7 +637,9 @@ const Transfer = () => {
               <p className="text-xs text-muted mt-0.5">
                 {canApprove 
                   ? 'Review pengajuan transfer yang masuk dari cabang, setujui/tolak, dan cetak Surat Jalan' 
-                  : 'Pantau status permohonan transfer cabang Anda'}
+                  : isBranchStaff
+                    ? 'Pantau status permohonan transfer cabang Anda'
+                    : 'Pantau seluruh pengajuan transfer antar-cabang (persetujuan oleh Admin Pusat)'}
               </p>
             </div>
 

@@ -393,7 +393,11 @@ const Permintaan = () => {
     }
   };
 
+  // Surat Jalan baru boleh dicetak setelah tiket diproses CK (DIPROSES/DIKIRIM/SELESAI), bukan saat masih DIAJUKAN.
+  const canPrintSuratJalan = (t) => !isOutletStaff && ['DIPROSES', 'DIKIRIM', 'SELESAI'].includes(t?.status);
+
   const handleOpenSuratJalan = (t) => {
+    if (!canPrintSuratJalan(t)) return;
     const rawItems = Array.isArray(t.items) && t.items.length > 0
       ? t.items.map(it => {
           const qtyKirim = it.qty_dikirim !== null && it.qty_dikirim !== undefined ? it.qty_dikirim : (it.qty_disetujui || it.qty_diminta);
@@ -587,7 +591,7 @@ const Permintaan = () => {
                               ? (t.status === 'DIAJUKAN' ? 'Proses Tiket' : t.status === 'DIPROSES' ? 'Kirim Barang' : 'Detail')
                               : 'Detail'}
                           </button>
-                          {!isOutletStaff && (t.status === 'DIKIRIM' || t.status === 'SELESAI' || t.status === 'DIPROSES') && (
+                          {canPrintSuratJalan(t) && (
                             <button 
                               onClick={() => handleOpenSuratJalan(t)}
                               className="p-1.5 text-stone-500 hover:text-white hover:bg-stone-800 rounded-lg transition-all cursor-pointer"
@@ -1314,8 +1318,8 @@ const Permintaan = () => {
                   </div>
                 )}
 
-                {/* Tombol Cetak Surat Jalan */}
-                {!isOutletStaff && (
+                {/* Tombol Cetak Surat Jalan (disembunyikan selama tiket masih DIAJUKAN) */}
+                {canPrintSuratJalan(selectedTicket) && (
                   <div className="pt-4 border-t border-line mt-4">
                     <button
                       type="button"

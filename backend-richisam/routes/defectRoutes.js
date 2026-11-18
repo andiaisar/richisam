@@ -7,6 +7,7 @@ router.use(authenticate, enforceOutletScope);
 
 router.get('/', defectController.getDefects);
 router.post('/', authorize('STAF_CABANG', 'ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), defectController.upload.single('foto'), defectController.reportDefect);
-router.put('/:id', authorize('ADMIN_PUSAT', 'OWNER', 'ADMIN_GUDANG'), defectController.processDefect);
+// Persetujuan/penolakan laporan defect hanya oleh Admin Pusat (Owner & Staf CK hanya memantau).
+router.put('/:id', authorize('ADMIN_PUSAT'), defectController.processDefect);
 
 module.exports = router;

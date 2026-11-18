@@ -158,6 +158,9 @@ exports.reportDefect = async (req, res) => {
 
 exports.processDefect = async (req, res) => {
   try {
+    if (req.user?.role !== 'ADMIN_PUSAT') {
+      return res.status(403).json({ success: false, message: 'Akses ditolak: Hanya Admin Pusat yang dapat memproses laporan defect' });
+    }
     const id = parseInt(req.params.id);
     const parsed = updateSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ success: false, message: 'Validasi gagal', data: parsed.error.format() });
